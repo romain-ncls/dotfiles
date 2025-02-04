@@ -7,6 +7,9 @@ test:
 deploy:
   nixos-rebuild switch --flake . --use-remote-sudo
 
+deploy-boot:
+  nixos-rebuild boot --flake . --use-remote-sudo
+
 up:
   nix flake update
 

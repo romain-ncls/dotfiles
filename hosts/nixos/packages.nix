@@ -45,6 +45,8 @@
     noto-fonts-cjk-serif
     noto-fonts-color-emoji
     noto-fonts-monochrome-emoji
+    fira-code
+    fira-code-symbols
 
     gparted
     vlc
