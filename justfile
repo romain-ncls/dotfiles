@@ -1,5 +1,8 @@
-test:
+dry:
   nixos-rebuild dry-build --flake .
+
+test:
+  nixos-rebuild test --flake . --use-remote-sudo
 
 deploy:
   nixos-rebuild switch --flake . --use-remote-sudo

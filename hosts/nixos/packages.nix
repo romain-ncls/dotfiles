@@ -90,4 +90,18 @@
   environment.sessionVariables = {
     SSH_ASKPASS_REQUIRE="prefer";
   };
+
+  #############################################################################
+  ################################### nix-ld ##################################
+  #############################################################################
+
+  programs.nix-ld.enable = true;
+  programs.nix-ld.libraries = with pkgs; [
+    # Add any missing dynamic libraries for unpackaged programs
+    # here, NOT in environment.systemPackages
+
+    ############### goland ###############
+    # enabled for full line completion
+    # no library needed for now
+  ];
 }
