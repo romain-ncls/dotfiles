@@ -36,6 +36,10 @@ up:
 history:
   nix profile history --profile /nix/var/nix/profiles/system
 
+# print generations
+generations:
+  nixos-rebuild list-generations
+
 # just is a command runner, Justfile is very similar to Makefile, but simpler.
 
 ############################################################################
