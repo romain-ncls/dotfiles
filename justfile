@@ -7,10 +7,14 @@ dry:
   nixos-rebuild dry-build --flake .
 
 # build system and print diff with current-system
-check:
+diff:
   nixos-rebuild build --flake .
   nix store diff-closures /run/current-system ./result
   rm result
+
+# print diff between booted and current systems
+current-diff:
+  nix store diff-closures /run/booted-system /run/current-system
 
 # build and apply temporarily
 test:
