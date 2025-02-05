@@ -8,7 +8,6 @@
     wget
     curl
     neofetch
-    cmatrix
     bat
     eza
     doggo
@@ -17,7 +16,7 @@
     htop
     bottom
     zip
-    tree
+    unzip
     nmap
     ncdu
     bemenu # Menu picker for soundbox `~/scripts/soundbox`
