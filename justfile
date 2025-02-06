@@ -40,6 +40,10 @@ history:
 generations:
   nixos-rebuild list-generations
 
+# garbage collect all unused nix store entries
+gc:
+  sudo nix-collect-garbage --delete-old
+
 # just is a command runner, Justfile is very similar to Makefile, but simpler.
 
 ############################################################################
