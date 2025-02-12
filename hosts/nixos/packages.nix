@@ -58,6 +58,7 @@
     flameshot
     spotify
     helvum # PipeWire Patchbay
+    easyeffects # Audio effects for PipeWire applications
   ];
 
   programs.firefox.enable = true;
