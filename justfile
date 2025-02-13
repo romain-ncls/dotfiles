@@ -2,9 +2,6 @@
 default:
     @just --list --unsorted
 
-# nixos-rebuild dry-build
-dry:
-  nixos-rebuild dry-build --flake .
 
 # build system and print diff with current-system
 diff:
@@ -15,6 +12,15 @@ diff:
 # print diff between booted and current systems
 current-diff:
   nix store diff-closures /run/booted-system /run/current-system
+
+# nixos-rebuild dry-build
+dry:
+  nixos-rebuild dry-build --flake .
+
+# nixos-rebuild build
+build:
+  nixos-rebuild build --flake . --show-trace -L -v
+  rm result
 
 # build and apply temporarily
 test:

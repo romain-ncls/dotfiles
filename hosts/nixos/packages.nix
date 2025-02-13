@@ -1,5 +1,17 @@
-{ pkgs, ... }:
-{
+{ pkgs, inputs, ... }:
+let
+  muteCtlPlugin = ../../mutectl/mutectl-vencord-plugin.ts;
+  discord-modded = (pkgs.discord.override {
+      withOpenASAR = true;
+      withVencord = true;
+      vencord = (pkgs.vencord.overrideAttrs (finalAttrs: previousAttrs:{
+        preBuild = ''
+          mkdir src/userplugins
+          cp ${muteCtlPlugin} src/userplugins/mutectl.ts
+        '';
+      }));
+    });
+in {
   environment.systemPackages = with pkgs; [
     libva-utils
     libnotify # For `notify-send`
@@ -54,11 +66,14 @@
     jetbrains.goland
     gitkraken
     postman
-    discord
+    # discord
+    discord-modded
     flameshot
     spotify
     helvum # PipeWire Patchbay
     easyeffects # Audio effects for PipeWire applications
+
+    inputs.mutectl.packages."${pkgs.system}".default
   ];
 
   programs.firefox.enable = true;
