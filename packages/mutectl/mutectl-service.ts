@@ -26,14 +26,13 @@ router.get("/sse", async (ctx) => {
     delete clients[id]
   })
 });
-router.post('/unmute', () => {
+router.post('/unmute', (ctx) => {
   broadcast('unmute')
+  ctx.response.status = 204
 })
-router.post('/mute', () => {
+router.post('/mute', (ctx) => {
   broadcast('mute')
-})
-router.post('/no-mic', () => {
-  broadcast('mute')
+  ctx.response.status = 204
 })
 
 const app = new Application();

@@ -72,9 +72,9 @@ in {
     spotify
     helvum # PipeWire Patchbay
     easyeffects # Audio effects for PipeWire applications
-
-    _custom.mutectl
   ];
+
+  services.mutectl.enable = true;
 
   programs.firefox.enable = true;
 
