@@ -3,7 +3,6 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    mutectl.url = "path:mutectl";
   };
 
   outputs = { self, nixpkgs, ... }@inputs: {
@@ -11,6 +10,7 @@
       system = "x86_64-linux";
       specialArgs = { inherit inputs; };
       modules = [
+        ./packages
         ./hosts/nixos/default.nix
       ];
     };

@@ -1,6 +1,6 @@
 { pkgs, inputs, ... }:
 let
-  muteCtlPlugin = ../../mutectl/mutectl-vencord-plugin.ts;
+  muteCtlPlugin = ../../packages/mutectl/mutectl-vencord-plugin.ts;
   discord-modded = (pkgs.discord.override {
       withOpenASAR = true;
       withVencord = true;
@@ -73,7 +73,7 @@ in {
     helvum # PipeWire Patchbay
     easyeffects # Audio effects for PipeWire applications
 
-    inputs.mutectl.packages."${pkgs.system}".default
+    _custom.mutectl
   ];
 
   programs.firefox.enable = true;
