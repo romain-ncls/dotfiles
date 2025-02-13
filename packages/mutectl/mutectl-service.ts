@@ -39,4 +39,4 @@ const app = new Application();
 app.use(router.routes());
 app.use(router.allowedMethods());
 
-app.listen({ port: HTTP_PORT });
+app.listen({ hostname: '127.0.0.1', port: HTTP_PORT });
