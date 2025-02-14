@@ -15,6 +15,7 @@ in {
   environment.systemPackages = with pkgs; [
     libva-utils
     libnotify # For `notify-send`
+    alsa-utils # needed for `amixer` for mutectl
     # at # echo 'notify-send -u critical "Reminder" "GitLab Update"' | at 15:15
     vim
     wget

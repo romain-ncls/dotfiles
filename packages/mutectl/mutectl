@@ -13,6 +13,8 @@ main() {
 }
 
 mute() {
+  muteClients
+
   defaultDevice=$(pactl get-default-sink)
   if [[ "$defaultDevice" =~ "Poly_BT600" ]]; then
     muteHeadset
@@ -24,6 +26,8 @@ mute() {
 }
 
 unmute() {
+  unmuteClients
+
   defaultDevice=$(pactl get-default-sink)
   if [[ "$defaultDevice" =~ "Poly_BT600" ]]; then
     unmuteHeadset
@@ -32,21 +36,30 @@ unmute() {
   else
     echo 'unknown device!'
   fi
-}
-
-muteHeadset() {
-  # amixer set Capture nocap
-
-  pactl set-card-profile alsa_card.usb-Plantronics_Poly_BT600_064e0dab8f85441c958b643739ca9cdc-00 output:analog-stereo
-}
-
-unmuteHeadset() {
-  # amixer set Capture cap
 
   if isVolumeTooMuch; then
     qdbus org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Pause
   fi
-  pactl set-card-profile alsa_card.usb-Plantronics_Poly_BT600_064e0dab8f85441c958b643739ca9cdc-00 output:analog-stereo+input:mono-fallback
+}
+
+muteClients() {
+  curl -X POST http://127.0.0.1:4815/mute
+}
+
+unmuteClients() {
+  curl -X POST http://127.0.0.1:4815/unmute
+}
+
+muteHeadset() {
+  amixer set Capture nocap
+
+  # pactl set-card-profile alsa_card.usb-Plantronics_Poly_BT600_064e0dab8f85441c958b643739ca9cdc-00 output:analog-stereo
+}
+
+unmuteHeadset() {
+  amixer set Capture cap
+
+  # pactl set-card-profile alsa_card.usb-Plantronics_Poly_BT600_064e0dab8f85441c958b643739ca9cdc-00 output:analog-stereo+input:mono-fallback
 }
 
 muteEar2() {
@@ -54,10 +67,6 @@ muteEar2() {
 }
 
 unmuteEar2() {
-  if isVolumeTooMuch; then
-    qdbus org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Pause
-  fi
-
   pactl set-card-profile bluez_card.2C_BE_EB_47_6F_2A headset-head-unit
 }
 
