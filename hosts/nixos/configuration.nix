@@ -2,19 +2,19 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, ... }:
+{ pkgs, ... }:
 
 {
-  imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
-    ];
+  imports = [ # Include the results of the hardware scan.
+    ./hardware-configuration.nix
+  ];
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  boot.initrd.luks.devices."luks-34dd4630-caa0-4174-a47b-beb193b64fd2".device = "/dev/disk/by-uuid/34dd4630-caa0-4174-a47b-beb193b64fd2";
+  boot.initrd.luks.devices."luks-34dd4630-caa0-4174-a47b-beb193b64fd2".device =
+    "/dev/disk/by-uuid/34dd4630-caa0-4174-a47b-beb193b64fd2";
   networking.hostName = "nixos"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 

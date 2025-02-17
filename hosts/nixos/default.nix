@@ -1,9 +1,1 @@
-{ ... }:
-{
-  imports =
-    [
-      ./configuration.nix
-      ./users.nix
-      ./packages.nix
-    ];
-}
+{ ... }: { imports = [ ./configuration.nix ./users.nix ./packages.nix ]; }

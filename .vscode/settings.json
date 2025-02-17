@@ -7,4 +7,7 @@
   "deno.config":"./deno.jsonc",
   "prettier.printWidth": 120,
   "prettier.singleQuote": true,
+  "[nix]": {
+    "editor.formatOnSave": true
+  }
 }

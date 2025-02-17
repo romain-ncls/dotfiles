@@ -1,5 +1,4 @@
 { pkgs, ... }:
-
 pkgs.stdenv.mkDerivation {
   pname = "mutectl";
   version = "0.0.1";
@@ -16,7 +15,8 @@ pkgs.stdenv.mkDerivation {
   '';
 
   meta = {
-    description = "MuteCtl: control system mute state from devices to clients like discord";
+    description =
+      "MuteCtl: control system mute state from devices to clients like discord";
     license = pkgs.lib.licenses.mit;
     maintainers = [ "romain-ncls" ];
   };

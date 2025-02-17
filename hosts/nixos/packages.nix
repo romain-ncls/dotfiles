@@ -1,16 +1,16 @@
-{ pkgs, inputs, ... }:
+{ pkgs, ... }:
 let
   muteCtlPlugin = ../../packages/mutectl/mutectl-vencord-plugin.ts;
   discord-modded = (pkgs.discord.override {
-      withOpenASAR = true;
-      withVencord = true;
-      vencord = (pkgs.vencord.overrideAttrs (finalAttrs: previousAttrs:{
-        preBuild = ''
-          mkdir src/userplugins
-          cp ${muteCtlPlugin} src/userplugins/mutectl.ts
-        '';
-      }));
-    });
+    withOpenASAR = true;
+    withVencord = true;
+    vencord = (pkgs.vencord.overrideAttrs (finalAttrs: previousAttrs: {
+      preBuild = ''
+        mkdir src/userplugins
+        cp ${muteCtlPlugin} src/userplugins/mutectl.ts
+      '';
+    }));
+  });
 in {
   environment.systemPackages = with pkgs; [
     libva-utils
@@ -43,6 +43,8 @@ in {
     konsave # KDE settings exporter.
 
     git
+    nixfmt-rfc-style # nix formatter
+    nil # nix language server
     gh
     jq
     just
@@ -95,26 +97,25 @@ in {
 
   programs = {
     ssh.startAgent = true;
-    ssh.askPassword = pkgs.lib.mkForce "${pkgs.ksshaskpass.out}/bin/ksshaskpass";
+    ssh.askPassword =
+      pkgs.lib.mkForce "${pkgs.ksshaskpass.out}/bin/ksshaskpass";
   };
 
   systemd.user.services.add_ssh_keys = {
     script = ''
       ssh-add $HOME/.ssh/id_ed25519
     '';
-    wantedBy = [ "multi-user.target" ];  #starts after login
+    wantedBy = [ "multi-user.target" ]; # starts after login
   };
 
-  environment.sessionVariables = {
-    SSH_ASKPASS_REQUIRE="prefer";
-  };
+  environment.sessionVariables = { SSH_ASKPASS_REQUIRE = "prefer"; };
 
   #############################################################################
   ################################### nix-ld ##################################
   #############################################################################
 
   programs.nix-ld.enable = true;
-  programs.nix-ld.libraries = with pkgs; [
+  programs.nix-ld.libraries = [
     # Add any missing dynamic libraries for unpackaged programs
     # here, NOT in environment.systemPackages
 
