@@ -21,22 +21,3 @@ pkgs.stdenv.mkDerivation {
     maintainers = [ "romain-ncls" ];
   };
 }
-
-
-  # Systemd service for NixOS
-  # nixosModules.default = { config, lib, pkgs, ... }: {
-  #   systemd.services.mutectl = {
-  #     description = "MuteCtl";
-  #     after = [ "network.target" ];
-  #     wantedBy = [ "multi-user.target" ];
-  #     serviceConfig = {
-  #       ExecStart = "${self.packages.${system}.default}/bin/mutectl-service";
-  #       Restart = "always";
-  #       User = "nobody";
-  #       Group = "nogroup";
-  #       StandardOutput = "journal";
-  #       StandardError = "journal";
-  #     };
-  #   };
-  # };
-
