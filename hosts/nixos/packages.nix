@@ -1,17 +1,24 @@
 { pkgs, ... }:
 let
   muteCtlPlugin = ../../packages/mutectl/mutectl-vencord-plugin.ts;
-  discord-modded = (pkgs.discord.override {
-    withOpenASAR = true;
-    withVencord = true;
-    vencord = (pkgs.vencord.overrideAttrs (finalAttrs: previousAttrs: {
-      preBuild = ''
-        mkdir src/userplugins
-        cp ${muteCtlPlugin} src/userplugins/mutectl.ts
-      '';
-    }));
-  });
-in {
+  discord-modded = (
+    pkgs.discord.override {
+      withOpenASAR = true;
+      withVencord = true;
+      vencord = (
+        pkgs.vencord.overrideAttrs (
+          finalAttrs: previousAttrs: {
+            preBuild = ''
+              mkdir src/userplugins
+              cp ${muteCtlPlugin} src/userplugins/mutectl.ts
+            '';
+          }
+        )
+      );
+    }
+  );
+in
+{
   environment.systemPackages = with pkgs; [
     libva-utils
     libnotify # For `notify-send`
@@ -69,7 +76,6 @@ in {
     jetbrains.goland
     gitkraken
     postman
-    # discord
     discord-modded
     flameshot
     spotify
@@ -97,8 +103,7 @@ in {
 
   programs = {
     ssh.startAgent = true;
-    ssh.askPassword =
-      pkgs.lib.mkForce "${pkgs.ksshaskpass.out}/bin/ksshaskpass";
+    ssh.askPassword = pkgs.lib.mkForce "${pkgs.ksshaskpass.out}/bin/ksshaskpass";
   };
 
   systemd.user.services.add_ssh_keys = {
@@ -108,7 +113,9 @@ in {
     wantedBy = [ "multi-user.target" ]; # starts after login
   };
 
-  environment.sessionVariables = { SSH_ASKPASS_REQUIRE = "prefer"; };
+  environment.sessionVariables = {
+    SSH_ASKPASS_REQUIRE = "prefer";
+  };
 
   #############################################################################
   ################################### nix-ld ##################################
