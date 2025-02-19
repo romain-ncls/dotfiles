@@ -91,6 +91,8 @@ in
   services.mutectl.enable = true;
 
   programs.firefox.enable = true;
+  programs.chromium.enable = true;
+  programs.chromium.enablePlasmaBrowserIntegration = true;
 
   programs.fish.enable = true;
 
