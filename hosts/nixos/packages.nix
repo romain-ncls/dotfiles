@@ -19,6 +19,18 @@ let
   );
 in
 {
+  fonts.packages = with pkgs; [
+    noto-fonts
+    noto-fonts-cjk-sans
+    noto-fonts-cjk-serif
+    noto-fonts-color-emoji
+    noto-fonts-monochrome-emoji
+    (fira-code.override {
+      useVariableFont = false;
+    })
+    fira-code-symbols
+  ];
+
   environment.systemPackages = with pkgs; [
     libva-utils
     libnotify # For `notify-send`
@@ -60,14 +72,6 @@ in
     nodejs_23
     go
     gcc # Needed for `go test -race`
-
-    noto-fonts
-    noto-fonts-cjk-sans
-    noto-fonts-cjk-serif
-    noto-fonts-color-emoji
-    noto-fonts-monochrome-emoji
-    fira-code
-    fira-code-symbols
 
     gparted
     vlc
