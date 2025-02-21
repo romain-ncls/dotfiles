@@ -93,6 +93,7 @@ in
   programs.firefox.enable = true;
   programs.chromium.enable = true;
   programs.chromium.enablePlasmaBrowserIntegration = true;
+  nixpkgs.config.brave.commandLineArgs = "--enable-features=VaapiVideoDecodeLinuxGL,VaapiVideoEncoder,Vulkan,VulkanFromANGLE,DefaultANGLEVulkan,VaapiIgnoreDriverChecks,VaapiVideoDecoder,PlatformHEVCDecoderSupport,UseMultiPlaneFormatForHardwareVideo";
 
   programs.fish.enable = true;
 
