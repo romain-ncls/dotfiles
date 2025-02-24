@@ -107,7 +107,7 @@ in
 
   programs = {
     ssh.startAgent = true;
-    ssh.askPassword = pkgs.lib.mkForce "${pkgs.ksshaskpass.out}/bin/ksshaskpass";
+    ssh.askPassword = pkgs.lib.mkForce "${pkgs.kdePackages.ksshaskpass.out}/bin/ksshaskpass";
   };
 
   systemd.user.services.add_ssh_keys = {
