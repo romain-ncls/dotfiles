@@ -7,6 +7,8 @@ main() {
     mute
   elif [[ "$mute" == "unmute" ]]; then
     unmute
+  elif [[ "$mute" == "no-mic" ]]; then
+    nomic
   else
     echo "no command!"
   fi
@@ -19,7 +21,7 @@ mute() {
   if [[ "$defaultDevice" =~ "Poly_BT600" ]]; then
     muteHeadset
   elif [[ "$defaultDevice" =~ "2C_BE_EB_47_6F_2A" ]]; then
-    muteEar2
+    nomicEar2
   else
     echo 'unknown device!'
   fi
@@ -42,6 +44,19 @@ unmute() {
   fi
 }
 
+nomic() {
+  muteClients
+
+  defaultDevice=$(pactl get-default-sink)
+  if [[ "$defaultDevice" =~ "Poly_BT600" ]]; then
+    nomicHeadset
+  elif [[ "$defaultDevice" =~ "2C_BE_EB_47_6F_2A" ]]; then
+    nomicEar2
+  else
+    echo 'unknown device!'
+  fi
+}
+
 muteClients() {
   curl -X POST http://127.0.0.1:4815/mute
 }
@@ -50,19 +65,23 @@ unmuteClients() {
   curl -X POST http://127.0.0.1:4815/unmute
 }
 
-muteHeadset() {
-  amixer set Capture nocap
+nomicHeadset() {
+  pactl set-card-profile alsa_card.usb-Plantronics_Poly_BT600_064e0dab8f85441c958b643739ca9cdc-00 output:analog-stereo
+}
 
-  # pactl set-card-profile alsa_card.usb-Plantronics_Poly_BT600_064e0dab8f85441c958b643739ca9cdc-00 output:analog-stereo
+muteHeadset() {
+  pactl set-card-profile alsa_card.usb-Plantronics_Poly_BT600_064e0dab8f85441c958b643739ca9cdc-00 output:analog-stereo+input:mono-fallback
+
+  amixer set Capture nocap
 }
 
 unmuteHeadset() {
-  amixer set Capture cap
+  pactl set-card-profile alsa_card.usb-Plantronics_Poly_BT600_064e0dab8f85441c958b643739ca9cdc-00 output:analog-stereo+input:mono-fallback
 
-  # pactl set-card-profile alsa_card.usb-Plantronics_Poly_BT600_064e0dab8f85441c958b643739ca9cdc-00 output:analog-stereo+input:mono-fallback
+  amixer set Capture cap
 }
 
-muteEar2() {
+nomicEar2() {
   pactl set-card-profile bluez_card.2C_BE_EB_47_6F_2A a2dp-sink
 }
 
