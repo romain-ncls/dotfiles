@@ -78,6 +78,7 @@ in
     brave
     vscode
     jetbrains.goland
+    steam-run # use to start remote code with me
     gitkraken
     postman
     discord-modded
