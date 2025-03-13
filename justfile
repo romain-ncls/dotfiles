@@ -48,7 +48,10 @@ generations:
 
 # garbage collect all unused nix store entries
 gc:
-  sudo nix-collect-garbage --delete-old
+  sudo nix-collect-garbage
+
+gc-generations:
+  sudo nix-collect-garbage --delete-older-than 30d
 
 # just is a command runner, Justfile is very similar to Makefile, but simpler.
 
