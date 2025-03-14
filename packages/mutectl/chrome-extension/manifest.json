@@ -1,0 +1,18 @@
+{
+  "name": "MuteCTL",
+  "description": "Base Level Extension",
+  "version": "1.0",
+  "manifest_version": 3,
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  },
+  "content_scripts": [
+    {
+      "js": ["teams.js"],
+      "matches": [
+        "https://teams.microsoft.com/*"
+      ]
+    }
+  ]
+}
