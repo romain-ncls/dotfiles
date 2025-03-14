@@ -64,7 +64,6 @@ in
     git
     nixfmt-rfc-style # nix formatter
     nil # nix language server
-    gh
     jq
     just
     tokei
@@ -72,6 +71,7 @@ in
     nodejs_23
     go
     gcc # Needed for `go test -race`
+    graphviz # used by pprof
 
     gparted
     vlc
