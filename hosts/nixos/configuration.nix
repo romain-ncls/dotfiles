@@ -3,7 +3,12 @@
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
 { pkgs, ... }:
-
+let
+  allowedPorts = [
+    5353 # mDNS
+    5359 # quickshare
+  ];
+in
 {
   imports = [
     # Include the results of the hardware scan.
@@ -113,8 +118,8 @@
   # services.openssh.enable = true;
 
   # Open ports in the firewall.
-  # networking.firewall.allowedTCPPorts = [ ... ];
-  # networking.firewall.allowedUDPPorts = [ ... ];
+  networking.firewall.allowedTCPPorts = allowedPorts;
+  networking.firewall.allowedUDPPorts = allowedPorts;
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
 
