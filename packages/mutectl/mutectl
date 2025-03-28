@@ -18,8 +18,8 @@ mute() {
   muteClients
 
   defaultDevice=$(pactl get-default-sink)
-  if [[ "$defaultDevice" =~ "Poly_BT600" ]]; then
-    muteHeadset
+  if [[ "$defaultDevice" =~ "Dell_Inc_AWPRO" ]]; then
+    muteHeadphones
   elif [[ "$defaultDevice" =~ "2C_BE_EB_47_6F_2A" ]]; then
     nomicEar2
   else
@@ -31,8 +31,8 @@ unmute() {
   unmuteClients
 
   defaultDevice=$(pactl get-default-sink)
-  if [[ "$defaultDevice" =~ "Poly_BT600" ]]; then
-    unmuteHeadset
+  if [[ "$defaultDevice" =~ "Dell_Inc_AWPRO" ]]; then
+    unmuteHeadphones
   elif [[ "$defaultDevice" =~ "2C_BE_EB_47_6F_2A" ]]; then
     unmuteEar2
   else
@@ -48,8 +48,8 @@ nomic() {
   muteClients
 
   defaultDevice=$(pactl get-default-sink)
-  if [[ "$defaultDevice" =~ "Poly_BT600" ]]; then
-    nomicHeadset
+  if [[ "$defaultDevice" =~ "Dell_Inc_AWPRO" ]]; then
+    muteHeadphones
   elif [[ "$defaultDevice" =~ "2C_BE_EB_47_6F_2A" ]]; then
     nomicEar2
   else
@@ -65,19 +65,11 @@ unmuteClients() {
   curl -X POST http://127.0.0.1:4815/unmute
 }
 
-nomicHeadset() {
-  pactl set-card-profile alsa_card.usb-Plantronics_Poly_BT600_064e0dab8f85441c958b643739ca9cdc-00 output:analog-stereo
-}
-
-muteHeadset() {
-  pactl set-card-profile alsa_card.usb-Plantronics_Poly_BT600_064e0dab8f85441c958b643739ca9cdc-00 output:analog-stereo+input:mono-fallback
-
+muteHeadphones() {
   amixer set Capture nocap
 }
 
-unmuteHeadset() {
-  pactl set-card-profile alsa_card.usb-Plantronics_Poly_BT600_064e0dab8f85441c958b643739ca9cdc-00 output:analog-stereo+input:mono-fallback
-
+unmuteHeadphones() {
   amixer set Capture cap
 }
 
