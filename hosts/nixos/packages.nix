@@ -69,6 +69,7 @@ in
     tokei
     deno
     nodejs_23
+    pnpm
     go
     gcc # Needed for `go test -race`
     graphviz # used by pprof
