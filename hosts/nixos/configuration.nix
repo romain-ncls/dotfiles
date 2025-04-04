@@ -7,6 +7,11 @@ let
   allowedPorts = [
     5353 # mDNS
     5359 # quickshare
+
+    # playing
+    4045
+    4046
+    4047
   ];
 in
 {
