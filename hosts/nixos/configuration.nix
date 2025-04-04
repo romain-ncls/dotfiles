@@ -24,7 +24,7 @@ in
   networking.hostName = "nixos"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
-  boot.kernelPackages = pkgs.linuxPackages_6_13;
+  boot.kernelPackages = pkgs.linuxPackages_6_14;
 
   # Configure network proxy if necessary
   # networking.proxy.default = "http://user:password@proxy:port/";
