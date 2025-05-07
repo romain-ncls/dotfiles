@@ -73,6 +73,7 @@ in
     go
     gcc # Needed for `go test -race`
     graphviz # used by pprof
+    jdk # Java LTS
 
     gparted
     vlc
