@@ -116,16 +116,19 @@ in
     ssh.askPassword = pkgs.lib.mkForce "${pkgs.kdePackages.ksshaskpass.out}/bin/ksshaskpass";
   };
 
-  systemd.user.services.add_ssh_keys = {
-    script = ''
-      ssh-add $HOME/.ssh/id_ed25519
-    '';
-    wantedBy = [ "multi-user.target" ]; # starts after login
-  };
+  # systemd.user.services.add_ssh_keys = {
+  #   script = ''
+  #     ssh-add $HOME/.ssh/id_ed25519
+  #   '';
+  #   wantedBy = [ "multi-user.target" ]; # starts after login
+  # };
 
-  environment.sessionVariables = {
-    SSH_ASKPASS_REQUIRE = "prefer";
-  };
+  # environment.sessionVariables = {
+  #   SSH_ASKPASS_REQUIRE = "prefer";
+  # };
+  # services.gnome.gnome-keyring.enable = true;
+  # security.pam.services.sddm.enableGnomeKeyring = true;
+  # programs.ssh.startAgent = true;
 
   #############################################################################
   ################################### nix-ld ##################################
