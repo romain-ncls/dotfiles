@@ -9,6 +9,8 @@ main() {
     unmute
   elif [[ "$mute" == "no-mic" ]]; then
     nomic
+  elif [[ "$mute" == "afk" ]]; then
+    afk
   else
     echo "no command!"
   fi
@@ -57,12 +59,21 @@ nomic() {
   fi
 }
 
+afk() {
+  afkClients
+  qdbus org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Pause || :
+}
+
 muteClients() {
   curl -X POST http://127.0.0.1:4815/mute
 }
 
 unmuteClients() {
   curl -X POST http://127.0.0.1:4815/unmute
+}
+
+afkClients() {
+  curl -X POST http://127.0.0.1:4815/afk
 }
 
 muteHeadphones() {

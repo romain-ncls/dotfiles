@@ -4,6 +4,10 @@ function getMuteBtn(): HTMLButtonElement {
   return document.querySelector('div[class*="micButtonParent"] > button') as HTMLButtonElement
 }
 
+function getAfkButton(): HTMLButtonElement {
+  return document.querySelector('div[class*="micButtonParent"] + button[role="switch"]') as HTMLButtonElement
+}
+
 function connect() {
   const eventSource = new EventSource('http://127.0.0.1:4815/sse');
   eventSource.addEventListener('error', () => {
@@ -14,11 +18,23 @@ function connect() {
     const btn = getMuteBtn()
     if (btn.ariaChecked == 'false') {
       btn.click()
+    } else {
+      const afkBtn = getAfkButton()
+      if (afkBtn.ariaChecked == 'true') {
+        afkBtn.click()
+      }
     }
   });
   eventSource.addEventListener('unmute', () => {
     const btn = getMuteBtn()
     if (btn.ariaChecked == 'true') {
+      btn.click()
+    }
+
+  });
+  eventSource.addEventListener('afk', () => {
+    const btn = getAfkButton()
+    if (btn.ariaChecked == 'false') {
       btn.click()
     }
   });

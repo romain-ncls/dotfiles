@@ -34,6 +34,10 @@ router.post('/mute', (ctx) => {
   broadcast('mute')
   ctx.response.status = 204
 })
+router.post('/afk', (ctx) => {
+  broadcast('afk')
+  ctx.response.status = 204
+})
 
 const app = new Application();
 app.use(router.routes());
