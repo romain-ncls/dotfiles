@@ -62,6 +62,7 @@ in
     konsave # KDE settings exporter.
 
     git
+    gh # github CLI
     nixfmt-rfc-style # nix formatter
     nil # nix language server
     jq
