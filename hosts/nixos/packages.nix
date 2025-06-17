@@ -58,6 +58,7 @@ in
     bc # Calculator used by `~/scripts/mutectl`
     caligula # ISO burner TUI
     ffmpeg # Used for conversion to mono in the soundbox
+    xdotool # Used for the "focus discord" shortcut
 
     konsave # KDE settings exporter.
 
