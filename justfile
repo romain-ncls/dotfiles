@@ -24,15 +24,15 @@ build:
 
 # build and apply temporarily
 test:
-  nixos-rebuild test --flake . --use-remote-sudo
+  nixos-rebuild test --flake . --sudo
 
 # build and switch now
 deploy:
-  nixos-rebuild switch --flake . --use-remote-sudo
+  nixos-rebuild switch --flake . --sudo
 
 # build and switch on boot
 deploy-boot:
-  nixos-rebuild boot --flake . --use-remote-sudo
+  nixos-rebuild boot --flake . --sudo
 
 # update flake
 up:
@@ -63,10 +63,10 @@ gc-generations:
 
 
 # deploy:
-#   nixos-rebuild switch --flake . --use-remote-sudo
+#   nixos-rebuild switch --flake . --sudo
 
 # debug:
-#   nixos-rebuild switch --flake . --use-remote-sudo --show-trace --verbose
+#   nixos-rebuild switch --flake . --sudo --show-trace --verbose
 
 # up:
 #   nix flake update
