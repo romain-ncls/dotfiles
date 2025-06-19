@@ -95,7 +95,7 @@ unmuteEar2() {
 isVolumeTooMuch() {
   volume=`qdbus org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Volume || echo 0`
 
-  isMore=`echo "$volume > 0.45" | bc -l`
+  isMore=`echo "$volume > 0.31" | bc -l`
 
   [ $isMore -eq '1' ] && return 0 || return 1
 }
