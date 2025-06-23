@@ -3,8 +3,7 @@ pkgs.stdenv.mkDerivation {
   pname = "mutectl";
   version = "0.0.1";
 
-  # buildInputs = [ pkgs.deno ];
-  buildInputs = [ (pkgs.callPackage ../../vendor/deno/package.nix { }) ];
+  buildInputs = [ pkgs.deno ];
 
   src = ./.;
 

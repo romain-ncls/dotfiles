@@ -69,8 +69,7 @@ in
     jq
     just
     tokei
-    # deno
-    (pkgs.callPackage ../../vendor/deno/package.nix { })
+    deno
     nodePackages_latest.nodejs
     pnpm
     go
