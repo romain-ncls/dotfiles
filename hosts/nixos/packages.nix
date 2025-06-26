@@ -91,6 +91,7 @@ in
     helvum # PipeWire Patchbay
     easyeffects # Audio effects for PipeWire applications
     rquickshare
+    readest
   ];
 
   services.mutectl.enable = true;
