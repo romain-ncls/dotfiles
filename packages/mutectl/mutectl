@@ -7,8 +7,6 @@ main() {
     mute
   elif [[ "$mute" == "unmute" ]]; then
     unmute
-  elif [[ "$mute" == "no-mic" ]]; then
-    nomic
   elif [[ "$mute" == "afk" ]]; then
     afk
   else
@@ -18,44 +16,15 @@ main() {
 
 mute() {
   muteClients
-
-  defaultDevice=$(pactl get-default-sink)
-  if [[ "$defaultDevice" =~ "Dell_Inc_AWPRO" ]]; then
-    muteHeadphones
-  elif [[ "$defaultDevice" =~ "2C_BE_EB_47_6F_2A" ]]; then
-    nomicEar2
-  else
-    echo 'unknown device!'
-  fi
+  muteHeadphones
 }
 
 unmute() {
   unmuteClients
-
-  defaultDevice=$(pactl get-default-sink)
-  if [[ "$defaultDevice" =~ "Dell_Inc_AWPRO" ]]; then
-    unmuteHeadphones
-  elif [[ "$defaultDevice" =~ "2C_BE_EB_47_6F_2A" ]]; then
-    unmuteEar2
-  else
-    echo 'unknown device!'
-  fi
+  unmuteHeadphones
 
   if isVolumeTooMuch; then
     qdbus org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Pause
-  fi
-}
-
-nomic() {
-  muteClients
-
-  defaultDevice=$(pactl get-default-sink)
-  if [[ "$defaultDevice" =~ "Dell_Inc_AWPRO" ]]; then
-    muteHeadphones
-  elif [[ "$defaultDevice" =~ "2C_BE_EB_47_6F_2A" ]]; then
-    nomicEar2
-  else
-    echo 'unknown device!'
   fi
 }
 
@@ -82,14 +51,6 @@ muteHeadphones() {
 
 unmuteHeadphones() {
   amixer set Capture cap
-}
-
-nomicEar2() {
-  pactl set-card-profile bluez_card.2C_BE_EB_47_6F_2A a2dp-sink
-}
-
-unmuteEar2() {
-  pactl set-card-profile bluez_card.2C_BE_EB_47_6F_2A headset-head-unit
 }
 
 isVolumeTooMuch() {
