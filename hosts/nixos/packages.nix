@@ -70,7 +70,8 @@ in
     just
     tokei
     deno
-    nodePackages_latest.nodejs
+    # nodePackages_latest.nodejs
+    nodejs
     pnpm
     go
     gcc # Needed for `go test -race`
@@ -114,7 +115,8 @@ in
 
   programs = {
     ssh.startAgent = true;
-    ssh.askPassword = pkgs.lib.mkForce "${pkgs.kdePackages.ksshaskpass.out}/bin/ksshaskpass";
+    # ssh.askPassword = pkgs.lib.mkForce "${pkgs.kdePackages.ksshaskpass.out}/bin/ksshaskpass";
+    # ssh.askPassword = pkgs.lib.mkForce "${pkgs.x11_ssh_askpass}/libexec/x11-ssh-askpass";
   };
 
   # systemd.user.services.add_ssh_keys = {
