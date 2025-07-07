@@ -1,7 +1,7 @@
 #!/usr/bin/env -S deno -q run --allow-net
-import { ServerSentEvent, ServerSentEventTarget } from 'jsr:@oak/commons@^1.0/server_sent_event';
-import { Application } from 'jsr:@oak/oak/application';
-import { Router } from "jsr:@oak/oak/router";
+import { ServerSentEvent, ServerSentEventTarget } from 'jsr:@oak/commons@1.0.1/server_sent_event';
+import { Application } from 'jsr:@oak/oak@17.1.5/application';
+import { Router } from "jsr:@oak/oak@17.1.5/router";
 
 const HTTP_PORT = 4815
 
