@@ -17,6 +17,10 @@ let
       );
     }
   );
+
+  golandFixed = pkgs.jetbrains.goland.override {
+    jdk = pkgs.jdk;
+  };
 in
 {
   fonts.packages = with pkgs; [
@@ -81,7 +85,8 @@ in
     vlc
     brave
     vscode
-    jetbrains.goland
+    # jetbrains.goland
+    golandFixed # https://github.com/NixOS/nixpkgs/issues/425328 or https://github.com/NixOS/nixpkgs/pull/419026
     steam-run # use to start remote code with me
     gitkraken
     postman
