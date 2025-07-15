@@ -90,7 +90,7 @@ in
     spotify
     helvum # PipeWire Patchbay
     easyeffects # Audio effects for PipeWire applications
-    rquickshare
+    packet # QuickShare client
     readest
   ];
 
