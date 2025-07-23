@@ -33,9 +33,13 @@ function connect() {
 
   });
   eventSource.addEventListener('afk', () => {
-    const btn = getAfkButton()
-    if (btn.ariaChecked == 'false') {
-      btn.click()
+    const muteBtn = getMuteBtn()
+    const afkBtn = getAfkButton()
+    if (muteBtn.ariaChecked == 'false') {
+      muteBtn.click()
+    }
+    if (afkBtn.ariaChecked == 'false') {
+      afkBtn.click()
     }
   });
 }
