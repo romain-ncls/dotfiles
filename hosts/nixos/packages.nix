@@ -106,6 +106,26 @@ in
 
   services.atd.enable = true;
 
+  systemd.user.services.easyeffects = {
+    enable = true;
+    description = "Easyeffects daemon";
+
+    after = [ "graphical-session.target" ];
+    wantedBy = [ "graphical-session.target" ];
+    requires = [ "dbus.service" ];
+    partOf = [
+      "graphical-session.target"
+      "pipewire.service"
+    ];
+
+    serviceConfig = {
+      ExecStart = "${pkgs.easyeffects}/bin/easyeffects --gapplication-service";
+      ExecStop = "${pkgs.easyeffects}/bin/easyeffects --quit";
+      Restart = "on-failure";
+      RestartSec = 5;
+    };
+  };
+
   #############################################################################
   ############################ SSH passphrase setup ###########################
   #############################################################################
