@@ -35,7 +35,6 @@ in
     libva-utils
     libnotify # For `notify-send`
     alsa-utils # needed for `amixer` for mutectl
-    # at # echo 'notify-send -u critical "Reminder" "GitLab Update"' | at 15:15
     vim
     wget
     curl
@@ -104,7 +103,7 @@ in
 
   virtualisation.docker.enable = true;
 
-  services.atd.enable = true;
+  services.atd.enable = true; # echo 'notify-send -u critical "Reminder" "GitLab Update"' | at 15:15
 
   systemd.user.services.easyeffects = {
     enable = true;
