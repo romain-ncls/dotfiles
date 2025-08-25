@@ -81,6 +81,7 @@ in
     brave
     vscode
     jetbrains.goland
+    jetbrains.webstorm
     steam-run # use to start remote code with me
     gitkraken
     postman
@@ -104,6 +105,8 @@ in
   virtualisation.docker.enable = true;
 
   services.atd.enable = true; # echo 'notify-send -u critical "Reminder" "GitLab Update"' | at 15:15
+
+  programs.droidcam.enable = true;
 
   systemd.user.services.easyeffects = {
     enable = true;
