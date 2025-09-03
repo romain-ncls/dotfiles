@@ -50,8 +50,9 @@ in
     unzip
     nmap
     ncdu
-    bemenu # Menu picker for soundbox `~/scripts/soundbox`
+    bemenu # dmenu for the soundboard
     bemoji # Bemenu emoji picker.
+    tofi # Alternative dmenu for the soundboard
     wl-clipboard # Wayland copy/paste support for bemenu
     wtype # Wayland typing support for bemenu. # doesn't work
     bc # Calculator used by `~/scripts/mutectl`

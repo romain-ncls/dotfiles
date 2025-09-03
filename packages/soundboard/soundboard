@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+set -e
+
+SOUNDBOX_FOLDER="$HOME/Music/soundbox"
+DEFAULT_VOLUME="0.1"
+
+DMENU="bemenu" # tofi or bemenu
+GUI_HIST_FILE=$HOME/.local/state/soundboard-history
+LAST_PLAYED_FILE=$HOME/.local/state/soundboard-last
+
+
+usage() {
+  progName=$(basename $0)
+  echo "Usage: $progName <subcommand>"
+  echo ""
+  echo "Commands:"
+  echo "  gui                Display a bemenu sound picker"
+  echo "  play <filepath>    Play the provided file"
+  echo "  replay             Replay the last file"
+  echo "  stop               Stop all playing files"
+  echo ""
+}
+
+###########################################################
+
+custom_bemenu() {
+  bemenu -i -l 20 --fn "NotoSans Regular 18" -p "SoundBox" \
+  --nb "#0d1117CC" \
+  --ab "#0d1117CC" \
+  --sb "#0d1117CC" \
+  --hb "#0d1117CC" \
+  --hf "#ff4d4f" \
+  --tf "#CACACA" \
+  --counter always
+}
+
+custom_tofi() {
+    # --history-file=$GUI_HIST_FILE \
+  tofi \
+    --prompt-text="SoundBox:  " \
+    --width=1880 \
+    --height=865 \
+    --corner-radius=8 \
+    --border-width=0 \
+    --outline-width=0 \
+    --margin-top=20 \
+    --margin-left=20 \
+    --margin-right=20 \
+    --result-spacing=5 \
+    --num-results=20 \
+    --font=NotoSans \
+    --font-size=18 \
+    --background-color="#0d1117CC" \
+    --selection-color="#ff4d4f"
+}
+
+###########################################################
+
+gui() {
+  file=$(ls -r $SOUNDBOX_FOLDER | custom_$DMENU)
+
+  if [[ $file ]]; then
+    play $SOUNDBOX_FOLDER/$file
+  fi
+}
+
+play() {
+  file=$1
+
+  if [ -z "$file" ]; then
+    echo "Missing filepath"
+    exit 1
+  fi
+
+  if [ ! -f $file ]; then
+    echo "File not found: $file"
+  fi
+
+  volume=$DEFAULT_VOLUME
+  fileVolume=$(echo $file | sed -n 's/.*\.v\([0-9\_]\+\).*/\1/p' | sed 's/_/./g')
+  if [ -n "${fileVolume}" ]; then
+    volume=$fileVolume
+  fi
+
+  echo "Playing: $file"
+  echo $file > $LAST_PLAYED_FILE
+
+  # media-role Soundboard is used to avoid using the same volume as other app with role Music like Spotify.
+  # This is usefull to always have the sound at 100% for the soundboard.
+
+  # Play to discord
+  pw-cli ls Node | grep -A1 'node.name = "WEBRTC VoiceEngine"' | grep -q "Stream/Input/Audio" && {
+    pw-play --media-role "Soundboard" --volume $volume --target "WEBRTC VoiceEngine" $file &
+  }
+
+  # Play to Microsoft Teams (if using brave browser)
+  # pw-cli ls Node | grep -A1 'node.name = "Brave input"' | grep -q "Stream/Input/Audio" && {
+  #   pw-play --media-role "Soundboard" --volume $VOLUME --target "Brave input" $file &
+  # }
+
+  pw-play --media-role "Soundboard" --volume $volume $file
+}
+
+replay() {
+  # pkill pw-play
+  play $(cat $LAST_PLAYED_FILE)
+}
+
+stop() {
+  pkill pw-play
+}
+
+###########################################################
+
+subcommand=$1
+if [ -z "$subcommand" ]; then
+  usage
+  exit 1
+fi
+
+shift
+
+case $subcommand in
+  "-h" | "--help")
+    usage
+  ;;
+  "gui")
+    gui $@
+  ;;
+  "play")
+    play $@
+  ;;
+  "replay")
+    replay $@
+  ;;
+  "stop")
+    stop $@
+  ;;
+  *)
+    echo "Unknown command: $subcommand"
+    echo ""
+    usage
+  ;;
+esac
