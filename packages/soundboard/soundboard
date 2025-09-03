@@ -35,7 +35,6 @@ custom_bemenu() {
 }
 
 custom_tofi() {
-    # --history-file=$GUI_HIST_FILE \
   tofi \
     --prompt-text="SoundBox:  " \
     --width=1880 \
@@ -52,6 +51,7 @@ custom_tofi() {
     --font-size=18 \
     --background-color="#0d1117CC" \
     --selection-color="#ff4d4f"
+    # --history-file=$GUI_HIST_FILE
 }
 
 ###########################################################
