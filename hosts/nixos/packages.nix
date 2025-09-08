@@ -109,6 +109,8 @@ in
 
   programs.droidcam.enable = true;
 
+  programs.steam.enable = true;
+
   systemd.user.services.easyeffects = {
     enable = true;
     description = "Easyeffects daemon";
