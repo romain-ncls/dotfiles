@@ -60,6 +60,7 @@ in
     ffmpeg # Used for conversion to mono in the soundbox
     xdotool # Used for the "focus discord" shortcut
 
+    kdePackages.qtwebengine # needed by HTML wallpaper
     konsave # KDE settings exporter.
 
     git
