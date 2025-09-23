@@ -62,6 +62,7 @@ in
 
     kdePackages.qtwebengine # needed by HTML wallpaper
     konsave # KDE settings exporter.
+    kdePackages.kdeconnect-kde
 
     git
     gh # github CLI

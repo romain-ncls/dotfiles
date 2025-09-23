@@ -13,6 +13,12 @@ let
     4046
     4047
   ];
+  allowedPortRanges = [
+    {
+      from = 1714;
+      to = 1764;
+    } # KDE Connect
+  ];
 in
 {
   imports = [
@@ -125,6 +131,8 @@ in
   # Open ports in the firewall.
   networking.firewall.allowedTCPPorts = allowedPorts;
   networking.firewall.allowedUDPPorts = allowedPorts;
+  networking.firewall.allowedTCPPortRanges = allowedPortRanges;
+  networking.firewall.allowedUDPPortRanges = allowedPortRanges;
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
 

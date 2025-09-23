@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+msg=$(qdbus org.freedesktop.ScreenSaver /ScreenSaver GetActive | grep -q true && echo "Already locked" || echo "Successfully locked")
+
+loginctl lock-session && mutectl afk && kdeconnect-cli -n 'OnePlus 13' --ping-msg "$msg"
