@@ -2,7 +2,7 @@
 set -e
 
 SOUNDBOX_FOLDER="$HOME/Music/soundbox"
-DEFAULT_VOLUME="0.1"
+DEFAULT_VOLUME="0,1"
 
 DMENU="bemenu" # tofi or bemenu
 GUI_HIST_FILE=$HOME/.local/state/soundboard-history
@@ -77,7 +77,7 @@ play() {
   fi
 
   volume=$DEFAULT_VOLUME
-  fileVolume=$(echo $file | sed -n 's/.*\.v\([0-9\_]\+\).*/\1/p' | sed 's/_/./g')
+  fileVolume=$(echo $file | sed -n 's/.*\.v\([0-9\_]\+\).*/\1/p' | sed 's/_/,/g')
   if [ -n "${fileVolume}" ]; then
     volume=$fileVolume
   fi
