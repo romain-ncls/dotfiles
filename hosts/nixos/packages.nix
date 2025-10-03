@@ -78,6 +78,7 @@ in
     gcc # Needed for `go test -race`
     graphviz # used by pprof
     jdk # Java LTS
+    uv # Python dependency manager
 
     gparted
     vlc
