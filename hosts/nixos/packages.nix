@@ -84,13 +84,13 @@ in
     vlc
     brave
     vscode
-    jetbrains.goland
-    jetbrains.webstorm
+    # jetbrains.goland
+    # jetbrains.webstorm
     steam-run # use to start remote code with me
     gitkraken
     postman
     discord-modded
-    flameshot
+    # flameshot
     spotify
     helvum # PipeWire Patchbay
     easyeffects # Audio effects for PipeWire applications
