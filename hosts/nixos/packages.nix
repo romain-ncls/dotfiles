@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, pkgs-7df7ff, ... }:
 let
   muteCtlPlugin = ../../packages/mutectl/mutectl-vencord-plugin.ts;
   discord-modded = (
@@ -19,6 +19,12 @@ let
   );
 in
 {
+  nixpkgs.overlays = [
+    (self: super: {
+      jetbrains = pkgs-7df7ff.jetbrains;
+    })
+  ];
+
   fonts.packages = with pkgs; [
     noto-fonts
     noto-fonts-cjk-sans
@@ -84,8 +90,9 @@ in
     vlc
     brave
     vscode
-    # jetbrains.goland
-    # jetbrains.webstorm
+    jetbrains.goland
+    jetbrains.webstorm
+    jetbrains.pycharm-professional
     steam-run # use to start remote code with me
     gitkraken
     postman
