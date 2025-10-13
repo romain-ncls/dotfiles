@@ -19,12 +19,6 @@ let
   );
 in
 {
-  nixpkgs.overlays = [
-    (self: super: {
-      jetbrains = pkgs-7df7ff.jetbrains;
-    })
-  ];
-
   fonts.packages = with pkgs; [
     noto-fonts
     noto-fonts-cjk-sans
