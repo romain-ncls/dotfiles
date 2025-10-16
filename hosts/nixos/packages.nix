@@ -1,4 +1,4 @@
-{ pkgs, pkgs-7df7ff, ... }:
+{ pkgs, ... }:
 let
   muteCtlPlugin = ../../packages/mutectl/mutectl-vencord-plugin.ts;
   discord-modded = (
