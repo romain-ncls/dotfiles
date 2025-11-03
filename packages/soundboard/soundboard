@@ -95,7 +95,7 @@ play() {
 
   # Play to Microsoft Teams (if using brave browser)
   # pw-cli ls Node | grep -A1 'node.name = "Brave input"' | grep -q "Stream/Input/Audio" && {
-  #   pw-play --media-role "Soundboard" --volume $VOLUME --target "Brave input" $file &
+  #   pw-play --media-role "Soundboard" --volume $volume --target "Brave input" $file &
   # }
 
   pw-play --media-role "Soundboard" --volume $volume $file
