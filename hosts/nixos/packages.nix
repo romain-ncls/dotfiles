@@ -89,6 +89,7 @@ in
     jetbrains.goland
     jetbrains.webstorm
     jetbrains.pycharm-professional
+    jetbrains.datagrip
     steam-run # use to start remote code with me
     gitkraken
     postman
