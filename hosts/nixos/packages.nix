@@ -79,6 +79,8 @@ in
     graphviz # used by pprof
     jdk # Java LTS
     uv # Python dependency manager
+    kind # Kubernetes in Docker
+    kubectl
 
     gparted
     vlc
