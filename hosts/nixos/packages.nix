@@ -59,6 +59,7 @@ in
     caligula # ISO burner TUI
     ffmpeg # Used for conversion to mono in the soundbox
     xdotool # Used for the "focus discord" shortcut
+    mkpasswd # To hash bcrypt passwords
 
     kdePackages.qtwebengine # needed by HTML wallpaper
     konsave # KDE settings exporter.
