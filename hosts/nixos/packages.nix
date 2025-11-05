@@ -83,6 +83,7 @@ in
     kind # Kubernetes in Docker
     kubectl
 
+    bitwarden-desktop
     gparted
     vlc
     brave
