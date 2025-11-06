@@ -70,6 +70,7 @@ in
     nixfmt-rfc-style # nix formatter
     nil # nix language server
     jq
+    yq-go
     just
     tokei
     deno
