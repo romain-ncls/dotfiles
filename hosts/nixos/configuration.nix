@@ -131,6 +131,10 @@ in
   # Enable the OpenSSH daemon.
   # services.openssh.enable = true;
 
+  networking.extraHosts = ''
+    192.168.1.15 gitlab.soeman.fr
+  '';
+
   # Open ports in the firewall.
   networking.firewall.allowedTCPPorts = allowedPorts;
   networking.firewall.allowedUDPPorts = allowedPorts;
