@@ -150,11 +150,11 @@ in
   # programs.ssh.startAgent = true;
   # security.pam.services.sddm.enableGnomeKeyring = true;
 
-  programs = {
-    ssh.startAgent = true;
-    # ssh.askPassword = pkgs.lib.mkForce "${pkgs.kdePackages.ksshaskpass.out}/bin/ksshaskpass";
-    # ssh.askPassword = pkgs.lib.mkForce "${pkgs.x11_ssh_askpass}/libexec/x11-ssh-askpass";
-  };
+  # programs = {
+  #   ssh.startAgent = true;
+  #   # ssh.askPassword = pkgs.lib.mkForce "${pkgs.kdePackages.ksshaskpass.out}/bin/ksshaskpass";
+  #   # ssh.askPassword = pkgs.lib.mkForce "${pkgs.x11_ssh_askpass}/libexec/x11-ssh-askpass";
+  # };
 
   # systemd.user.services.add_ssh_keys = {
   #   script = ''
