@@ -92,7 +92,7 @@ in
     vscode
     jetbrains.goland
     jetbrains.webstorm
-    jetbrains.pycharm-professional
+    jetbrains.pycharm
     jetbrains.datagrip
     steam-run # use to start remote code with me
     gitkraken
