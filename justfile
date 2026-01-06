@@ -2,6 +2,8 @@
 default:
     @just --list --unsorted
 
+option *ARGS:
+  nixos-option --flake . {{ARGS}}
 
 # build system and print diff with current-system
 diff:
@@ -25,14 +27,17 @@ build:
 # build and apply temporarily
 test:
   nixos-rebuild test --flake . --sudo
+alias apply := test
 
 # build and switch now
 deploy:
   nixos-rebuild switch --flake . --sudo
+alias switch := deploy
 
 # build and switch on boot
 deploy-boot:
   nixos-rebuild boot --flake . --sudo
+alias switch-boot := deploy-boot
 
 # update flake
 up:
