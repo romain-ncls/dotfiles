@@ -67,7 +67,7 @@ in
 
     git
     gh # github CLI
-    nixfmt-rfc-style # nix formatter
+    nixfmt # nix formatter
     nil # nix language server
     jq
     yq-go
