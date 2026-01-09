@@ -84,6 +84,7 @@ in
     kind # Kubernetes in Docker
     kubectl
     yamllint # YAML linter use by Infra repo git hooks
+    pkgs._custom.mysql-shell-docker # mysql shell in docker
 
     bitwarden-desktop
     gparted
