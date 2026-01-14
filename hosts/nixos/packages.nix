@@ -60,8 +60,6 @@ in
     ffmpeg # Used for conversion to mono in the soundbox
     xdotool # Used for the "focus discord" shortcut
     mkpasswd # To hash bcrypt passwords
-    bitwarden-cli
-    bws # Bitwarden Secret Manager CLI
 
     kdePackages.qtwebengine # needed by HTML wallpaper
     konsave # KDE settings exporter.
@@ -87,6 +85,10 @@ in
     kubectl
     yamllint # YAML linter use by Infra repo git hooks
     pkgs._custom.mysql-shell-docker # mysql shell in docker
+    bitwarden-cli
+    bws # Bitwarden Secret Manager CLI
+    s5cmd # s3 client
+    age # backup encryption
 
     bitwarden-desktop
     gparted
