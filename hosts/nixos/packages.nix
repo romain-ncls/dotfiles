@@ -61,6 +61,7 @@ in
     xdotool # Used for the "focus discord" shortcut
     mkpasswd # To hash bcrypt passwords
     bitwarden-cli
+    bws # Bitwarden Secret Manager CLI
 
     kdePackages.qtwebengine # needed by HTML wallpaper
     konsave # KDE settings exporter.
