@@ -1,3 +1,11 @@
 #!/usr/bin/env bash
 
-docker run -it --rm -v $HOME:$HOME -v /tmp:/tmp -w $(pwd) --network host mysql:8.4 mysqlsh --no-defaults "$@"
+docker run -it --rm \
+  -v $HOME:$HOME \
+  -e HOME="$HOME" \
+  -v /tmp:/tmp \
+  -w $(pwd) \
+  --user "$(id -u):$(id -g)" \
+  --network host \
+  mysql:8.4 \
+  mysqlsh --no-defaults "$@"
