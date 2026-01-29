@@ -1,23 +1,4 @@
 { pkgs, ... }:
-let
-  muteCtlPlugin = ../../packages/mutectl/mutectl-vencord-plugin.ts;
-  discord-modded = (
-    pkgs.discord.override {
-      withOpenASAR = true;
-      withVencord = true;
-      vencord = (
-        pkgs.vencord.overrideAttrs (
-          finalAttrs: previousAttrs: {
-            preBuild = ''
-              mkdir src/userplugins
-              cp ${muteCtlPlugin} src/userplugins/mutectl.ts
-            '';
-          }
-        )
-      );
-    }
-  );
-in
 {
   fonts.packages = with pkgs; [
     noto-fonts
@@ -103,7 +84,7 @@ in
     steam-run # use to start remote code with me
     gitkraken
     postman
-    discord-modded
+    _custom.discord
     # flameshot
     spotify
     helvum # PipeWire Patchbay

@@ -9,5 +9,6 @@
   "prettier.singleQuote": true,
   "[nix]": {
     "editor.formatOnSave": true
-  }
+  },
+  "nix.enableLanguageServer": true
 }

@@ -1,7 +1,7 @@
 { pkgs, ... }:
 let
   customPkgs = {
-    mutectl = pkgs.callPackage ./mutectl { };
+    inherit (pkgs.callPackage ./mutectl { }) mutectl discord;
     mysql-shell-docker = pkgs.callPackage ./mysql-shell-docker { };
   };
 in
