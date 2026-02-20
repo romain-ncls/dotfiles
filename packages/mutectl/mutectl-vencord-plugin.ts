@@ -1,11 +1,11 @@
 import definePlugin from '@utils/types';
 
 function getMuteBtn(): HTMLButtonElement {
-  return document.querySelector('div[class*="micButtonParent"]:first-of-type > button[role="switch"]') as HTMLButtonElement
+  return document.querySelector('div[class*="audioButtonParent"]:first-of-type > button[role="switch"]') as HTMLButtonElement
 }
 
 function getAfkButton(): HTMLButtonElement {
-  return document.querySelector('div[class*="micButtonParent"]:last-of-type > button[role="switch"]') as HTMLButtonElement
+  return document.querySelector('div[class*="audioButtonParent"]:last-of-type > button[role="switch"]') as HTMLButtonElement
 }
 
 function connect() {
