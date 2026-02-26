@@ -13,6 +13,8 @@
   ];
 
   environment.systemPackages = with pkgs; [
+    usbutils
+    pciutils
     libva-utils
     libnotify # For `notify-send`
     vim
@@ -69,6 +71,7 @@
     bws # Bitwarden Secret Manager CLI
     s5cmd # s3 client
     age # backup encryption
+    # claude-code
 
     bitwarden-desktop
     gparted
