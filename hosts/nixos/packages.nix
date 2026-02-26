@@ -15,7 +15,6 @@
   environment.systemPackages = with pkgs; [
     libva-utils
     libnotify # For `notify-send`
-    alsa-utils # needed for `amixer` for mutectl
     vim
     wget
     curl
@@ -36,7 +35,6 @@
     tofi # Alternative dmenu for the soundboard
     wl-clipboard # Wayland copy/paste support for bemenu
     wtype # Wayland typing support for bemenu. # doesn't work
-    bc # Calculator used by `~/scripts/mutectl`
     caligula # ISO burner TUI
     ffmpeg # Used for conversion to mono in the soundbox
     xdotool # Used for the "focus discord" shortcut

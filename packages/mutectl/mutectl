@@ -47,19 +47,17 @@ afkClients() {
 }
 
 muteHeadphones() {
-  amixer set Capture nocap
+  wpctl set-mute @DEFAULT_SOURCE@ 1
 }
 
 unmuteHeadphones() {
-  amixer set Capture cap
+  wpctl set-mute @DEFAULT_SOURCE@ 0
 }
 
 isVolumeTooMuch() {
-  volume=`qdbus org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Volume || echo 0`
+  volume=$(qdbus org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Volume || echo 0)
 
-  isMore=`echo "$volume > 0.31" | bc -l`
-
-  [ $isMore -eq '1' ] && return 0 || return 1
+  awk "BEGIN { exit !($volume > 0.31) }" && return 0 || return 1
 }
 
 main
