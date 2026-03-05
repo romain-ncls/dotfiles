@@ -20,7 +20,7 @@
     vim
     wget
     curl
-    neofetch
+    fastfetch
     bat
     eza
     doggo
