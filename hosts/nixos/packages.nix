@@ -88,7 +88,7 @@
     _custom.discord
     # flameshot
     spotify
-    helvum # PipeWire Patchbay
+    crosspipe # PipeWire graph
     easyeffects # Audio effects for PipeWire applications
     packet # QuickShare client
     readest
