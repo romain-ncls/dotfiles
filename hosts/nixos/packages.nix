@@ -46,6 +46,13 @@
     kdePackages.qtwebengine # needed by HTML wallpaper
     konsave # KDE settings exporter.
     kdePackages.kdeconnect-kde
+    (pkgs.kdePackages.spectacle.override {
+      # Add OCR support to spectacle
+      tesseractLanguages = [
+        "eng"
+        "fra"
+      ];
+    })
 
     git
     gh # github CLI
@@ -129,6 +136,11 @@
       RestartSec = 5;
     };
   };
+
+  services.udev.extraRules = ''
+    # Dell AW Pro headset (413c:a529)
+    SUBSYSTEM=="hidraw", ATTRS{idVendor}=="413c", ATTRS{idProduct}=="a529", TAG+="uaccess"
+  '';
 
   #############################################################################
   ############################ SSH passphrase setup ###########################
