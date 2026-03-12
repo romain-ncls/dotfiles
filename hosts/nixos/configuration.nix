@@ -30,6 +30,17 @@ in
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
+  boot.initrd.systemd.enable = true;
+  boot.plymouth.enable = true;
+  boot.consoleLogLevel = 3;
+  boot.initrd.verbose = false;
+  boot.kernelParams = [
+    "quiet"
+    "udev.log_level=3"
+    "systemd.show_status=auto"
+  ];
+  # boot.loader.timeout = 0;
+
   boot.initrd.luks.devices."luks-34dd4630-caa0-4174-a47b-beb193b64fd2".device =
     "/dev/disk/by-uuid/34dd4630-caa0-4174-a47b-beb193b64fd2";
   networking.hostName = "nixos"; # Define your hostname.
