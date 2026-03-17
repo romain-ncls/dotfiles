@@ -73,7 +73,7 @@
     kind # Kubernetes in Docker
     kubectl
     yamllint # YAML linter use by Infra repo git hooks
-    pkgs._custom.mysql-shell-docker # mysql shell in docker
+    mysql-shell
     bitwarden-cli
     bws # Bitwarden Secret Manager CLI
     s5cmd # s3 client
