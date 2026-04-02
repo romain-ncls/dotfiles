@@ -63,7 +63,7 @@
     just
     tokei
     deno
-    nodePackages_latest.nodejs
+    nodejs_latest
     pnpm
     go
     gcc # Needed for `go test -race`
