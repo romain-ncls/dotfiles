@@ -99,6 +99,7 @@
     easyeffects # Audio effects for PipeWire applications
     packet # QuickShare client
     readest
+    obsidian
   ];
 
   services.mutectl.enable = true;
