@@ -78,7 +78,7 @@
     bws # Bitwarden Secret Manager CLI
     s5cmd # s3 client
     age # backup encryption
-    # claude-code
+    claude-code
 
     bitwarden-desktop
     gparted
