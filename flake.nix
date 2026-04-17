@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
-    hister.url = "github:asciimoo/hister";
+    hister.url = "github:asciimoo/hister?rev=81e401d069b7ed9ced35827db3fe238b11fb39cc";
   };
 
   outputs =
