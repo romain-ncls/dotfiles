@@ -138,7 +138,14 @@
     };
   };
 
-  services.hister.enable = true;
+  services.hister = {
+    enable = true;
+    config = {
+      server = {
+        address = "127.0.0.1:44333";
+      };
+    };
+  };
 
   services.udev.extraRules = ''
     # Dell AW Pro headset (413c:a529)
