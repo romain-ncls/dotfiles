@@ -147,10 +147,7 @@
     };
   };
 
-  services.udev.extraRules = ''
-    # Dell AW Pro headset (413c:a529)
-    SUBSYSTEM=="hidraw", ATTRS{idVendor}=="413c", ATTRS{idProduct}=="a529", TAG+="uaccess"
-  '';
+  programs.awpro.enable = true;
 
   #############################################################################
   ############################ SSH passphrase setup ###########################
