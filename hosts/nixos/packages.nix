@@ -80,7 +80,6 @@
     age # backup encryption
     claude-code
 
-    bitwarden-desktop
     gparted
     vlc
     brave
