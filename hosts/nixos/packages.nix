@@ -79,6 +79,8 @@
     s5cmd # s3 client
     age # backup encryption
     claude-code
+    python3 # for claude code plugins
+    bun # for claude code plugins
 
     gparted
     vlc
