@@ -85,6 +85,7 @@ in
 
   services.xserver.videoDrivers = [ "modesetting" ];
   hardware.graphics.enable = true;
+  hardware.cpu.intel.npu.enable = true;
 
   # Enable the KDE Plasma Desktop Environment.
   services.displayManager.plasma-login-manager.enable = true;
