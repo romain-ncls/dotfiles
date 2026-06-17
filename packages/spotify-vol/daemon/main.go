@@ -1,144 +1,113 @@
-// Global Super+Shift+Scroll -> Spotify volume.
+// spotify-vol controls Spotify's volume over its MPRIS DBus interface.
 //
-// KDE Plasma on Wayland cannot bind mouse-wheel events as global shortcuts, so
-// we read input events straight from evdev: we track the held state of the
-// Super and Shift modifiers (from any keyboard) and, when the wheel moves while
-// both are held, run `spotify-vol up|down`.
+// Driving MPRIS Volume (rather than the PipeWire stream node) sets Spotify's
+// *own* internal volume, so the in-app slider, the audio stream and KDE all
+// stay in sync. It also survives Spotify recycling its stream node on pause.
 //
-// Every /dev/input/event* device is opened read-only (never grabbed), so normal
-// scrolling and typing are unaffected. Requires membership of the `input` group.
+// Usage:
+//
+//	spotify-vol up|down        adjust by ±5%
+//	spotify-vol set <0-100>    set absolute percentage
+//	spotify-vol get            print current percentage
+//	spotify-vol daemon         Super+Shift+Scroll listener (see input.go)
 package main
 
 import (
-	"encoding/binary"
-	"io"
+	"fmt"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"sync"
-	"time"
+	"strconv"
+
+	"github.com/godbus/dbus/v5"
 )
 
-// Linux input event types/codes (see <linux/input-event-codes.h>).
 const (
-	evKey = 0x01
-	evRel = 0x02
+	mprisService = "org.mpris.MediaPlayer2.spotify"
+	mprisPath    = "/org/mpris/MediaPlayer2"
+	mprisVolume  = "org.mpris.MediaPlayer2.Player.Volume"
 
-	relWheel = 0x08
+	osdService = "org.kde.plasmashell"
+	osdPath    = "/org/kde/osdService"
+	osdMethod  = "org.kde.osdService.mediaPlayerVolumeChanged"
 
-	keyLeftShift  = 42
-	keyRightShift = 54
-	keyLeftMeta   = 125
-	keyRightMeta  = 126
-
-	// struct input_event on 64-bit Linux: 16-byte timeval + u16 type + u16 code + s32 value.
-	eventSize = 24
+	step = 0.05
 )
 
-type event struct {
-	typ   uint16
-	code  uint16
-	value int32
-}
-
-func parse(b []byte) event {
-	return event{
-		typ:   binary.LittleEndian.Uint16(b[16:18]),
-		code:  binary.LittleEndian.Uint16(b[18:20]),
-		value: int32(binary.LittleEndian.Uint32(b[20:24])),
-	}
-}
-
-func isModifier(code uint16) bool {
-	switch code {
-	case keyLeftShift, keyRightShift, keyLeftMeta, keyRightMeta:
-		return true
-	}
-	return false
+func usage() {
+	fmt.Fprintln(os.Stderr, "usage: spotify-vol {up|down|set <0-100>|get|daemon}")
 }
 
 func main() {
-	spotifyVol := os.Getenv("SPOTIFY_VOL")
-	if spotifyVol == "" {
-		spotifyVol = "spotify-vol"
+	if len(os.Args) < 2 {
+		usage()
+		os.Exit(1)
 	}
 
-	events := make(chan event, 64)
-	go scanDevices(events)
-
-	// A single consumer owns the modifier state, so no locking is needed here.
-	pressed := map[uint16]bool{}
-	held := func(a, b uint16) bool { return pressed[a] || pressed[b] }
-
-	for ev := range events {
-		switch {
-		case ev.typ == evKey && isModifier(ev.code):
-			if ev.value == 1 { // down (2 == autorepeat, ignored)
-				pressed[ev.code] = true
-			} else if ev.value == 0 { // up
-				delete(pressed, ev.code)
-			}
-		case ev.typ == evRel && ev.code == relWheel && ev.value != 0:
-			if held(keyLeftMeta, keyRightMeta) && held(keyLeftShift, keyRightShift) {
-				dir := "up"
-				if ev.value < 0 {
-					dir = "down"
-				}
-				_ = exec.Command(spotifyVol, dir).Start()
-			}
-		}
+	if os.Args[1] == "daemon" {
+		runDaemon()
+		return
 	}
-}
 
-// scanDevices opens every input device and starts a reader goroutine for each,
-// rescanning every 2s so hot-plugged mice/keyboards are picked up (and removed
-// ones reopened when they return).
-func scanDevices(events chan<- event) {
-	var mu sync.Mutex
-	open := map[string]bool{}
+	conn, err := dbus.ConnectSessionBus()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "spotify-vol:", err)
+		os.Exit(1)
+	}
+	defer conn.Close()
 
-	for {
-		paths, _ := filepath.Glob("/dev/input/event*")
-		for _, p := range paths {
-			mu.Lock()
-			seen := open[p]
-			if !seen {
-				open[p] = true
-			}
-			mu.Unlock()
-			if seen {
-				continue
-			}
+	cur, ok := getVolume(conn)
+	if !ok {
+		return // Spotify not running / no MPRIS endpoint -> nothing to do.
+	}
 
-			f, err := os.Open(p)
-			if err != nil {
-				mu.Lock()
-				delete(open, p)
-				mu.Unlock()
-				continue
-			}
-			go readDevice(p, f, events, &mu, open)
+	switch os.Args[1] {
+	case "up":
+		applyVolume(conn, cur+step)
+	case "down":
+		applyVolume(conn, cur-step)
+	case "set":
+		if len(os.Args) < 3 {
+			usage()
+			os.Exit(1)
 		}
-		time.Sleep(2 * time.Second)
+		p, err := strconv.ParseFloat(os.Args[2], 64)
+		if err != nil {
+			usage()
+			os.Exit(1)
+		}
+		applyVolume(conn, p/100)
+	case "get":
+		fmt.Println(percent(cur))
+	default:
+		usage()
+		os.Exit(1)
 	}
 }
 
-func readDevice(path string, f *os.File, events chan<- event, mu *sync.Mutex, open map[string]bool) {
-	defer func() {
-		f.Close()
-		mu.Lock()
-		delete(open, path)
-		mu.Unlock()
-	}()
+func percent(v float64) int { return int(v*100 + 0.5) }
 
-	buf := make([]byte, eventSize)
-	for {
-		if _, err := io.ReadFull(f, buf); err != nil {
-			return // device unplugged or read error: drop it, scanner may reopen later
-		}
-		ev := parse(buf)
-		if (ev.typ == evKey && isModifier(ev.code)) || (ev.typ == evRel && ev.code == relWheel) {
-			events <- ev
-		}
+// getVolume returns Spotify's MPRIS volume in [0,1]; ok is false when Spotify
+// is not reachable on the bus.
+func getVolume(conn *dbus.Conn) (vol float64, ok bool) {
+	v, err := conn.Object(mprisService, mprisPath).GetProperty(mprisVolume)
+	if err != nil {
+		return 0, false
 	}
+	f, isFloat := v.Value().(float64)
+	return f, isFloat
+}
+
+// applyVolume clamps to [0,1], sets the MPRIS volume and shows the KDE OSD.
+func applyVolume(conn *dbus.Conn, vol float64) {
+	if vol < 0 {
+		vol = 0
+	} else if vol > 1 {
+		vol = 1
+	}
+	obj := conn.Object(mprisService, mprisPath)
+	if err := obj.SetProperty(mprisVolume, dbus.MakeVariant(vol)); err != nil {
+		fmt.Fprintln(os.Stderr, "spotify-vol:", err)
+		return
+	}
+	// Spotify-branded Plasma OSD popup; failure here is non-fatal.
+	conn.Object(osdService, osdPath).Call(osdMethod, 0, int32(percent(vol)), "Spotify", "spotify")
 }

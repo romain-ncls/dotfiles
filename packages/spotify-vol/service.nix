@@ -34,7 +34,7 @@ in {
       partOf = [ "graphical-session.target" ];
       after = [ "graphical-session.target" ];
       serviceConfig = {
-        ExecStart = "${cfg.package}/bin/spotify-vol-daemon";
+        ExecStart = "${cfg.package}/bin/spotify-vol daemon";
         Restart = "on-failure";
         RestartSec = 3;
       };
