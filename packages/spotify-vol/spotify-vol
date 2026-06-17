@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Control Spotify's volume through its MPRIS DBus interface.
+#
+# Driving MPRIS Volume (rather than the PipeWire stream node) sets Spotify's
+# *own* internal volume, so the in-app slider, the audio stream and KDE all
+# stay in sync. It also survives Spotify recycling its stream node on pause.
+set -uo pipefail
+
+SVC=org.mpris.MediaPlayer2.spotify
+OBJ=/org/mpris/MediaPlayer2
+IFACE=org.mpris.MediaPlayer2.Player
+STEP=0.05
+
+mpris_get() {
+  gdbus call -e -d "$SVC" -o "$OBJ" \
+    -m org.freedesktop.DBus.Properties.Get "$IFACE" Volume 2>/dev/null \
+    | grep -oE '[0-9]+\.?[0-9]*' | head -1
+}
+
+mpris_set() {
+  gdbus call -e -d "$SVC" -o "$OBJ" \
+    -m org.freedesktop.DBus.Properties.Set "$IFACE" Volume "<$1>" >/dev/null 2>&1
+}
+
+osd() {
+  gdbus call -e -d org.kde.plasmashell -o /org/kde/osdService \
+    -m org.kde.osdService.mediaPlayerVolumeChanged "$1" "Spotify" "spotify" \
+    >/dev/null 2>&1 || true
+}
+
+pct() { awk -v v="$1" 'BEGIN { printf "%d", v * 100 + 0.5 }'; }
+
+cur=$(mpris_get)
+# Spotify not running / no MPRIS endpoint -> nothing to do.
+[ -z "$cur" ] && exit 0
+
+case "${1:-}" in
+  up)
+    new=$(awk -v c="$cur" -v s="$STEP" 'BEGIN { v = c + s; if (v > 1) v = 1; printf "%.4f", v }') ;;
+  down)
+    new=$(awk -v c="$cur" -v s="$STEP" 'BEGIN { v = c - s; if (v < 0) v = 0; printf "%.4f", v }') ;;
+  set)
+    new=$(awk -v p="${2:-0}" 'BEGIN { v = p / 100; if (v > 1) v = 1; if (v < 0) v = 0; printf "%.4f", v }') ;;
+  get)
+    pct "$cur"; echo; exit 0 ;;
+  *)
+    echo "usage: spotify-vol {up|down|set <0-100>|get}" >&2; exit 1 ;;
+esac
+
+mpris_set "$new"
+osd "$(pct "$new")"

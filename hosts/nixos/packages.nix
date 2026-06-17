@@ -105,6 +105,8 @@
 
   services.mutectl.enable = true;
 
+  services.spotify-vol.enable = true;
+
   programs.firefox.enable = true;
 
   programs.fish.enable = true;
