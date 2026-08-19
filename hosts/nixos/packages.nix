@@ -141,14 +141,14 @@
     };
   };
 
-  services.hister = {
-    enable = true;
-    config = {
-      server = {
-        address = "127.0.0.1:44333";
-      };
-    };
-  };
+  # services.hister = {
+  #   enable = true;
+  #   config = {
+  #     server = {
+  #       address = "127.0.0.1:44333";
+  #     };
+  #   };
+  # };
 
   programs.awpro.enable = true;
 
