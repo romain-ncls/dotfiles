@@ -9,6 +9,7 @@
   qt6,
   deno,
   discord,
+  openasar,
   vencord,
 }:
 {
@@ -59,6 +60,17 @@
   discord = discord.override {
     withOpenASAR = true;
     withVencord = true;
+    # OpenAsar's default "perf" preset force-enables Chromium's DrDc feature, which is
+    # off by default on desktop Linux. On this Meteor Lake iGPU, DrDc combined with
+    # VA-API H.264 decode aborts the GPU process (SIGTRAP) every few minutes, which
+    # DrKonqi then reports as a Discord crash. Drop just that one flag; the rest of
+    # the preset (GPU rasterization, zero-copy, hardware overlays) is kept.
+    openasar = openasar.overrideAttrs (previousAttrs: {
+      postPatch = (previousAttrs.postPatch or "") + ''
+        substituteInPlace src/cmdSwitches.js \
+          --replace-fail '--enable-features=EnableDrDc,' '--enable-features='
+      '';
+    });
     vencord = (
       vencord.overrideAttrs (
         finalAttrs: previousAttrs:
