@@ -1,4 +1,10 @@
-{ pkgs, ... }:
+{ pkgs, inputs, ... }:
+let
+  pkgsClaude = import inputs.nixpkgs-claude {
+    inherit (pkgs.stdenv.hostPlatform) system;
+    config.allowUnfree = true;
+  };
+in
 {
   fonts.packages = with pkgs; [
     noto-fonts
@@ -78,7 +84,7 @@
     bws # Bitwarden Secret Manager CLI
     s5cmd # s3 client
     age # backup encryption
-    claude-code
+    pkgsClaude.claude-code
     python3 # for claude code plugins
     bun # for claude code plugins
 
