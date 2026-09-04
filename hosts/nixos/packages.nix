@@ -115,6 +115,12 @@ in
 
   programs.firefox.enable = true;
 
+  services.languagetool = {
+    enable = true;
+    port = 8749;
+    allowOrigin = "*"; # browser extension: http://localhost:8749/v2
+  };
+
   programs.fish.enable = true;
 
   services.flatpak.enable = true;
