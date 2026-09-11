@@ -164,6 +164,15 @@ in
 
   programs.awpro.enable = true;
 
+  # programs.solaar = {
+  #   enable = true;
+  #   userService = {
+  #     enable = true;
+  #     window = "hide";
+  #     extraArgs = [ "--restart-on-wake-up" ];
+  #   };
+  # };
+
   #############################################################################
   ############################ SSH passphrase setup ###########################
   #############################################################################
