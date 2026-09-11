@@ -61,6 +61,13 @@ in
   hardware.bluetooth.enable = true;
   hardware.bluetooth.powerOnBoot = true;
 
+  # Keychron keyboards (VID 3434) expose a raw HID interface that Keychron
+  # Launcher / VIA drive over WebHID. Without this the /dev/hidraw* nodes are
+  # root-only and the launcher never sees the keyboard.
+  services.udev.extraRules = ''
+    KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3434", MODE="0660", GROUP="users", TAG+="uaccess"
+  '';
+
   # Set your time zone.
   time.timeZone = "Europe/Paris";
 
