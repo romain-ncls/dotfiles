@@ -26,7 +26,7 @@ in {
       serviceConfig = {
         ExecStart = "${cfg.package}/bin/mutectl-service";
         Restart = "always";
-        User = "root";
+        DynamicUser = true;
       };
     };
   };

@@ -7,19 +7,27 @@
   gawk,
   pipewire,
   qt6,
-  deno,
+  buildGoModule,
   discord,
   openasar,
   vencord,
 }:
+let
+  mutectl-service = buildGoModule {
+    pname = "mutectl-service";
+    version = "0.1.0";
+
+    src = ./mutectl-service;
+    vendorHash = null;
+
+    meta.mainProgram = "mutectl-service";
+  };
+in
 {
   mutectl = stdenv.mkDerivation {
     pname = "mutectl";
-    version = "0.0.5";
+    version = "0.1.0";
 
-    buildInputs = [
-      deno
-    ];
     nativeBuildInputs = [
       makeWrapper
     ];
@@ -39,15 +47,7 @@
         ]
       }
 
-      mkdir -p $out/lib/mutectl
-      cp mutectl-service.ts $out/lib/mutectl/
-
-      cat > $out/bin/mutectl-service <<EOF
-      #!/bin/sh
-      exec ${deno}/bin/deno -q run --allow-net $out/lib/mutectl/mutectl-service.ts "\$@"
-      EOF
-
-      chmod +x $out/bin/mutectl-service
+      ln -s ${lib.getExe mutectl-service} $out/bin/mutectl-service
     '';
 
     meta = {
