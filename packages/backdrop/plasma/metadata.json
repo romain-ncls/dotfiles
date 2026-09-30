@@ -1,0 +1,16 @@
+{
+    "KPackageStructure": "Plasma/Wallpaper",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Romain Nicolas"
+            }
+        ],
+        "Description": "Windows Spotlight, Bing and Wallhaven pictures, picked by your likes and dislikes",
+        "Icon": "preferences-desktop-wallpaper",
+        "Id": "com.github.romain-ncls.backdrop",
+        "License": "MIT",
+        "Name": "Backdrop",
+        "Version": "0.1.0"
+    }
+}

@@ -114,6 +114,8 @@ in
 
   services.spotify-vol.enable = true;
 
+  services.backdrop.enable = true;
+
   programs.firefox.enable = true;
 
   services.languagetool = {
