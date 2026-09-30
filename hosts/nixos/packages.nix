@@ -90,6 +90,7 @@ in
 
     gparted
     vlc
+    mpv
     brave
     vscode
     jetbrains.goland
