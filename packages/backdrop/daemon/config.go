@@ -20,10 +20,18 @@ type Config struct {
 	// Pictures smaller than this are skipped.
 	MinWidth  int `json:"minWidth"`
 	MinHeight int `json:"minHeight"`
-	// Market is the locale of Spotlight and Bing texts. Keywords are learned
-	// from them, so keep it stable once the model has been trained.
+	// Market is the locale of Spotlight's texts. Keywords are learned from
+	// them, so keep it stable once the model has been trained.
 	Market  string `json:"market"`
 	Country string `json:"country"`
+	Bing    struct {
+		// Market is the Bing edition. France gets fr-FR, which is also what
+		// KDE's Picture of the Day showed.
+		Market string `json:"market"`
+		// Archive is the bingwallpaper.anerg.com edition used as back
+		// catalog, "" to use Bing's two-week feed only.
+		Archive string `json:"archive"`
+	} `json:"bing"`
 	// Sources maps a source name to its prior weight. The learned preference
 	// adjusts it; 0 disables the source.
 	Sources   map[string]float64 `json:"sources"`
@@ -46,9 +54,10 @@ func defaultConfig() *Config {
 		MinHeight: 1080,
 		Market:    "en-US",
 		Country:   "FR",
-		// Bing starts lower: its daily picture is hit or miss.
-		Sources: map[string]float64{"spotlight": 1, "wallhaven": 1, "bing": 0.5},
+		Sources:   map[string]float64{"spotlight": 1, "wallhaven": 1, "bing": 1},
 	}
+	c.Bing.Market = "fr-FR"
+	c.Bing.Archive = "fr"
 	c.Wallhaven.Queries = []string{"digital art", "concept art", "fantasy art", "illustration", "science fiction", "digital painting"}
 	c.Wallhaven.Categories = "100"
 	return c

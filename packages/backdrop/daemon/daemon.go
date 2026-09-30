@@ -589,9 +589,15 @@ func (d *Daemon) pick(listing []*Candidate, n int) []*Candidate {
 
 // prepare downloads and analyzes a candidate.
 func (d *Daemon) prepare(ctx context.Context, c *Candidate) error {
-	if c.Source == "wallhaven" {
+	switch {
+	case c.Source == "wallhaven":
 		if err := enrichWallhaven(ctx, c); err != nil {
 			return err
+		}
+	case strings.HasPrefix(c.InfoURL, bingArchiveSite):
+		// Only the credit is missing without it: not worth dropping the picture.
+		if err := enrichBingArchive(ctx, c); err != nil {
+			log.Printf("%s: %v", c.ID, err)
 		}
 	}
 	file, err := download(ctx, c.ImageURL, d.poolDir(), fileStem(c.ID))
