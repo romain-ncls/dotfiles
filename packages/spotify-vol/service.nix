@@ -35,7 +35,9 @@ in {
       after = [ "graphical-session.target" ];
       serviceConfig = {
         ExecStart = "${cfg.package}/bin/spotify-vol daemon";
-        Restart = "on-failure";
+        # `always`: a SIGTERM (e.g. `pkill spotify` also matching spotify-vol)
+        # counts as a clean exit and would not be restarted by `on-failure`.
+        Restart = "always";
         RestartSec = 3;
       };
     };
