@@ -6,16 +6,16 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1790158221,
-        "narHash": "sha256-UPU8qlb8PImZZdBI/e3n8OubIyJqySOO4OMKBDW6Gqo=",
+        "lastModified": 1790597546,
+        "narHash": "sha256-Sek/K+xrY63e1wmOadtNbB+x2aid3P4SGIc3k8Sdq8Y=",
         "owner": "romain-ncls",
         "repo": "awpro",
-        "rev": "13a060cb0581f2471a5b3cafd3a506d16fa2cea6",
+        "rev": "d92f6df573b0a5b4c5551fcfc8d3311c435e7a88",
         "type": "github"
       },
       "original": {
         "owner": "romain-ncls",
-        "ref": "v0.2.0",
+        "ref": "v0.3.0",
         "repo": "awpro",
         "type": "github"
       }

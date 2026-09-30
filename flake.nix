@@ -6,7 +6,7 @@
     nixpkgs-claude.url = "github:NixOS/nixpkgs/master";
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
     # hister.url = "github:asciimoo/hister?rev=81e401d069b7ed9ced35827db3fe238b11fb39cc";
-    awpro.url = "github:romain-ncls/awpro/v0.2.0";
+    awpro.url = "github:romain-ncls/awpro/v0.3.0";
   };
 
   outputs =
