@@ -68,6 +68,15 @@ in
     KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3434", MODE="0660", GROUP="users", TAG+="uaccess"
   '';
 
+  # Electron/V8 apps (Discord, GitKraken, node) reserve huge address spaces, so
+  # their crash dumps hit the 32G default cap: systemd-coredump then spends its
+  # full 5min writing to the LUKS disk and the whole desktop stalls. Truncate
+  # big cores instead; small ones (KDE apps, own tools) are unaffected.
+  systemd.coredump.settings.Coredump = {
+    ProcessSizeMax = "1G";
+    ExternalSizeMax = "1G";
+  };
+
   # Set your time zone.
   time.timeZone = "Europe/Paris";
 
