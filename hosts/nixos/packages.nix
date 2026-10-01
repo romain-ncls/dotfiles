@@ -166,6 +166,7 @@ in
   # };
 
   programs.awpro.enable = true;
+  programs.whatdidhesay.enable = true;
 
   # programs.solaar = {
   #   enable = true;

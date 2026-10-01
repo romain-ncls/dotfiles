@@ -116,12 +116,29 @@
         "type": "github"
       }
     },
+    "nixpkgs_5": {
+      "locked": {
+        "lastModified": 1790578696,
+        "narHash": "sha256-ZoxIApko70jCdbH3l20HWXOBaT2HZd87orzd2yJ9dVE=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "7a0f122f5090cf4c2ade2a13a0e229d4e19ba71f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "awpro": "awpro",
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs_4",
-        "nixpkgs-claude": "nixpkgs-claude"
+        "nixpkgs-claude": "nixpkgs-claude",
+        "whatdidhesay": "whatdidhesay"
       }
     },
     "rust-overlay": {
@@ -140,6 +157,25 @@
         "owner": "oxalica",
         "repo": "rust-overlay",
         "type": "github"
+      }
+    },
+    "whatdidhesay": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_5"
+      },
+      "locked": {
+        "lastModified": 1790863157,
+        "narHash": "sha256-SWeIU+wgXOpHi8jmMvhUeiBq63Tsiwh4Qfjnjv8poJ8=",
+        "ref": "refs/tags/v0.1.0",
+        "rev": "e873bbfc1e20a0fafa472f5b1c0f9bb43020baa8",
+        "revCount": 11,
+        "type": "git",
+        "url": "ssh://git@github.com/romain-ncls/whatdidhesay"
+      },
+      "original": {
+        "ref": "refs/tags/v0.1.0",
+        "type": "git",
+        "url": "ssh://git@github.com/romain-ncls/whatdidhesay"
       }
     }
   },

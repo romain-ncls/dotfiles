@@ -7,6 +7,7 @@
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
     # hister.url = "github:asciimoo/hister?rev=81e401d069b7ed9ced35827db3fe238b11fb39cc";
     awpro.url = "github:romain-ncls/awpro/v0.3.0";
+    whatdidhesay.url = "git+ssh://git@github.com/romain-ncls/whatdidhesay?ref=refs/tags/v0.1.0";
   };
 
   outputs =
@@ -16,6 +17,7 @@
       nixos-hardware,
       # hister,
       awpro,
+      whatdidhesay,
       ...
     }@inputs:
     let
@@ -33,6 +35,7 @@
           nixos-hardware.nixosModules.hp-probook-460G11
           # hister.nixosModules.default
           awpro.nixosModules.default
+          whatdidhesay.nixosModules.default
         ];
       };
     };
