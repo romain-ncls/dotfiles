@@ -56,7 +56,7 @@ gc:
   sudo nix-collect-garbage
 
 gc-generations:
-  sudo nix-collect-garbage --delete-older-than 30d
+  sudo nix-collect-garbage --delete-older-than 7d
 
 # just is a command runner, Justfile is very similar to Makefile, but simpler.
 
