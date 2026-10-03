@@ -3,9 +3,6 @@
 # Only keys changed on purpose belong here; KDE writes everything else itself.
 kdeglobals	KDE	LookAndFeelPackage	org.kde.breezedark.desktop
 ksmserverrc	General	loginMode	emptySession
-dolphinrc	MainWindow	MenuBar	Disabled
 konsolerc	KonsoleWindow	ShowMenuBarByDefault	false
-kded5rc	Module-browserintegrationreminder	autoload	false
-kded5rc	Module-device_automounter	autoload	false
 kxkbrc	Layout	LayoutList	fr
 kxkbrc	Layout	Use	true

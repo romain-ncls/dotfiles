@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Print the packages system/*.sh declares for this host, one per line.
+# Sources the config with stub helpers, so per-host guards are honoured and
+# no root is needed.
+set -euo pipefail
+dir=$(dirname "$(readlink -f "$0")")/../system
+
+AddPackage() { [[ $1 == --foreign ]] && shift; echo "$1"; }
+RemovePackage() { :; }
+IgnorePackage() { :; }
+IgnorePath() { :; }
+CopyFile() { :; }
+CopyFileTo() { :; }
+CreateFile() { cat >/dev/null; echo /dev/null; }
+CreateDir() { :; }
+CreateLink() { :; }
+RemoveFile() { :; }
+SetFileProperty() { :; }
+
+for f in "$dir"/*.sh; do
+	# shellcheck source=/dev/null
+	source "$f"
+done | sort -u

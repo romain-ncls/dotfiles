@@ -27,7 +27,7 @@ bw login          # once; afterwards chezmoi runs `bw unlock` itself when a temp
 
 ### KDE
 - Log out and back in after the first `just apply-home`: some KWin and
-  Plasma settings (tiling, Xwayland scale) are only read at login.
+  Plasma settings (Xwayland scale, theme) are only fully applied at login.
 - Plasma asks once whether to trust an executable `.desktop` file on the
   desktop (the reboot-to-Windows shortcut on the home PC). Accept.
 

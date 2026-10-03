@@ -21,11 +21,11 @@ Change the repo first, then apply. `just drift` should be clean before each comm
 
 ## New machine
 
-1. Install Arch from the live USB with `install/` (see [install/README.md](install/README.md)).
+1. Install Arch from the live USB (`install/`, not written yet; until then the "Menadion Migration" runbook).
 2. Boot it, log in, then:
    ```sh
    sudo pacman -S --needed git chezmoi just bitwarden-cli
-   yay -S aconfmgr-git        # after installing yay, see install/README.md
+   yay -S aconfmgr-git        # yay itself: see the runbook, phase 07
    git clone https://github.com/<you>/dotfiles ~/dotfiles
    chezmoi init --source ~/dotfiles   # asks "home" or "work" unless the hostname is menadion
    just apply
@@ -39,7 +39,7 @@ Change the repo first, then apply. `just drift` should be clean before each comm
 home/       chezmoi source for $HOME (.chezmoiroot points here)
   .kde/     KDE settings as one key per line, per role
 system/     aconfmgr configuration (packages, /etc, /boot, services)
-install/    live-USB install scripts, per role
+install/    live-USB install scripts, per role (to do)
 scripts/    helpers used by chezmoi and just
 windows/    Windows-side files for the home PC
 docs/       manual steps and design decisions

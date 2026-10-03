@@ -1,0 +1,10 @@
+{{ if eq .role "home" -}}
+#!/usr/bin/env bash
+# 4K TV: 200% scale on every connected output. Only the scale is set; KWin
+# keeps the rest of the display state in its own kwinoutputconfig.json.
+set -euo pipefail
+command -v kscreen-doctor >/dev/null && [[ -n ${WAYLAND_DISPLAY:-} ]] || exit 0
+for out in $(kscreen-doctor -o | sed 's/\x1b\[[0-9;]*m//g' | awk '$1 == "Output:" { print $3 }'); do
+	kscreen-doctor "output.$out.scale.2"
+done
+{{ end -}}

@@ -23,7 +23,7 @@ The role comes from `.chezmoi.toml.tmpl` (`menadion` → `home`, anything else a
 | KDE / Plasma settings | one line per key in `home/.kde/{common,home,work}.tsv` | `scripts/kde-config` via a chezmoi run script |
 | mouse acceleration | `scripts/flat-mice` (flat for every mouse) | every `chezmoi apply` |
 | packages, `/etc`, `/boot`, services | `system/` (aconfmgr: `10-*.sh` common, `50-home.sh`, `50-work.sh`, files under `system/files/`) | `just apply-system` |
-| fresh install from the live USB | `install/` | by hand, see `install/README.md` |
+| fresh install from the live USB | `install/` (to do) | by hand |
 | Windows side of the home PC | `windows/` | by hand |
 | anything that cannot be scripted | `docs/manual-steps.md` | by hand |
 | why something is the way it is | `docs/decisions.md` | |

@@ -20,8 +20,17 @@ apply-home:
 
 # What `just apply` would change
 diff:
-    -{{sys}} diff
-    chezmoi diff
+    #!/usr/bin/env bash
+    set -uo pipefail
+    want=$(scripts/aconf-packages)
+    echo "== packages to install"
+    comm -23 <(echo "$want") <(pacman -Qq | sort) | sed 's/^/+ /'
+    echo "== packages to remove (installed explicitly, not in system/)"
+    comm -13 <(echo "$want") <(pacman -Qqe | sort) | sed 's/^/- /'
+    echo "== system files"
+    {{sys}} diff / || true
+    echo "== home"
+    chezmoi diff --exclude scripts
 
 # Everything on the machine that the repo does not know about.
 # Clean means: no new system/99-unsorted.sh, no chezmoi changes, KDE keys in sync.
