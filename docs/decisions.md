@@ -72,3 +72,11 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 - **C: mounted at boot with the new in-kernel `ntfs` driver** (kernel 7.2). It
   mounts a hibernated or dirty volume read-only instead of refusing it. If it
   misbehaves, `ntfs3` is the fallback.
+
+## Not in the repo yet
+
+- **VS Code** settings and extensions stay in VS Code Settings Sync for now,
+  until they are cleaned up; then they move here (settings.json via chezmoi,
+  extension list installed by a run script) and Sync gets turned off. Install
+  `visual-studio-code-bin` (AUR, Microsoft build): several extensions are only
+  on Microsoft's marketplace.
