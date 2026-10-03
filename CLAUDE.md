@@ -22,7 +22,8 @@ The role comes from `.chezmoi.toml.tmpl` (`menadion` → `home`, anything else a
 | per-role differences in `$HOME` | templates using `.role`, and `home/.chezmoiignore` | |
 | KDE / Plasma settings | one line per key in `home/.kde/{common,home,work}.tsv` | `scripts/kde-config` via a chezmoi run script |
 | mouse acceleration | `scripts/flat-mice` (flat for every mouse) | every `chezmoi apply` |
-| packages, `/etc`, `/boot`, services | `system/` (aconfmgr: `10-*.sh` common, `50-home.sh`, `50-work.sh`, files under `system/files/`) | `just apply-system` |
+| hand-written part of `/boot/limine.conf` (globals, Windows entry) | `system/limine/<role>.conf` | `scripts/limine-conf` from `just apply-system` |
+| packages, `/etc`, services | `system/` (aconfmgr: `10-*.sh` common, `50-home.sh`, `50-work.sh`, files under `system/files/`) | `just apply-system` |
 | fresh install from the live USB | `install/` (to do) | by hand |
 | Windows side of the home PC | `windows/` | by hand |
 | anything that cannot be scripted | `docs/manual-steps.md` | by hand |
@@ -66,5 +67,6 @@ diffing `~/.config` before and after changing the setting in the GUI.
 - NVIDIA modules must stay **out** of the initramfs `MODULES`, or resume from hibernation fails.
 - `hid_logitech_dj hid_logitech_hidpp` **must** be in the initramfs, or the G305 misses its receiver.
 - Rebuild the initramfs with `limine-mkinitcpio`, never `mkinitcpio -P`.
-- After any edit of `/boot/limine.conf`, run `limine-update` (config hash is enrolled).
+- Never hand-edit `/boot/limine.conf`: edit `system/limine/home.conf` and `just apply-system`
+  (merges, then `limine-update` re-enrolls the config hash).
 - Limine entry ids are `Arch-Linux.linux` and `Windows-11`; OS switching uses `bootctl set-oneshot`.

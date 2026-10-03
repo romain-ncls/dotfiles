@@ -10,9 +10,10 @@ default:
 # Make the whole machine match the repo: system first, then $HOME
 apply: apply-system apply-home
 
-# Packages, /etc, /boot and services (aconfmgr, uses sudo)
+# Packages, /etc, services (aconfmgr), then the hand-written part of limine.conf (uses sudo)
 apply-system:
     {{sys}} apply
+    if [ -f system/limine/{{role}}.conf ]; then sudo scripts/limine-conf apply system/limine/{{role}}.conf; fi
 
 # Dotfiles, KDE settings, per-user setup (chezmoi; Bitwarden unlocks only if a template needs it)
 apply-home:
@@ -29,6 +30,10 @@ diff:
     comm -13 <(echo "$want") <(pacman -Qqe | sort) | sed 's/^/- /'
     echo "== system files"
     {{sys}} diff / || true
+    if [[ -f system/limine/{{role}}.conf ]]; then
+        echo "== limine.conf"
+        sudo scripts/limine-conf diff system/limine/{{role}}.conf || true
+    fi
     echo "== home"
     chezmoi diff --exclude scripts
 
@@ -45,6 +50,10 @@ drift:
         status=1
     else
         echo "clean"
+    fi
+    if [[ -f system/limine/{{role}}.conf ]]; then
+        echo "== limine.conf"
+        sudo scripts/limine-conf diff system/limine/{{role}}.conf || status=1
     fi
     echo "== home (chezmoi status)"
     out=$(chezmoi status --exclude scripts)

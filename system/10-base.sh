@@ -32,6 +32,7 @@ AddPackage --foreign limine-snapper-sync
 AddPackage snapper
 AddPackage snap-pac
 AddPackage inotify-tools                   # limine-snapper-sync's watcher
+AddPackage xxhash                          # HASH_FUNCTION=xxhash in /etc/default/limine
 
 # AUR helper and this repo's own tooling
 AddPackage --foreign yay

@@ -45,6 +45,11 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   --boot-loader-entry=`: logind only accepts entries it finds as BLS files on
   the ESP, and Limine has none. The one-shot takes Limine's entry *id*
   (`Arch-Linux.linux`, `Windows-11`), not the menu title.
+- **`limine.conf` is half generated, half hand-written.** The tools own the
+  Arch Linux entry and the Snapshots group; the global options and the Windows
+  entry are ours, kept in `system/limine/home.conf` and merged in by
+  `scripts/limine-conf` (which then runs `limine-update` to re-enroll the hash).
+  `/boot` itself is ignored by aconfmgr because it changes with every snapshot.
 - **Rebuild with `limine-mkinitcpio`**, not `mkinitcpio -P`. The package
   replaces the stock pacman hook, so `/boot/initramfs-linux.img` is never
   updated and plain `mkinitcpio` does not update Limine's entries.
