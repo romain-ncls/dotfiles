@@ -1,0 +1,13 @@
+# KDE settings for the home PC (MENADION) only.
+# file	group (nested groups separated by |)	key	value
+# 4K TV on HDMI at scale 2
+kwinrc	Xwayland	Scale	2
+kwinrc	Windows_HDR	MaxLuminance	720
+kwinrc	Windows_HDR	Reference	720
+# Tiling layout 25/50/25. KWin keys it by virtual-desktop id and output uuid,
+# so the desktop id is pinned too; the output uuid comes from the TV's EDID.
+kwinrc	Desktops	Id_1	c0c22334-46fb-40af-b73a-381408e06764
+kwinrc	Desktops	Number	1
+kwinrc	Desktops	Rows	1
+kwinrc	Tiling|c0c22334-46fb-40af-b73a-381408e06764|4247b314-9717-4e9e-aaaf-081b9dcbfaf1	padding	4
+kwinrc	Tiling|c0c22334-46fb-40af-b73a-381408e06764|4247b314-9717-4e9e-aaaf-081b9dcbfaf1	tiles	{"layoutDirection":"horizontal","tiles":[{"width":0.25},{"width":0.5},{"width":0.25}]}

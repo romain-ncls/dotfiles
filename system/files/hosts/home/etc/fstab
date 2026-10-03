@@ -1,0 +1,29 @@
+# Static information about the filesystems.
+# See fstab(5) for details.
+
+# <file system> <dir> <type> <options> <dump> <pass>
+# /dev/nvme0n1p5 LABEL=arch
+UUID=9d490862-88e3-4fc9-940b-5b46d2cdcf99	/         	btrfs     	rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=/@	0 0
+
+# /dev/nvme0n1p5 LABEL=arch
+UUID=9d490862-88e3-4fc9-940b-5b46d2cdcf99	/home     	btrfs     	rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=/@home	0 0
+
+# /dev/nvme0n1p5 LABEL=arch
+UUID=9d490862-88e3-4fc9-940b-5b46d2cdcf99	/.snapshots	btrfs     	rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=/@snapshots	0 0
+
+# /dev/nvme0n1p5 LABEL=arch
+UUID=9d490862-88e3-4fc9-940b-5b46d2cdcf99	/var/log  	btrfs     	rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=/@var_log	0 0
+
+# /dev/nvme0n1p5 LABEL=arch
+UUID=9d490862-88e3-4fc9-940b-5b46d2cdcf99	/var/cache	btrfs     	rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=/@var_cache	0 0
+
+# /dev/nvme0n1p5 LABEL=arch
+UUID=9d490862-88e3-4fc9-940b-5b46d2cdcf99	/var/tmp  	btrfs     	rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=/@var_tmp	0 0
+
+# /dev/nvme0n1p1
+UUID=94EA-FEA2      	/boot     	vfat      	rw,relatime,fmask=0077,dmask=0077,codepage=437,iocharset=ascii,shortname=mixed,utf8,errors=remount-ro	0 2
+
+# /dev/nvme0n1p6 LABEL=swap
+UUID=a239f1a1-5a69-44e9-b9c6-045cd5dbf20c	none      	swap      	defaults  	0 0
+
+UUID=5C08FF7308FF4B12  /mnt/win  ntfs  uid=1000,gid=1000,dmask=022,fmask=133,windows_names,nofail,x-systemd.device-timeout=10s  0 0

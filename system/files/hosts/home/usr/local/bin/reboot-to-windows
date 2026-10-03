@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Reboot straight into Windows, once, without changing what Limine remembers.
+#
+# Writes the Boot Loader Interface variable LoaderEntryOneShot (via bootctl);
+# Limine consumes it on the next boot and then forgets it.
+#
+# Not `systemctl reboot --boot-loader-entry=`: logind only accepts entries it
+# finds as BLS files on the ESP (or auto-* ids), and Limine has neither, so
+# logind reports "No boot loader entries discovered".
+#
+# Install to /usr/local/bin/reboot-to-windows (mode 0755).
+
+set -euo pipefail
+
+GUID=4a67b082-0a4c-41cf-b6c7-440b29bb8c4f
+
+die() {
+	if command -v kdialog >/dev/null 2>&1; then
+		kdialog --title 'Reboot into Windows' --error "$1"
+	else
+		printf '%s\n' "$1" >&2
+	fi
+	exit 1
+}
+
+# Which entry? Override with REBOOT_ENTRY if auto-detection picks wrong.
+# Limine publishes entry ids (e.g. "Windows-11") in LoaderEntries, UTF-16LE,
+# after a 4-byte attribute header.
+entry="${REBOOT_ENTRY:-}"
+if [[ -z $entry ]]; then
+	vars=/sys/firmware/efi/efivars/LoaderEntries-$GUID
+	[[ -r $vars ]] || die "Limine did not publish LoaderEntries — was this boot started by Limine?"
+	entry="$(tail -c +5 "$vars" | iconv -f UTF-16LE -t UTF-8 | tr '\0' '\n' | grep -im1 windows || true)"
+fi
+
+[[ -n $entry ]] || die "No Windows entry found in LoaderEntries.
+
+Set REBOOT_ENTRY to the exact entry id."
+
+if command -v kdialog >/dev/null 2>&1; then
+	kdialog --title 'Reboot into Windows' \
+		--warningcontinuecancel "Save your work — this restarts now.
+
+Boot entry: $entry" || exit 0
+fi
+
+# Passwordless if the sudoers drop-in is installed, otherwise a graphical prompt.
+sudo -n /usr/bin/bootctl set-oneshot "$entry" 2>/dev/null \
+	|| pkexec /usr/bin/bootctl set-oneshot "$entry" \
+	|| die "Could not set the one-shot boot entry."
+
+exec systemctl reboot

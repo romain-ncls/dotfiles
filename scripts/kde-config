@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Apply or check the KDE settings listed in home/.kde/*.tsv.
+#   kde-config apply ROLE   write every listed key with kwriteconfig6
+#   kde-config check ROLE   print keys whose live value differs; exit 1 if any
+set -euo pipefail
+
+mode=${1:?apply|check}
+role=${2:?home|work}
+dir=$(dirname "$(readlink -f "$0")")/../home/.kde
+drift=0
+
+group_args() { # "A|B|C" -> --group A --group B --group C
+	local IFS='|' g
+	for g in $1; do printf -- '--group\0%s\0' "$g"; done
+}
+
+while IFS=$'\t' read -r file groups key value; do
+	[[ -z $file || $file == \#* ]] && continue
+	mapfile -d '' gargs < <(group_args "$groups")
+	case $mode in
+	apply)
+		if [[ $file == kdeglobals && $key == LookAndFeelPackage ]] &&
+			command -v plasma-apply-lookandfeel >/dev/null && [[ -n ${WAYLAND_DISPLAY:-} ]]; then
+			# the global theme also sets colors, icons, cursor and decorations
+			current=$(kreadconfig6 --file kdeglobals --group KDE --key LookAndFeelPackage)
+			[[ $current == "$value" ]] || plasma-apply-lookandfeel --apply "$value"
+		fi
+		kwriteconfig6 --file "$file" "${gargs[@]}" --key "$key" -- "$value"
+		;;
+	check)
+		live=$(kreadconfig6 --file "$file" "${gargs[@]}" --key "$key")
+		if [[ $live != "$value" ]]; then
+			printf '%s [%s] %s: repo=%q live=%q\n' "$file" "$groups" "$key" "$value" "$live"
+			drift=1
+		fi
+		;;
+	esac
+done < <(cat "$dir/common.tsv" "$dir/$role.tsv")
+
+exit $drift

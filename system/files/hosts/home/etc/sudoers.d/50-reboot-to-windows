@@ -1,0 +1,1 @@
+romain ALL=(root) NOPASSWD: /usr/bin/bootctl set-oneshot Windows-11

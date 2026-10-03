@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Re-runs whenever one of these lists changes:
+# common {{ include ".kde/common.tsv" | sha256sum }}
+# {{ .role }} {{ include (printf ".kde/%s.tsv" .role) | sha256sum }}
+set -euo pipefail
+"{{ .chezmoi.workingTree }}/scripts/kde-config" apply {{ .role }}
+echo "KDE settings applied; some take effect at next login."

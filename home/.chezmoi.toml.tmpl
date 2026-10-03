@@ -1,0 +1,20 @@
+{{- /* Machine role. MENADION is the home PC; anything else asks once. */ -}}
+{{- $role := "" -}}
+{{- if eq .chezmoi.hostname "menadion" -}}
+{{-   $role = "home" -}}
+{{- else -}}
+{{-   $role = promptChoiceOnce . "role" "Machine role" (list "home" "work") -}}
+{{- end -}}
+
+sourceDir = "~/dotfiles"
+
+[data]
+    role = {{ $role | quote }}
+    email = "nicolasromain0@gmail.com"
+    name = "Romain Nicolas"
+
+# Secrets come from Bitwarden through the official CLI. "auto" runs
+# `bw unlock` only when a template actually asks for a secret, and locks
+# the vault again afterwards. One-time setup per machine: `bw login`.
+[bitwarden]
+    unlock = "auto"

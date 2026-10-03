@@ -1,0 +1,1 @@
+root=UUID=9d490862-88e3-4fc9-940b-5b46d2cdcf99 rootflags=subvol=@ rw quiet loglevel=3 nvidia_drm.modeset=1 resume=UUID=a239f1a1-5a69-44e9-b9c6-045cd5dbf20c

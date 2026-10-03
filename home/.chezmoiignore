@@ -1,0 +1,6 @@
+{{- if ne .role "home" }}
+# home PC only: dual-boot shortcut and the 4K display layout
+Desktop/reboot-to-windows.desktop
+.local/share/applications/reboot-to-windows.desktop
+.config/kwinoutputconfig.json
+{{- end }}

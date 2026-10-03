@@ -1,0 +1,5 @@
+{{- /* Built from this machine's own key, so `git log --show-signature` verifies locally. */ -}}
+{{- $pub := joinPath .chezmoi.homeDir ".ssh/id_ed25519.pub" -}}
+{{- if stat $pub -}}
+{{ .email }} namespaces="git" {{ include $pub | trim }}
+{{ end -}}

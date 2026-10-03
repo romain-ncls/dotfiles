@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Flat pointer acceleration for every mouse KDE has seen or can see now.
+# KDE stores acceleration per device ([Libinput][vendor][product][name] in
+# kcminputrc) and has no global switch, so this writes the key for each
+# connected pointer and for every device already listed. Runs on each
+# `chezmoi apply`; a new mouse is covered at the next apply.
+set -euo pipefail
+
+declare -A seen
+
+# connected mice: kernel input devices whose handlers include "mouse"
+while IFS=$'\t' read -r vendor product name; do
+	seen["$((16#$vendor))|$((16#$product))|$name"]=1
+done < <(awk '
+	/^I:/ { for (i = 1; i <= NF; i++) { split($i, kv, "="); if (kv[1] == "Vendor") v = kv[2]; if (kv[1] == "Product") p = kv[2] } }
+	/^N:/ { sub(/^N: Name="/, ""); sub(/"$/, ""); n = $0 }
+	/^H:/ && /mouse/ { if (v != "0000") print v "\t" p "\t" n }
+' /proc/bus/input/devices)
+
+# devices KDE already has a [Libinput] section for
+cfg=${XDG_CONFIG_HOME:-$HOME/.config}/kcminputrc
+if [[ -f $cfg ]]; then
+	while IFS= read -r line; do
+		[[ $line =~ ^\[Libinput\]\[([0-9]+)\]\[([0-9]+)\]\[(.*)\]$ ]] || continue
+		seen["${BASH_REMATCH[1]}|${BASH_REMATCH[2]}|${BASH_REMATCH[3]}"]=1
+	done <"$cfg"
+fi
+
+for dev in "${!seen[@]}"; do
+	IFS='|' read -r v p n <<<"$dev"
+	kwriteconfig6 --file kcminputrc --group Libinput --group "$v" --group "$p" --group "$n" \
+		--key PointerAccelerationProfile 1
+done
+
+# KWin only reads kcminputrc when a device appears; push it to live devices too
+busctl --user status org.kde.KWin >/dev/null 2>&1 || exit 0
+for path in $(busctl --user tree org.kde.KWin | grep -oE '/org/kde/KWin/InputDevice/event[0-9]+'); do
+	[[ $(busctl --user get-property org.kde.KWin "$path" org.kde.KWin.InputDevice pointer) == "b true" ]] || continue
+	busctl --user set-property org.kde.KWin "$path" org.kde.KWin.InputDevice pointerAccelerationProfileFlat b true
+done
