@@ -1,5 +1,9 @@
 # Installing from the live USB
 
+> **Never run end to end.** Written for completeness on 4 Oct 2026; only the
+> package selection and file writing were dry-run. Before using it, review it
+> against the current repo and Arch (with Claude), ideally in a VM first.
+
 `install/<host>.sh` turns an empty (or previous) Arch partition into a system
 that already matches the repo: packages, `/etc`, unit links and modes all come
 from `system/*.sh`, the same files `just apply-system` uses. `lib.sh` holds the
