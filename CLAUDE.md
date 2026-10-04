@@ -47,6 +47,8 @@ diffing `~/.config` before and after changing the setting in the GUI.
   `chezmoi add <file>` for `$HOME`, the `.tsv` files for KDE, `system/` for the rest.
 - Commit messages follow the old repo's style: `feat:`, `fix:`, `chore:`, `docs:`.
   Commits are SSH-signed (see `.gitconfig`).
+- Push right after every commit (no need to ask). Do not merge into `main`
+  unless the user asks.
 
 ## Constraints when Claude does the work
 
