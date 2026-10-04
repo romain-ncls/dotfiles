@@ -34,6 +34,9 @@ AddPackage --foreign ttf-ms-fonts           # Arial, Trebuchet MS: mpv subtitle 
 AddPackage mpv
 AddPackage qbittorrent
 
+# reading (settings: home/.readest, see scripts/readest-config)
+AddPackage readest
+
 # browsers
 AddPackage firefox
 AddPackage --foreign brave-bin

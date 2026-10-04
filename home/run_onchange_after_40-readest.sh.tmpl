@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Re-runs whenever the Readest settings in the repo change:
+# common {{ include ".readest/common.json" | sha256sum }}
+# {{ .role }} {{ include (printf ".readest/%s.json" .role) | sha256sum }}
+exec "{{ .chezmoi.workingTree }}/scripts/readest-config" apply {{ .role }}

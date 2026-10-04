@@ -94,6 +94,17 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   button; `mpv/sub-style-modernz-patch.md` explains how to reapply it after
   updating ModernZ.
 
+## Readest
+
+- **Only the keys changed on purpose**, found by diffing Readest's own fresh
+  defaults against the Windows `settings.json` (4 Oct 2026). The rest of that
+  file is device ids, sync state and open books. `scripts/readest-config` merges
+  the keys in (only while Readest is closed, or it overwrites them on exit).
+- **Sizes are home-only** (`home.json`): font 40, 144 px margins and the wide
+  text block were tuned for the 4K TV and would be too big on the laptop.
+- **The library is data, not config**: copied once from Windows to
+  `~/.local/share/com.bilingify.readest/Readest/`, not in the repo.
+
 ## Not in the repo yet
 
 - **VS Code** settings and extensions stay in VS Code Settings Sync for now,

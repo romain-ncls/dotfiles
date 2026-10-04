@@ -21,6 +21,7 @@ The role comes from `.chezmoi.toml.tmpl` (`menadion` → `home`, anything else a
 | files in `$HOME` | `home/` (chezmoi source; `.chezmoiroot` points here) | `just apply-home` |
 | per-role differences in `$HOME` | templates using `.role`, and `home/.chezmoiignore` | |
 | KDE / Plasma settings | one line per key in `home/.kde/{common,home,work}.tsv` | `scripts/kde-config` via a chezmoi run script |
+| Readest settings | the chosen keys in `home/.readest/{common,home,work}.json` | `scripts/readest-config` via a chezmoi run script |
 | mpv config (shared with Windows) | `mpv/` at the repo root: `~/.config/mpv` is a symlink to it; on Windows `%APPDATA%\mpv` is a junction to a clone (`windows/Setup-Mpv.ps1`) | edit in place, commit, `git pull` on the other side; `just drift` flags uncommitted changes |
 | mouse acceleration | `scripts/flat-mice` (flat for every mouse) | every `chezmoi apply` |
 | hand-written part of `/boot/limine.conf` (globals, Windows entry) | `system/limine/<role>.conf` | `scripts/limine-conf` from `just apply-system` |
@@ -33,8 +34,8 @@ The role comes from `.chezmoi.toml.tmpl` (`menadion` → `home`, anything else a
 Per-role differences in `system/`: guard with `if [[ $HOSTNAME == menadion ]]`
 or put them in `50-home.sh` / `50-work.sh`, which test the hostname themselves.
 
-KDE rewrites its config files constantly, so never add whole KDE rc files to
-chezmoi. Add the single key to the right `.tsv` instead. Find the key by
+KDE (and Readest) rewrite their config files constantly, so never add whole KDE rc
+files or Readest's `settings.json` to chezmoi. Add the single key to the right `.tsv` instead. Find the key by
 diffing `~/.config` before and after changing the setting in the GUI.
 
 ## Workflow

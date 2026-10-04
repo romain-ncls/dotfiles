@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Apply or check the Readest settings listed in home/.readest/{common,ROLE}.json.
+#   readest-config apply ROLE   merge the listed keys into Readest's settings.json
+#   readest-config check ROLE   print keys whose live value differs; exit 1 if any
+# Readest rewrites settings.json itself (device ids, open books, state), so the
+# repo holds only the keys chosen on purpose, like KDE's .tsv files.
+set -euo pipefail
+
+mode=${1:?apply|check}
+role=${2:?home|work}
+dir=$(dirname "$(readlink -f "$0")")/../home/.readest
+live=${XDG_CONFIG_HOME:-$HOME/.config}/com.bilingify.readest/settings.json
+want=$(jq -s '.[0] * .[1]' "$dir/common.json" "$dir/$role.json")
+
+case $mode in
+apply)
+	if pgrep -x readest >/dev/null; then
+		echo "Readest is running: close it and run 'chezmoi apply' again (it would overwrite the change)." >&2
+		exit 0
+	fi
+	mkdir -p "$(dirname "$live")"
+	if [[ -f $live ]]; then
+		tmp=$(mktemp)
+		jq --argjson want "$want" '. * $want' "$live" >"$tmp" && mv "$tmp" "$live"
+	else
+		echo "$want" >"$live"   # Readest fills in its defaults around these on first start
+	fi
+	;;
+check)
+	[[ -f $live ]] || { echo "Readest settings.json missing ($live)"; exit 1; }
+	jq -rn --argjson want "$want" --slurpfile live "$live" '
+		$want | paths(scalars) as $p
+		| select(($live[0] | getpath($p)) != ($want | getpath($p)))
+		| "\($p | map(tostring) | join(".")): repo=\($want | getpath($p) | tojson) live=\($live[0] | getpath($p) | tojson)"
+	' | grep . && exit 1
+	exit 0
+	;;
+esac

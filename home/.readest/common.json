@@ -1,0 +1,24 @@
+{
+  "libraryGroupBy": "series",
+  "bookshelves": { "rows": { "recent": { "fields_jsonb": { "definition": { "v": { "skeuomorphicCovers": true } } } } } },
+  "globalViewSettings": {
+    "uiLanguage": "en",
+    "translateTargetLang": "fr",
+    "defaultFont": "Sans-serif",
+    "sansSerifFont": "Lato",
+    "overrideFont": true,
+    "overrideLayout": true,
+    "maxColumnCount": 1,
+    "paragraphMargin": 0.4,
+    "textIndent": 1,
+    "gapPercent": 4,
+    "pageTurnStyle": "curl",
+    "animated": true,
+    "disableClick": true,
+    "invertImgColorInDark": true,
+    "progressStyle": "percentage",
+    "showRemainingPages": true,
+    "showCurrentTime": true,
+    "use24HourClock": true
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "globalViewSettings": {
+    "defaultFontSize": 40,
+    "marginTopPx": 144,
+    "marginBottomPx": 144,
+    "compactMarginLeftPx": 0,
+    "compactMarginRightPx": 144,
+    "maxInlineSize": 3720,
+    "maxBlockSize": 1940
+  }
+}
