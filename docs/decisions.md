@@ -108,6 +108,21 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 - **The library is data, not config**: copied once from Windows to
   `~/.local/share/com.bilingify.readest/Readest/`, not in the repo.
 
+## Remote desktop (home PC)
+
+- **KRDP (Plasma's RDP server), logging in with the Linux account** (PAM,
+  `SystemUserEnabled`) rather than a separate RDP user, so no password lives in
+  KWallet or the repo. Port 3389; there is no firewall to open. Keys in
+  `home/.kde/home.tsv`; the certificate (self-signed, per machine) and the user
+  unit come from `run_onchange_after_45-krdp.sh`.
+- **Broken with FreeRDP 3.32 in krdp 6.7.5** (4 Oct 2026): FreeRDP now turns on
+  extended security, so clients that offer NLA get it, and NLA looks for the
+  user in KRDP's own (empty) user list: "Could not find user in SAM database",
+  shown as a wrong password. Fixed upstream in krdp commit 4eb3dff (KDE bug
+  526514), not yet in a release. Until then: in Remmina set *Security protocol
+  negotiation* to **TLS**; the phone's Windows App cannot, so it waits for the
+  fix (or a separate RDP user in System Settings → Remote Desktop).
+
 ## Not in the repo yet
 
 - **VS Code** settings and extensions stay in VS Code Settings Sync for now,

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# KRDP (RDP server, home PC only): its settings are in .kde/home.tsv.
+# Self-signed certificate per machine (what System Settings would generate),
+# and the user unit that starts the server with Plasma.
+set -euo pipefail
+dir=$HOME/.local/share/krdpserver
+if [[ ! -f $dir/krdp.crt || ! -f $dir/krdp.key ]]; then
+	mkdir -p "$dir"
+	openssl req -nodes -new -x509 -days 3650 -batch \
+		-keyout "$dir/krdp.key" -out "$dir/krdp.crt" 2>/dev/null
+fi
+systemctl --user enable app-org.kde.krdpserver.service
