@@ -131,6 +131,10 @@ def write_info(adapter, dev, kind, k, name, appearance):
     else:
         if appearance is not None:
             gen.setdefault("Appearance", f"0x{appearance:04x}")
+            # BlueZ only auto-connects an LE device whose services include HID;
+            # without this a new entry stays idle until one manual connect
+            if appearance >> 6 == 0x0F:  # HID appearance category (mouse, keyboard…)
+                gen.setdefault("Services", "00001812-0000-1000-8000-00805f9b34fb;")
         gen["AddressType"] = "public" if k.get("AddressType") == b"\0\0\0\0" else "static"
         gen.setdefault("SupportedTechnologies", "LE;")
         ediv, rand = u32(k["EDIV"]), struct.unpack("<Q", k["ERand"])[0]
