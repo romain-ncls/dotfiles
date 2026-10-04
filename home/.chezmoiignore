@@ -1,5 +1,5 @@
 {{- if ne .role "home" }}
 # home PC only: dual-boot shortcut
-Desktop/reboot-to-windows.desktop
+.local/share/icons/hicolor/scalable/apps/reboot-to-windows.svg
 .local/share/applications/reboot-to-windows.desktop
 {{- end }}
