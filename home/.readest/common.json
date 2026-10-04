@@ -1,6 +1,18 @@
 {
   "libraryGroupBy": "series",
-  "bookshelves": { "rows": { "recent": { "fields_jsonb": { "definition": { "v": { "skeuomorphicCovers": true } } } } } },
+  "bookshelves": {
+    "rows": {
+      "recent": {
+        "fields_jsonb": {
+          "definition": {
+            "v": {
+              "skeuomorphicCovers": true
+            }
+          }
+        }
+      }
+    }
+  },
   "globalViewSettings": {
     "uiLanguage": "en",
     "translateTargetLang": "fr",
@@ -19,6 +31,7 @@
     "progressStyle": "percentage",
     "showRemainingPages": true,
     "showCurrentTime": true,
-    "use24HourClock": true
+    "use24HourClock": true,
+    "hyphenation": false
   }
 }

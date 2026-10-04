@@ -29,6 +29,13 @@ bw login          # once; afterwards chezmoi runs `bw unlock` itself when a temp
 - Log out and back in after the first `just apply-home`: some KWin and
   Plasma settings (Xwayland scale, theme) are only fully applied at login.
 
+### Readest
+- Settings → *Theme* → color theme **Contrast** (for both the library and the
+  reader). Readest keeps the color theme in its web view's local storage, not
+  in `settings.json`, so the repo cannot set it.
+- The library (books, progress, stats) is data, not config: copy
+  `~/.local/share/com.bilingify.readest/Readest/` from the old machine if wanted.
+
 ## Home PC (MENADION) only
 
 ### Windows
