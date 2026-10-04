@@ -21,6 +21,7 @@ The role comes from `.chezmoi.toml.tmpl` (`menadion` → `home`, anything else a
 | files in `$HOME` | `home/` (chezmoi source; `.chezmoiroot` points here) | `just apply-home` |
 | per-role differences in `$HOME` | templates using `.role`, and `home/.chezmoiignore` | |
 | KDE / Plasma settings | one line per key in `home/.kde/{common,home,work}.tsv` | `scripts/kde-config` via a chezmoi run script |
+| mpv config (shared with Windows) | `mpv/` at the repo root: `~/.config/mpv` is a symlink to it; on Windows `%APPDATA%\mpv` is a junction to a clone (`windows/Setup-Mpv.ps1`) | edit in place, commit, `git pull` on the other side |
 | mouse acceleration | `scripts/flat-mice` (flat for every mouse) | every `chezmoi apply` |
 | hand-written part of `/boot/limine.conf` (globals, Windows entry) | `system/limine/<role>.conf` | `scripts/limine-conf` from `just apply-system` |
 | packages, `/etc`, services | `system/` (aconfmgr: `10-*.sh` common, `50-home.sh`, `50-work.sh`, files under `system/files/`) | `just apply-system` |

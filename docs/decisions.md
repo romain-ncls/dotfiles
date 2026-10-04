@@ -78,6 +78,21 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   mounts a hibernated or dirty volume read-only instead of refusing it. If it
   misbehaves, `ntfs3` is the fallback.
 
+## mpv
+
+- **One config for Windows and Linux**, at `mpv/` in the repo (not under
+  `home/`, so it has no chezmoi naming and Windows can use it as is). Linux
+  links `~/.config/mpv` to it; Windows junctions `%APPDATA%\mpv` to a clone.
+  Edits land straight in the git working tree on both sides.
+- **No per-OS copies**: the only OS-specific values (screenshot folder) are
+  conditional profiles on mpv's `platform` property at the end of `mpv.conf`.
+- **Fonts**: subtitle presets bring their own fonts in `mpv/fonts`. Arial and
+  Trebuchet MS come from `ttf-ms-fonts` on Linux; the sub-style menu uses the
+  bundled Atkinson Hyperlegible Next instead of Segoe UI so it looks the same.
+- **Patched ModernZ**: `mpv/scripts/modernz.lua` carries the sub-style "Aa"
+  button; `mpv/sub-style-modernz-patch.md` explains how to reapply it after
+  updating ModernZ.
+
 ## Not in the repo yet
 
 - **VS Code** settings and extensions stay in VS Code Settings Sync for now,

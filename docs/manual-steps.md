@@ -50,6 +50,16 @@ bw login          # once; afterwards chezmoi runs `bw unlock` itself when a temp
 
 The UAC prompt is the only confirmation; unsaved work is discarded.
 
+### mpv on Windows (shares mpv/ with Arch)
+```powershell
+winget install Git.Git
+git clone https://github.com/romain-ncls/dotfiles $HOME\dotfiles
+powershell -ExecutionPolicy Bypass -File $HOME\dotfiles\windows\Setup-Mpv.ps1
+```
+`%APPDATA%\mpv` becomes a junction to `$HOME\dotfiles\mpv`; the old folder is
+kept as `mpv.backup-<date>`. Both OSes then read the same files: `git pull`
+before changing the mpv config on one side, commit and push after.
+
 ### Windows boot logo
 If the Windows boot animation looks stretched, from an elevated prompt:
 `bcdedit /set {globalsettings} highestmode on`.

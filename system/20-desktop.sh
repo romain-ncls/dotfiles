@@ -28,6 +28,11 @@ AddPackage noto-fonts
 AddPackage noto-fonts-cjk
 AddPackage noto-fonts-emoji
 AddPackage ttf-jetbrains-mono
+AddPackage --foreign ttf-ms-fonts           # Arial, Trebuchet MS: mpv subtitle presets
+
+# video (mpv's config is mpv/ in this repo, shared with Windows)
+AddPackage mpv
+AddPackage qbittorrent
 
 # browsers
 AddPackage firefox
