@@ -86,7 +86,8 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   Edits land straight in the git working tree on both sides.
 - **No per-OS copies**: the only OS-specific values (screenshot folder) are
   conditional profiles on mpv's `platform` property at the end of `mpv.conf`.
-- **Fonts**: subtitle presets bring their own fonts in `mpv/fonts`. Arial and
+- **Fonts**: subtitle presets bring their own fonts in `mpv/fonts` (all freely
+  redistributable; Roboto Medium is the SubsPlease build, Apache 2.0). Arial and
   Trebuchet MS come from `ttf-ms-fonts` on Linux; the sub-style menu uses the
   bundled Atkinson Hyperlegible Next instead of Segoe UI so it looks the same.
 - **Patched ModernZ**: `mpv/scripts/modernz.lua` carries the sub-style "Aa"

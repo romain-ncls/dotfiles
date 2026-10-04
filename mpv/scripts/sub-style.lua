@@ -52,12 +52,15 @@ local PRESETS = {
     -- Presets below come from a web survey (Reddit, shared mpv configs,
     -- fansub guides, streaming/broadcast style guides). Fonts live in ~~/fonts.
 
-    -- Most-recommended anime dialogue font today (thewiki.moe mpv block, GJM-style)
-    { id = "gandhi", label = "Fansub (Gandhi Sans)", opts = {
-        ["sub-font"] = "Gandhi Sans", ["sub-bold"] = true, ["sub-font-size"] = 50,
-        ["sub-outline-size"] = 2.4, ["sub-outline-color"] = "#FF000000",
-        ["sub-shadow-offset"] = 0.75, ["sub-back-color"] = "#A0000000",
-        ["sub-margin-y"] = 40,
+    -- SubsPlease / current Crunchyroll dialogue style, taken from a SubsPlease
+    -- release (ASS at 640x360: Roboto Medium 26, outline 1.3, no shadow,
+    -- margin 23). mpv sizes are relative to a 720p window, so doubled here.
+    { id = "subsplease", label = "SubsPlease (Roboto Medium)", opts = {
+        ["sub-font"] = "Roboto Medium", ["sub-bold"] = false, ["sub-font-size"] = 52,
+        ["sub-color"] = "#FFFFFFFF",
+        ["sub-outline-size"] = 2.6, ["sub-outline-color"] = "#FF000000",
+        ["sub-shadow-offset"] = 0, ["sub-border-style"] = "outline-and-shadow",
+        ["sub-margin-y"] = 46,
     }},
     -- Classic Crunchyroll look; ships with Windows
     { id = "trebuchet", label = "Crunchyroll classic (Trebuchet MS)", opts = {
@@ -209,7 +212,7 @@ local MENU_TEXT = {
     file      = {"File's own style", "as the subtitle file defines it"},
     mpv       = {"mpv default", "sans-serif, thin outline"},
     vlc       = {"VLC-like", "Arial, thick outline, soft shadow"},
-    gandhi    = {"Fansub", "Gandhi Sans · anime standard"},
+    subsplease = {"SubsPlease", "Roboto Medium · Crunchyroll style"},
     trebuchet = {"Crunchyroll classic", "Trebuchet MS"},
     streaming = {"Streaming", "Source Sans 3 · Netflix-like"},
     clearsans = {"Soft modern", "Clear Sans · off-white"},
