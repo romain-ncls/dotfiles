@@ -102,6 +102,9 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   the keys in (only while Readest is closed, or it overwrites them on exit).
 - **Sizes are home-only** (`home.json`): font 40, 144 px margins and the wide
   text block were tuned for the 4K TV and would be too big on the laptop.
+- **Reading font: Literata** (serif, `ttf-literata`), on trial from 4 Oct 2026
+  after a font research round; Lato stays as the sans font. Bookerly was tried
+  and dropped.
 - **The library is data, not config**: copied once from Windows to
   `~/.local/share/com.bilingify.readest/Readest/`, not in the repo.
 

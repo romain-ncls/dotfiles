@@ -42,6 +42,10 @@ diffing `~/.config` before and after changing the setting in the GUI.
 ## Workflow
 
 - Change the repo, then apply. Do not edit the live machine first.
+- Exception, trials: the user may install a package ad hoc (`yay -S …`) just to
+  try it. Don't push them through the repo for that. Once they decide, record
+  it in `system/` (keep) or have them remove it (drop); `just drift` lists
+  anything left unrecorded.
 - `just drift` must come back clean before committing. It runs `aconfmgr save`
   (anything unrecorded lands in `system/99-unsorted.sh`: sort it into the right
   file or delete it), `chezmoi status`, and the KDE key check.

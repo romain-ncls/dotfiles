@@ -16,7 +16,7 @@
   "globalViewSettings": {
     "uiLanguage": "en",
     "translateTargetLang": "fr",
-    "defaultFont": "Sans-serif",
+    "defaultFont": "Serif",
     "sansSerifFont": "Lato",
     "overrideFont": true,
     "overrideLayout": true,
@@ -32,6 +32,7 @@
     "showRemainingPages": true,
     "showCurrentTime": true,
     "use24HourClock": true,
-    "hyphenation": false
+    "hyphenation": false,
+    "serifFont": "Literata"
   }
 }
