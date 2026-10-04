@@ -8,3 +8,10 @@ kxkbrc	Layout	LayoutList	fr
 kxkbrc	Layout	Use	true
 # Konsole: Meta+Return as well as Ctrl+Alt+T (the two shortcuts are tab-separated)
 kglobalshortcutsrc	services|org.kde.konsole.desktop	_launch	Ctrl+Alt+T	Meta+Return
+# Breeze window-specific override: no title bar or border on mpv (matched by window class)
+breezerc	Windeco Exception 0	Enabled	true
+breezerc	Windeco Exception 0	ExceptionType	0
+breezerc	Windeco Exception 0	ExceptionPattern	mpv
+breezerc	Windeco Exception 0	HideTitleBar	true
+breezerc	Windeco Exception 0	BorderSize	0
+breezerc	Windeco Exception 0	Mask	0
