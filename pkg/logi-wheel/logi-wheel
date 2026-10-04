@@ -35,8 +35,9 @@ def log(*args):
 
 def sensitivity_to_threshold(s):
     """Options+ sensitivity (1-100, higher = free-spins sooner) to the device's
-    auto-disengage threshold (higher = needs a faster flick; 0xFF = never)."""
-    return max(1, min(0xFE, round((100 - s) / 2) + 1))
+    auto-disengage threshold (higher = needs a faster flick; 0xFF = never).
+    Fitted on one point: Options+ 88 wrote 10 on an MX Anywhere 3S."""
+    return max(1, min(0xFE, round(1 + (100 - s) * 0.75)))
 
 
 class HidppError(Exception):
@@ -75,14 +76,14 @@ class Mouse:
         return self.features[fid]
 
     def read(self):
-        mode, threshold, _, force = self.request(self.feature(SMART_SHIFT), 1)[:4]
+        mode, threshold, force = self.request(self.feature(SMART_SHIFT), 1)[:3]
         return mode, threshold, force
 
     def apply(self, p):
         threshold = sensitivity_to_threshold(p["sensitivity"]) if p["smartshift"] else 0xFF
         force = max(1, min(100, int(p["force"])))
         # wheel mode 0 = unchanged, so a free-spin set with the button stays
-        self.request(self.feature(SMART_SHIFT), 2, 0, threshold, 0, force)
+        self.request(self.feature(SMART_SHIFT), 2, 0, threshold, force)
 
 
 def find_mice():
