@@ -10,7 +10,7 @@ change the repo in the same task, apply it, and say what you changed.
 | role | hostname | notes |
 |---|---|---|
 | `home` | `menadion` | MSI Z690, i9-12900K, RTX 3070 Ti, 4K TV. Dual-boot with Windows 11 on a shared ESP. btrfs + snapper + Limine. |
-| `work` | (not installed yet) | Intel Core Ultra 5 125U, integrated graphics only. LUKS, no dual-boot. |
+| `work` | (not installed yet; start with `install/WORK.md`) | Intel Core Ultra 5 125U, integrated graphics only. LUKS, no dual-boot. |
 
 The role comes from `.chezmoi.toml.tmpl` (`menadion` → `home`, anything else asks once).
 
@@ -24,7 +24,7 @@ The role comes from `.chezmoi.toml.tmpl` (`menadion` → `home`, anything else a
 | mouse acceleration | `scripts/flat-mice` (flat for every mouse) | every `chezmoi apply` |
 | hand-written part of `/boot/limine.conf` (globals, Windows entry) | `system/limine/<role>.conf` | `scripts/limine-conf` from `just apply-system` |
 | packages, `/etc`, services | `system/` (aconfmgr: `10-*.sh` common, `50-home.sh`, `50-work.sh`, files under `system/files/`) | `just apply-system` |
-| fresh install from the live USB | `install/` (to do) | by hand |
+| fresh install from the live USB | `install/lib.sh` (shared) + `install/<host>.sh`; work PC: `install/WORK.md` | by hand, `install/README.md` |
 | Windows side of the home PC | `windows/` | by hand |
 | anything that cannot be scripted | `docs/manual-steps.md` | by hand |
 | why something is the way it is | `docs/decisions.md` | |

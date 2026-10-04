@@ -1,11 +1,21 @@
 #!/usr/bin/env bash
 # Print the packages system/*.sh declares for this host, one per line.
-# Sources the config with stub helpers, so per-host guards are honoured and
-# no root is needed.
+#   aconf-packages            all packages
+#   aconf-packages --native   repository packages only
+#   aconf-packages --foreign  AUR packages only
+# Sources the config with stub helpers, so per-host guards are honoured and no
+# root is needed. Set HOSTNAME to evaluate it for another machine (the
+# installer does this from the live USB).
 set -euo pipefail
 dir=$(dirname "$(readlink -f "$0")")/../system
+want=${1:-all}
 
-AddPackage() { [[ $1 == --foreign ]] && shift; echo "$1"; }
+AddPackage() {
+	local kind=native
+	[[ $1 == --foreign ]] && { kind=foreign; shift; }
+	[[ $want == all || $want == "--$kind" ]] && echo "$1"
+	return 0
+}
 RemovePackage() { :; }
 IgnorePackage() { :; }
 IgnorePath() { :; }
