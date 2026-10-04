@@ -3,15 +3,23 @@ pkgname=logi-wheel
 pkgver=1
 pkgrel=1
 pkgdesc='Per-app SmartShift and scroll force for Logitech mice on KDE Plasma'
-arch=(any)
+arch=(x86_64)
 license=(MIT)
-depends=(python python-gobject kwin)
+depends=(kwin)
+makedepends=(go)
 backup=(etc/logi-wheel.toml)
-source=(logi-wheel logi-wheel.js logi-wheel.service 70-logi-wheel.rules logi-wheel.toml)
-sha256sums=(SKIP SKIP SKIP SKIP SKIP)
+source=(logi-wheel.js logi-wheel.service 70-logi-wheel.rules logi-wheel.toml)
+sha256sums=(SKIP SKIP SKIP SKIP)
+
+build() {
+	cd "$startdir/daemon"   # local package: the Go sources sit next to this file
+	export GOPATH="$srcdir/gopath" GOTOOLCHAIN=local CGO_ENABLED=0
+	export GOFLAGS="-buildmode=pie -trimpath -mod=readonly -modcacherw"
+	go build -o "$srcdir/logi-wheel" .
+}
 
 package() {
-	install -Dm755 logi-wheel -t "$pkgdir/usr/bin"
+	install -Dm755 "$srcdir/logi-wheel" -t "$pkgdir/usr/bin"
 	install -Dm644 logi-wheel.js -t "$pkgdir/usr/share/logi-wheel"
 	install -Dm644 logi-wheel.service -t "$pkgdir/usr/lib/systemd/user"
 	install -d "$pkgdir/usr/lib/systemd/user/graphical-session.target.wants"

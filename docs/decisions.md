@@ -96,6 +96,8 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   `logitech-hidpp` driver already gives hi-res scrolling, so logi-wheel only
   sends SmartShift (feature 0x2111: threshold + scroll force) and never touches
   wheel events. Neither tool has per-app profiles on KDE Wayland anyway.
+- **Written in Go** like the old repo's daemons (spotify-vol, mutectl): one
+  static binary, `go` only as a make dependency.
 - **A KWin script reports the active window**: on Wayland only the compositor
   knows it. The daemon loads the script over D-Bus at start, so nothing in
   `kwinrc` has to enable it.

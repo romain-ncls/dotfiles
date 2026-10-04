@@ -4,7 +4,7 @@
 #   local-pkgs check   list the out-of-date ones, exit 1 if any
 # Each package records the hash of its pkg/<name>/ folder in
 # /usr/share/local-pkgs/<name>, so any edit (code or config) triggers a
-# rebuild, with no version bump. makepkg -i runs sudo pacman itself.
+# rebuild, with no version bump. makepkg -si runs sudo pacman itself.
 # PKGROOT overrides the pkg/ folder (the installer copies it into the target).
 set -euo pipefail
 root=${PKGROOT:-$(dirname "$(readlink -f "$0")")/../pkg}
@@ -22,7 +22,7 @@ for dir in "$root"/*/; do
 	fi
 	build=$(mktemp -d)
 	cp -r "$dir". "$build"
-	(cd "$build" && LOCALPKG_HASH=$hash makepkg -sfi --noconfirm)
+	(cd "$build" && LOCALPKG_HASH=$hash makepkg -sfir --noconfirm)   # -r: drop make deps (go…) again
 	rm -rf "$build"
 done
 exit $status
