@@ -82,8 +82,11 @@ class Mouse:
     def apply(self, p):
         threshold = sensitivity_to_threshold(p["sensitivity"]) if p["smartshift"] else 0xFF
         force = max(1, min(100, int(p["force"])))
-        # wheel mode 0 = unchanged, so a free-spin set with the button stays
-        self.request(self.feature(SMART_SHIFT), 2, 0, threshold, force)
+        # the wheel only takes new values when the mode is sent with them
+        # (0 = "unchanged" stores them until the next power cycle); send the
+        # current mode back, so a free-spin set with the button stays
+        mode = self.read()[0]
+        self.request(self.feature(SMART_SHIFT), 2, mode, threshold, force)
 
 
 def find_mice():
