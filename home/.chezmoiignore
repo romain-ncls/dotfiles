@@ -4,4 +4,6 @@
 # home PC only: dual-boot shortcut
 .local/share/icons/hicolor/scalable/apps/reboot-to-windows.svg
 .local/share/applications/reboot-to-windows.desktop
+# home PC only: TV as default audio output
+.config/wireplumber
 {{- end }}

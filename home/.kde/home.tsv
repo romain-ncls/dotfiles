@@ -8,3 +8,11 @@ krdpserverrc	General	Autostart	true
 krdpserverrc	General	SystemUserEnabled	true
 krdpserverrc	General	Certificate	/home/romain/.local/share/krdpserver/krdp.crt
 krdpserverrc	General	CertificateKey	/home/romain/.local/share/krdpserver/krdp.key
+# Desktop on the TV: never lock, dim, blank or suspend on its own.
+kscreenlockerrc	Daemon	Autolock	false
+kscreenlockerrc	Daemon	Timeout	0
+powerdevilrc	AC|Display	DimDisplayWhenIdle	false
+powerdevilrc	AC|Display	DimDisplayIdleTimeoutSec	-1
+powerdevilrc	AC|Display	TurnOffDisplayWhenIdle	false
+powerdevilrc	AC|Display	TurnOffDisplayIdleTimeoutSec	-1
+powerdevilrc	AC|SuspendAndShutdown	AutoSuspendAction	0

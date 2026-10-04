@@ -6,3 +6,5 @@ ksmserverrc	General	loginMode	emptySession
 konsolerc	KonsoleWindow	ShowMenuBarByDefault	false
 kxkbrc	Layout	LayoutList	fr
 kxkbrc	Layout	Use	true
+# Konsole: Meta+Return as well as Ctrl+Alt+T (the two shortcuts are tab-separated)
+kglobalshortcutsrc	services|org.kde.konsole.desktop	_launch	Ctrl+Alt+T	Meta+Return
