@@ -35,7 +35,8 @@ Per-role differences in `system/`: guard with `if [[ $HOSTNAME == menadion ]]`
 or put them in `50-home.sh` / `50-work.sh`, which test the hostname themselves.
 
 KDE (and Readest) rewrite their config files constantly, so never add whole KDE rc
-files or Readest's `settings.json` to chezmoi. Add the single key to the right `.tsv` instead. Find the key by
+files or Readest's `settings.json` to chezmoi. Add the single key to the right
+`.tsv` / `.readest/*.json` instead. Find the key by
 diffing `~/.config` before and after changing the setting in the GUI.
 
 ## Workflow
