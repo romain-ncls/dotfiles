@@ -29,6 +29,7 @@ AddPackage noto-fonts-cjk
 AddPackage noto-fonts-emoji
 AddPackage ttf-jetbrains-mono
 AddPackage ttf-lato                        # Readest's reading font
+AddPackage --foreign amazon-fonts          # Bookerly (on trial for Readest); downloaded from Amazon, never stored in this repo
 AddPackage --foreign ttf-ms-fonts           # Arial, Trebuchet MS: mpv subtitle presets
 
 # video (mpv's config is mpv/ in this repo, shared with Windows)
