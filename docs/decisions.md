@@ -67,6 +67,15 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   Lightspeed receiver at ~5 s and `logitech-dj` takes over at ~12 s; on about
   2 boots out of 3 the receiver never re-announced the mouse.
 
+## Desktop
+
+- **`plasma-meta` stays, so Discover and Flatpak stay installed but unused.**
+  Software comes from pacman and the AUR (yay), which aconfmgr tracks; Flatpaks
+  would live outside `just drift`. `plasma-meta` hard-depends on `discover` and
+  `flatpak-kcm` (which needs `flatpak`), and listing its other dependencies by
+  hand would miss components added by later Plasma releases.
+  `plasma-meta-deflatpak` (AUR) still depends on `discover`.
+
 ## Hardware (home PC)
 
 - **NVIDIA**: `nvidia-open-dkms`; `options nvidia NVreg_PreserveVideoMemoryAllocations=1`
