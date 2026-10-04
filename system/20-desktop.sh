@@ -22,6 +22,7 @@ AddPackage wireplumber
 # bluetooth (KDE's bluedevil talks to bluetoothd)
 AddPackage bluez
 AddPackage bluez-utils                     # bluetoothctl
+AddPackage --foreign logi-wheel             # pkg/logi-wheel: per-app SmartShift/scroll force (local, not AUR)
 
 # fonts
 AddPackage noto-fonts

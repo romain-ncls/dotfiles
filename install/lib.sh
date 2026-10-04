@@ -123,16 +123,22 @@ aur_packages() {
 	local tmp=$T/etc/sudoers.d/00-install-temporary status=0
 	echo "$USERNAME ALL=(ALL:ALL) NOPASSWD: ALL" >"$tmp"
 	chmod 440 "$tmp"
-	mapfile -t aur < <(packages --foreign | grep -vx yay)
+	# pkg/ holds local packages: built from the repo by scripts/local-pkgs, not from the AUR
+	mapfile -t aur < <(packages --foreign | grep -vx yay | grep -vxF -f <(ls "$REPO/pkg"))
+	rm -rf "$T/var/tmp/local-pkgs"   # not /tmp: arch-chroot mounts a fresh tmpfs there
+	cp -r "$REPO/pkg" "$T/var/tmp/local-pkgs"
+	cp "$REPO/scripts/local-pkgs" "$T/var/tmp/local-pkgs/build"
 	in_target runuser -u "$USERNAME" -- env HOME="/home/$USERNAME" bash -euc '
 		cd "$(mktemp -d)"
 		git clone --depth 1 https://aur.archlinux.org/yay.git
 		cd yay && makepkg -sir --noconfirm
 		yay -S --needed --noconfirm --removemake "$@"
+		PKGROOT=/var/tmp/local-pkgs /var/tmp/local-pkgs/build
 	' _ "${aur[@]}" || status=$?
 	rm -f "$tmp"   # whatever happened above
+	rm -rf "$T/var/tmp/local-pkgs"
 	((status == 0)) || die "AUR build failed (exit $status); the temporary sudo rule was removed."
-	ok "AUR: yay ${aur[*]}"
+	ok "AUR: yay ${aur[*]}; local: $(ls "$REPO/pkg" | xargs)"
 }
 
 # Snapper creates its own .snapshots subvolume inside @; swap it for @snapshots

@@ -10,8 +10,9 @@ default:
 # Make the whole machine match the repo: system first, then $HOME
 apply: apply-system apply-home
 
-# Packages, /etc, services (aconfmgr), then the hand-written part of limine.conf (uses sudo)
+# Local packages (pkg/), packages, /etc, services (aconfmgr), then the hand-written part of limine.conf (uses sudo)
 apply-system:
+    scripts/local-pkgs
     {{sys}} apply
     if [ -f system/limine/{{role}}.conf ]; then sudo scripts/limine-conf apply system/limine/{{role}}.conf; fi
 
@@ -28,6 +29,8 @@ diff:
     comm -23 <(echo "$want") <(pacman -Qq | sort) | sed 's/^/+ /'
     echo "== packages to remove (installed explicitly, not in system/)"
     comm -13 <(echo "$want") <(pacman -Qqe | sort) | sed 's/^/- /'
+    echo "== local packages (pkg/)"
+    scripts/local-pkgs check || true
     echo "== system files"
     {{sys}} diff / || true
     if [[ -f system/limine/{{role}}.conf ]]; then
@@ -55,6 +58,8 @@ drift:
         echo "== limine.conf"
         sudo scripts/limine-conf diff system/limine/{{role}}.conf || status=1
     fi
+    echo "== local packages (pkg/)"
+    scripts/local-pkgs check && echo "clean" || status=1
     echo "== home (chezmoi status)"
     out=$(chezmoi status --exclude scripts)
     if [[ -n $out ]]; then echo "$out"; status=1; else echo "clean"; fi

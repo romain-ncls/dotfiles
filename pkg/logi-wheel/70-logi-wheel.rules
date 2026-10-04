@@ -1,0 +1,2 @@
+# Let the logged-in user talk HID++ to Logitech devices (same idea as Solaar's rule).
+ACTION!="remove", SUBSYSTEM=="hidraw", KERNELS=="*:046D:*", TAG+="uaccess"

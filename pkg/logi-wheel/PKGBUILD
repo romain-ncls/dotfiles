@@ -1,0 +1,23 @@
+# Local package: built and installed by scripts/local-pkgs (`just apply-system`).
+pkgname=logi-wheel
+pkgver=1
+pkgrel=1
+pkgdesc='Per-app SmartShift and scroll force for Logitech mice on KDE Plasma'
+arch=(any)
+license=(MIT)
+depends=(python python-gobject kwin)
+backup=(etc/logi-wheel.toml)
+source=(logi-wheel logi-wheel.js logi-wheel.service 70-logi-wheel.rules logi-wheel.toml)
+sha256sums=(SKIP SKIP SKIP SKIP SKIP)
+
+package() {
+	install -Dm755 logi-wheel -t "$pkgdir/usr/bin"
+	install -Dm644 logi-wheel.js -t "$pkgdir/usr/share/logi-wheel"
+	install -Dm644 logi-wheel.service -t "$pkgdir/usr/lib/systemd/user"
+	install -d "$pkgdir/usr/lib/systemd/user/graphical-session.target.wants"
+	ln -s ../logi-wheel.service "$pkgdir/usr/lib/systemd/user/graphical-session.target.wants/"
+	install -Dm644 70-logi-wheel.rules -t "$pkgdir/usr/lib/udev/rules.d"
+	install -Dm644 logi-wheel.toml "$pkgdir/etc/logi-wheel.toml"
+	# lets scripts/local-pkgs see whether pkg/logi-wheel changed since this build
+	echo "${LOCALPKG_HASH:-unknown}" | install -Dm644 /dev/stdin "$pkgdir/usr/share/local-pkgs/$pkgname"
+}

@@ -25,6 +25,7 @@ The role comes from `.chezmoi.toml.tmpl` (`menadion` → `home`, anything else a
 | mpv config (shared with Windows) | `mpv/` at the repo root: `~/.config/mpv` is a symlink to it; on Windows `%APPDATA%\mpv` is a junction to a clone (`windows/Setup-Mpv.ps1`) | edit in place, commit, `git pull` on the other side; `just drift` flags uncommitted changes |
 | mouse acceleration | `scripts/flat-mice` (flat for every mouse) | every `chezmoi apply` |
 | hand-written part of `/boot/limine.conf` (globals, Windows entry) | `system/limine/<role>.conf` | `scripts/limine-conf` from `just apply-system` |
+| a small tool needing files in several system places (e.g. `logi-wheel`) | a local package in `pkg/<name>/` (PKGBUILD + files), declared with `AddPackage --foreign` | `scripts/local-pkgs` from `just apply-system` (rebuilds when the folder changes) |
 | packages, `/etc`, services | `system/` (aconfmgr: `10-*.sh` common, `50-home.sh`, `50-work.sh`, files under `system/files/`) | `just apply-system` |
 | fresh install from the live USB | `install/lib.sh` (shared) + `install/<host>.sh`; work PC: `install/WORK.md` | by hand, `install/README.md` |
 | Windows side of the home PC | `windows/` | by hand |

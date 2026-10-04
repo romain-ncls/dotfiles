@@ -1,0 +1,226 @@
+#!/usr/bin/env python3
+"""Per-app SmartShift, sensitivity and scroll force for Logitech mice on KDE.
+
+A KWin script, loaded by this daemon, reports each window activation over
+D-Bus. The daemon picks the matching profile in /etc/logi-wheel.toml and sends
+one HID++ command (feature 0x2111, SmartShift enhanced) to every Logitech mouse
+on /dev/hidraw*. It never touches wheel events or the wheel resolution, so the
+kernel's hi-res smooth scrolling is left alone.
+
+  logi-wheel           run the daemon (the systemd user service does this)
+  logi-wheel status    print the raw values each mouse holds now
+"""
+import glob
+import os
+import select
+import sys
+import time
+import tomllib
+
+from gi.repository import Gio, GLib
+
+CONFIG = "/etc/logi-wheel.toml"
+KWIN_SCRIPT = "/usr/share/logi-wheel/logi-wheel.js"
+BUS_NAME = "local.LogiWheel"
+DEFAULTS = {"smartshift": True, "sensitivity": 50, "force": 50}
+
+SMART_SHIFT = 0x2111  # SmartShift enhanced (with tunable scroll force)
+DEVICE_STATUS = 0x1D4B  # wireless device status: tells us when the mouse reconnects
+SWID = 0x0A  # our software id; the kernel driver and events use others
+
+
+def log(*args):
+    print(*args, flush=True)
+
+
+def sensitivity_to_threshold(s):
+    """Options+ sensitivity (1-100, higher = free-spins sooner) to the device's
+    auto-disengage threshold (higher = needs a faster flick; 0xFF = never)."""
+    return max(1, min(0xFE, round((100 - s) / 2) + 1))
+
+
+class HidppError(Exception):
+    pass
+
+
+class Mouse:
+    def __init__(self, node):
+        self.node = node
+        self.fd = os.open(node, os.O_RDWR | os.O_NONBLOCK)
+        self.features = {}
+
+    def close(self):
+        os.close(self.fd)
+
+    def request(self, index, fn, *params, timeout=1.0):
+        fnsw = fn << 4 | SWID
+        os.write(self.fd, bytes([0x11, 0xFF, index, fnsw, *params]).ljust(20, b"\0"))
+        end = time.monotonic() + timeout
+        while (left := end - time.monotonic()) > 0:
+            if not select.select([self.fd], [], [], left)[0]:
+                break
+            r = os.read(self.fd, 64)
+            if len(r) < 6 or r[0] not in (0x10, 0x11):
+                continue
+            if r[2] in (0xFF, 0x8F) and r[3] == index and r[4] == fnsw:
+                raise HidppError(f"{self.node}: HID++ error {r[5]:#x}")
+            if r[2] == index and r[3] == fnsw:
+                return r[4:]
+        raise TimeoutError(f"{self.node}: no answer")
+
+    def feature(self, fid):
+        """Index of a HID++ 2.0 feature (0 = the device does not have it)."""
+        if fid not in self.features:
+            self.features[fid] = self.request(0, 0, fid >> 8, fid & 0xFF)[0]
+        return self.features[fid]
+
+    def read(self):
+        mode, threshold, _, force = self.request(self.feature(SMART_SHIFT), 1)[:4]
+        return mode, threshold, force
+
+    def apply(self, p):
+        threshold = sensitivity_to_threshold(p["sensitivity"]) if p["smartshift"] else 0xFF
+        force = max(1, min(100, int(p["force"])))
+        # wheel mode 0 = unchanged, so a free-spin set with the button stays
+        self.request(self.feature(SMART_SHIFT), 2, 0, threshold, 0, force)
+
+
+def find_mice():
+    """hidraw nodes of Logitech devices that speak HID++ and have SmartShift."""
+    for sysdir in sorted(glob.glob("/sys/class/hidraw/hidraw*")):
+        try:
+            with open(f"{sysdir}/device/uevent") as f:
+                if ":0000046D:" not in f.read():
+                    continue
+            with open(f"{sysdir}/device/report_descriptor", "rb") as f:
+                if b"\x85\x11" not in f.read():  # no long HID++ report
+                    continue
+            mouse = Mouse("/dev/" + os.path.basename(sysdir))
+        except OSError:
+            continue
+        try:
+            if mouse.feature(SMART_SHIFT):
+                yield mouse
+                continue
+        except (OSError, HidppError, TimeoutError):
+            pass
+        mouse.close()
+
+
+def load_config():
+    try:
+        with open(CONFIG, "rb") as f:
+            return tomllib.load(f)
+    except (OSError, tomllib.TOMLDecodeError) as e:
+        log(f"{CONFIG}: {e}; using defaults")
+        return {}
+
+
+def profile_for(cls, desktop):
+    cfg = load_config()
+    base = {**DEFAULTS, **cfg.get("default", {})}
+    for name, p in cfg.get("app", {}).items():
+        if name.lower() in (cls.lower(), desktop.lower()):
+            return name, {**base, **p}
+    return "default", base
+
+
+class Daemon:
+    def __init__(self):
+        self.mice = {}  # node -> (Mouse, GLib watch id)
+        self.profile = None
+        self.name = None
+
+    def apply(self, mouse):
+        try:
+            mouse.apply(self.profile)
+        except (OSError, HidppError, TimeoutError) as e:
+            log(f"{mouse.node}: {e}")
+
+    def rescan(self):
+        present = {m.node: m for m in find_mice() if m.node not in self.mice}
+        for node, mouse in present.items():
+            log(f"{node}: SmartShift mouse found")
+            try:  # looked up now: on_report cannot send requests itself
+                mouse.feature(DEVICE_STATUS)
+            except (OSError, HidppError, TimeoutError):
+                mouse.features[DEVICE_STATUS] = 0
+            watch = GLib.io_add_watch(mouse.fd, GLib.IO_IN | GLib.IO_HUP | GLib.IO_ERR, self.on_report, mouse)
+            self.mice[node] = (mouse, watch)
+            if self.profile:
+                self.apply(mouse)
+        return True
+
+    def on_report(self, fd, cond, mouse):
+        try:
+            r = os.read(fd, 64)
+        except OSError:
+            r = b""
+        if not r or cond & (GLib.IO_HUP | GLib.IO_ERR):
+            log(f"{mouse.node}: gone")
+            del self.mice[mouse.node]
+            mouse.close()
+            return False
+        # a reconnect resets the wheel settings: send them again
+        status = mouse.features.get(DEVICE_STATUS)
+        if status and len(r) > 3 and r[2] == status and r[3] >> 4 == 0:
+            GLib.timeout_add(500, lambda: self.apply(mouse) and False)
+        return True
+
+    def active_window(self, cls, desktop):
+        name, profile = profile_for(cls, desktop)
+        if profile == self.profile:
+            return
+        self.name, self.profile = name, profile
+        log(f"{cls or desktop} -> [{name}] {profile}")
+        for mouse, _ in self.mice.values():
+            self.apply(mouse)
+
+    def on_call(self, conn, sender, path, iface, method, params, invocation):
+        cls, desktop = params.unpack()
+        invocation.return_value(None)
+        self.active_window(cls, desktop)
+
+    def load_kwin_script(self, conn):
+        def call(method, sig=None, *args):
+            return conn.call_sync(
+                "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", method,
+                GLib.Variant(sig, args) if sig else None, None, 0, -1, None,
+            )
+
+        # reload, so the script reports the window that is active right now
+        if call("isScriptLoaded", "(s)", "logi-wheel").unpack()[0]:
+            call("unloadScript", "(s)", "logi-wheel")
+        call("loadScript", "(ss)", KWIN_SCRIPT, "logi-wheel")
+        call("start")
+
+    def run(self):
+        node = Gio.DBusNodeInfo.new_for_xml(
+            "<node><interface name='local.LogiWheel'><method name='ActiveWindow'>"
+            "<arg type='s' direction='in'/><arg type='s' direction='in'/>"
+            "</method></interface></node>"
+        )
+
+        def acquired(conn, _name):
+            conn.register_object_with_closures2("/local/LogiWheel", node.interfaces[0], self.on_call, None, None)
+            self.load_kwin_script(conn)
+
+        Gio.bus_own_name(Gio.BusType.SESSION, BUS_NAME, 0, acquired, None, lambda *_: sys.exit("D-Bus name taken"))
+        self.rescan()
+        GLib.timeout_add_seconds(3, self.rescan)  # mouse switched back to this PC
+        GLib.MainLoop().run()
+
+
+def status():
+    found = False
+    for mouse in find_mice():
+        found = True
+        mode, threshold, force = mouse.read()
+        mode = {1: "free-spin", 2: "ratchet"}.get(mode, mode)
+        print(f"{mouse.node}: wheel {mode}, auto-disengage threshold {threshold}, force {force}")
+    if not found:
+        sys.exit("no SmartShift mouse found (connected? readable /dev/hidraw*?)")
+
+
+if __name__ == "__main__":
+    status() if sys.argv[1:] == ["status"] else Daemon().run()

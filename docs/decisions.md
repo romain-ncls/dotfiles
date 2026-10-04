@@ -87,6 +87,26 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   mounts a hibernated or dirty volume read-only instead of refusing it. If it
   misbehaves, `ntfs3` is the fallback.
 
+## Logitech mice (logi-wheel)
+
+- **Per-app wheel settings (Options+ style) with our own `pkg/logi-wheel`,
+  not Solaar or logiops.** Both broke smooth scrolling on the work laptop:
+  logiops diverts the wheel and re-emits coarse events, and Solaar re-applies
+  the wheel resolution behind the kernel driver. The kernel's
+  `logitech-hidpp` driver already gives hi-res scrolling, so logi-wheel only
+  sends SmartShift (feature 0x2111: threshold + scroll force) and never touches
+  wheel events. Neither tool has per-app profiles on KDE Wayland anyway.
+- **A KWin script reports the active window**: on Wayland only the compositor
+  knows it. The daemon loads the script over D-Bus at start, so nothing in
+  `kwinrc` has to enable it.
+- **Local package rather than files spread across chezmoi and `system/`**:
+  binary, user unit, KWin script, udev rule (hidraw `uaccess`) and config all
+  live in one folder and uninstall together. `scripts/local-pkgs` stores a
+  hash of the folder in the package, so editing the config is enough to make
+  `just apply-system` rebuild it; no version bumps.
+- **Options+ sensitivity is mapped to the device threshold by a guess**
+  (`sensitivity_to_threshold`), calibrated against what Options+ wrote to the mouse.
+
 ## mpv
 
 - **One config for Windows and Linux**, at `mpv/` in the repo (not under

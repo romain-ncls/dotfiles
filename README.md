@@ -37,6 +37,7 @@ Change the repo first, then apply. `just drift` should be clean before each comm
 home/       chezmoi source for $HOME (.chezmoiroot points here)
   .kde/     KDE settings as one key per line, per role
 system/     aconfmgr configuration (packages, /etc, /boot, services)
+pkg/        local packages (PKGBUILDs not on the AUR), built by just apply-system
 install/    live-USB install scripts (home done, work: see install/WORK.md)
 scripts/    helpers used by chezmoi and just
 windows/    Windows-side files for the home PC

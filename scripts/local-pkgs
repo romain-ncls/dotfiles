@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Build and install the local packages in pkg/ (PKGBUILDs that are not on the AUR).
+#   local-pkgs         rebuild and install each package whose folder changed
+#   local-pkgs check   list the out-of-date ones, exit 1 if any
+# Each package records the hash of its pkg/<name>/ folder in
+# /usr/share/local-pkgs/<name>, so any edit (code or config) triggers a
+# rebuild, with no version bump. makepkg -i runs sudo pacman itself.
+# PKGROOT overrides the pkg/ folder (the installer copies it into the target).
+set -euo pipefail
+root=${PKGROOT:-$(dirname "$(readlink -f "$0")")/../pkg}
+mode=${1:-build}
+status=0
+for dir in "$root"/*/; do
+	[[ -f $dir/PKGBUILD ]] || continue
+	name=$(basename "$dir")
+	hash=$(cd "$dir" && find . -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
+	[[ $(cat "/usr/share/local-pkgs/$name" 2>/dev/null) == "$hash" ]] && continue
+	if [[ $mode == check ]]; then
+		echo "$name: pkg/$name changed since it was installed (just apply-system)"
+		status=1
+		continue
+	fi
+	build=$(mktemp -d)
+	cp -r "$dir". "$build"
+	(cd "$build" && LOCALPKG_HASH=$hash makepkg -sfi --noconfirm)
+	rm -rf "$build"
+done
+exit $status
