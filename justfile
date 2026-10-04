@@ -60,6 +60,9 @@ drift:
     if [[ -n $out ]]; then echo "$out"; status=1; else echo "clean"; fi
     echo "== KDE keys"
     scripts/kde-config check {{role}} && echo "clean" || status=1
+    echo "== mpv (read in place from mpv/, so changes show up in git, not chezmoi)"
+    out=$(git status --short -- mpv)
+    if [[ -n $out ]]; then echo "$out"; echo "-> commit them (and git pull on the other OS)"; status=1; else echo "clean"; fi
     exit $status
 
 # Pull a changed $HOME file back into the repo, e.g. `just add ~/.config/fish/config.fish`
