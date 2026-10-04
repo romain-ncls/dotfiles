@@ -1,0 +1,189 @@
+#!/usr/bin/env python3
+# Copy Bluetooth pairing keys from Windows into BlueZ, so a device paired in
+# Windows also works in Arch on the same channel (dual boot, one adapter).
+# Pair the device in Windows, shut Windows down (not hibernate), boot Arch, then:
+#   scripts/bt-windows-keys                  list the devices Windows has keys for
+#   sudo scripts/bt-windows-keys NAME|ADDR…  copy those keys, restart bluetooth
+# Keys are read from C:'s SYSTEM hive; nothing is written to Windows. Only the
+# key sections of an existing BlueZ entry are replaced, the rest is kept.
+import configparser
+import os
+import struct
+import subprocess
+import sys
+
+HIVE = os.environ.get("WIN_HIVE", "/mnt/win/Windows/System32/config/SYSTEM")
+BLUEZ = "/var/lib/bluetooth"
+
+
+class Hive:
+    """Just enough of the regf format to read keys and values."""
+
+    def __init__(self, path):
+        with open(path, "rb") as f:
+            self.d = f.read()
+        if self.d[:4] != b"regf":
+            sys.exit(f"{path}: not a registry hive")
+        self.root = struct.unpack_from("<I", self.d, 0x24)[0]
+
+    def cell(self, off):
+        o = 4096 + off
+        return self.d[o + 4 : o - struct.unpack_from("<i", self.d, o)[0]]
+
+    def name(self, nk):
+        c = self.cell(nk)
+        flags, ln = struct.unpack_from("<H", c, 2)[0], struct.unpack_from("<H", c, 0x48)[0]
+        raw = c[0x4C : 0x4C + ln]
+        return raw.decode("latin-1") if flags & 0x20 else raw.decode("utf-16-le")
+
+    def subkeys(self, nk):
+        c = self.cell(nk)
+        out = {}
+
+        def walk(off):
+            lst = self.cell(off)
+            sig, n = lst[:2], struct.unpack_from("<H", lst, 2)[0]
+            step = 8 if sig in (b"lf", b"lh") else 4
+            for i in range(n):
+                o = struct.unpack_from("<I", lst, 4 + step * i)[0]
+                if sig == b"ri":
+                    walk(o)
+                else:
+                    out[self.name(o).lower()] = o
+
+        if struct.unpack_from("<I", c, 0x14)[0]:
+            walk(struct.unpack_from("<I", c, 0x1C)[0])
+        return out
+
+    def key(self, path):
+        nk = self.root
+        for part in path.split("\\"):
+            nk = self.subkeys(nk).get(part.lower())
+            if nk is None:
+                return None
+        return nk
+
+    def values(self, nk):
+        n, lst = struct.unpack_from("<II", self.cell(nk), 0x24)
+        out = {}
+        if not n:
+            return out
+        vl = self.cell(lst)
+        for i in range(n):
+            vk = self.cell(struct.unpack_from("<I", vl, 4 * i)[0])
+            ln, size, off, _typ, flags = struct.unpack_from("<HIIIH", vk, 2)
+            nm = vk[0x14 : 0x14 + ln]
+            nm = nm.decode("latin-1") if flags & 1 else nm.decode("utf-16-le")
+            if size & 0x80000000:  # small data lives in the offset field
+                out[nm] = struct.pack("<I", off)[: size & 0x7FFFFFFF]
+            else:
+                out[nm] = self.cell(off)[:size]
+        return out
+
+
+def mac(hexaddr):
+    return ":".join(hexaddr[i : i + 2] for i in range(0, 12, 2)).upper()
+
+
+def u32(b):
+    return struct.unpack("<I", b)[0]
+
+
+def windows_devices(hive):
+    sel = hive.key("Select")
+    if sel is None:
+        sys.exit(f"{HIVE}: not the SYSTEM hive")
+    base = f"ControlSet{u32(hive.values(sel)['Current']):03d}\\Services\\BTHPORT\\Parameters"
+    keys, infos = hive.key(base + "\\Keys"), hive.key(base + "\\Devices")
+    info = hive.subkeys(infos) if infos else {}
+    for adapter, anode in hive.subkeys(keys).items():
+        # classic devices: a 16-byte link key value named after the device
+        for dev, val in hive.values(anode).items():
+            if len(dev) == 12 and len(val) == 16:
+                yield adapter, dev, "classic", {"LinkKey": val}, info.get(dev)
+        # LE devices: one subkey per device
+        for dev, dnode in hive.subkeys(anode).items():
+            yield adapter, dev, "le", hive.values(dnode), info.get(dev)
+
+
+def device_name(hive, node):
+    if node is None:
+        return "?"
+    v = hive.values(node)
+    raw = v.get("LEName") or v.get("Name") or b"?"
+    return raw.split(b"\0")[0].decode("utf-8", "replace")
+
+
+def write_info(adapter, dev, kind, k, name, appearance):
+    path = os.path.join(BLUEZ, mac(adapter), mac(dev), "info")
+    cfg = configparser.ConfigParser(interpolation=None, delimiters=("=",))
+    cfg.optionxform = str
+    cfg.read(path)
+    if not cfg.has_section("General"):
+        cfg.add_section("General")
+    gen = cfg["General"]
+    gen.setdefault("Name", name)
+    gen["Trusted"] = "true"
+    gen["Blocked"] = "false"
+    if kind == "classic":
+        gen.setdefault("SupportedTechnologies", "BR/EDR;")
+        cfg["LinkKey"] = {"Key": k["LinkKey"].hex().upper(), "Type": "4", "PINLength": "0"}
+    else:
+        if appearance is not None:
+            gen.setdefault("Appearance", f"0x{appearance:04x}")
+        gen["AddressType"] = "public" if k.get("AddressType") == b"\0\0\0\0" else "static"
+        gen.setdefault("SupportedTechnologies", "LE;")
+        ediv, rand = u32(k["EDIV"]), struct.unpack("<Q", k["ERand"])[0]
+        cfg.remove_section("PeripheralLongTermKey")
+        cfg.remove_section("SlaveLongTermKey")
+        cfg["LongTermKey"] = {
+            "Key": k["LTK"].hex().upper(),
+            # EDIV = Rand = 0 means LE Secure Connections (2 = unauthenticated P-256)
+            "Authenticated": "2" if ediv == 0 and rand == 0 else "0",
+            "EncSize": str(u32(k["KeyLength"])),
+            "EDiv": str(ediv),
+            "Rand": str(rand),
+        }
+        if "IRK" in k:  # Windows keeps the IRK byte-reversed
+            cfg["IdentityResolvingKey"] = {"Key": k["IRK"][::-1].hex().upper()}
+    os.makedirs(os.path.dirname(path), mode=0o700, exist_ok=True)
+    with open(path, "w") as f:
+        cfg.write(f, space_around_delimiters=False)
+    os.chmod(path, 0o600)
+    return path
+
+
+def main():
+    hive = Hive(HIVE)
+    devices = []
+    for adapter, dev, kind, k, node in windows_devices(hive):
+        appearance = None
+        if node is not None and "LEAppearance" in hive.values(node):
+            appearance = u32(hive.values(node)["LEAppearance"])
+        devices.append((adapter, dev, kind, k, device_name(hive, node), appearance))
+
+    wanted = sys.argv[1:]
+    if not wanted:
+        for adapter, dev, kind, _, name, _ in devices:
+            print(f"{mac(dev)}  {kind:7}  {name}  (adapter {mac(adapter)})")
+        return
+
+    if os.geteuid() != 0:
+        sys.exit("writing BlueZ keys needs root: run with sudo")
+    def matches(d):
+        return any(w.lower() in d[4].lower() or w.upper().replace("-", ":") == mac(d[1]) for w in wanted)
+
+    picked = [d for d in devices if matches(d)]
+    if not picked:
+        sys.exit("no Windows pairing matches " + ", ".join(wanted) + "; run without arguments to list them")
+    for adapter, dev, kind, k, name, appearance in picked:
+        if not os.path.isdir(os.path.join(BLUEZ, mac(adapter))):
+            print(f"skip {name}: adapter {mac(adapter)} is not on this machine")
+            continue
+        print(f"{name} ({mac(dev)}): {write_info(adapter, dev, kind, k, name, appearance)}")
+    subprocess.run(["systemctl", "restart", "bluetooth.service"], check=True)
+    print("bluetooth restarted; switch the device to its Windows channel")
+
+
+if __name__ == "__main__":
+    main()

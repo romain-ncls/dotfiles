@@ -65,6 +65,22 @@ powershell -ExecutionPolicy Bypass -File $HOME\dotfiles\windows\Setup-Mpv.ps1
 kept as `mpv.backup-<date>`. Both OSes then read the same files: `git pull`
 before changing the mpv config on one side, commit and push after.
 
+### Bluetooth devices shared with Windows (MX Anywhere 3S on channel 2)
+Both OSes use the same adapter, so a device remembers only the key of the
+OS that paired it last. Pair in Windows, then give Arch the same key:
+1. In Windows, pair the device (MX Anywhere 3S: channel 2). Shut Windows down
+   properly; a hibernated Windows may not have written the key to disk yet.
+2. In Arch, with C: mounted on `/mnt/win`:
+   ```sh
+   scripts/bt-windows-keys                      # lists what Windows has paired
+   sudo scripts/bt-windows-keys "MX Anywhere"   # writes /var/lib/bluetooth/…/info, restarts bluetooth
+   ```
+Redo both steps after any re-pairing in Windows. Never pair that channel from
+Arch, because that replaces the key the mouse holds and breaks Windows. The keys stay
+in `/var/lib/bluetooth` and the Windows registry, never in this repo. A
+Logitech device gets a different address on each channel, so an old Arch-only
+pairing on another channel is a separate entry: `bluetoothctl remove <addr>`.
+
 ### Windows boot logo
 If the Windows boot animation looks stretched, from an elevated prompt:
 `bcdedit /set {globalsettings} highestmode on`.
