@@ -16,7 +16,7 @@
   "globalViewSettings": {
     "uiLanguage": "en",
     "translateTargetLang": "fr",
-    "defaultFont": "Serif",
+    "defaultFont": "Sans-serif",
     "sansSerifFont": "Lato",
     "overrideFont": true,
     "overrideLayout": true,
