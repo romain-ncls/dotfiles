@@ -78,15 +78,20 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 
 ## DNS
 
-- **Cloudflare over HTTPS, through `dnscrypt-proxy` on `127.0.0.1:53`.**
-  `systemd-resolved` only does DNS over TLS, so a local DoH proxy it is.
-  `server_names = ['cloudflare']` pins it to `dns.cloudflare.com`; the bootstrap
-  resolvers (plain DNS, only used to look up that name at start) are 1.1.1.1 /
-  1.0.0.1. NetworkManager's `[global-dns-domain-*]` overrides the DHCP servers
-  on every connection and still writes `/etc/resolv.conf`. The service is used
-  instead of the socket, so the config's `listen_addresses` stays as shipped.
-  A captive portal (hotel Wi-Fi) needs DNS before HTTPS works: stop
-  `dnscrypt-proxy` and remove `dns.conf` temporarily, or use the portal's IP.
+- **Cloudflare over DNS-over-TLS, through `systemd-resolved`**
+  (`resolved.conf.d/cloudflare-dot.conf`). It is part of systemd, so there's no
+  extra package. NetworkManager uses it because `/etc/resolv.conf` links to its
+  stub (127.0.0.53). `no-dhcp-dns.conf` stops NM from passing the router's DNS
+  on, or resolved would also query it in plain text. `DNSOverTLS=yes` is strict:
+  if port 853 is blocked, DNS fails instead of falling back to plain text
+  (`opportunistic` would fall back silently).
+- **Not DoH.** DNS-over-HTTPS (tried first, with `dnscrypt-proxy`) encrypts
+  the same way; it only also hides that the traffic is DNS, which matters on
+  networks that block port 853, not on a home LAN. It cost an extra service and
+  a 1,000-line config that drifts from the package's.
+- On a network whose internal names need its own DNS (the work LAN, a captive
+  portal), add that connection's DNS by hand: `nmcli connection modify <con>
+  ipv4.ignore-auto-dns no`.
 
 ## Hardware (home PC)
 

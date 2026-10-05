@@ -20,7 +20,6 @@ AddPackage git
 AddPackage openssh
 AddPackage networkmanager
 AddPackage iwd
-AddPackage dnscrypt-proxy                  # DNS over HTTPS to Cloudflare
 AddPackage pacman-contrib                  # paccache
 AddPackage reflector
 
@@ -53,9 +52,10 @@ CopyFile /etc/sudoers                      # %wheel ALL=(ALL:ALL) ALL
 # ── boot ────────────────────────────────────────────────────────────────
 CopyFile /etc/default/limine
 
-# ── DNS: Cloudflare over HTTPS via dnscrypt-proxy on 127.0.0.1 ────────
-CopyFile /etc/dnscrypt-proxy/dnscrypt-proxy.toml   # server_names = ['cloudflare']
-CopyFile /etc/NetworkManager/conf.d/dns.conf       # resolv.conf → 127.0.0.1
+# ── DNS: Cloudflare over TLS via systemd-resolved ───────────────────────
+CopyFile /etc/systemd/resolved.conf.d/cloudflare-dot.conf
+CopyFile /etc/NetworkManager/conf.d/no-dhcp-dns.conf   # ignore the router's DNS
+CreateLink /etc/resolv.conf /run/systemd/resolve/stub-resolv.conf   # NM then uses resolved
 
 # ── snapper ─────────────────────────────────────────────────────────────
 CopyFile /etc/snapper/configs/root 640
@@ -64,7 +64,10 @@ CopyFile /etc/snapper/configs/root 640
 CreateLink /etc/systemd/system/multi-user.target.wants/NetworkManager.service /usr/lib/systemd/system/NetworkManager.service
 CreateLink /etc/systemd/system/dbus-org.freedesktop.nm-dispatcher.service /usr/lib/systemd/system/NetworkManager-dispatcher.service
 CreateLink /etc/systemd/system/network-online.target.wants/NetworkManager-wait-online.service /usr/lib/systemd/system/NetworkManager-wait-online.service
-CreateLink /etc/systemd/system/multi-user.target.wants/dnscrypt-proxy.service /usr/lib/systemd/system/dnscrypt-proxy.service
+CreateLink /etc/systemd/system/sysinit.target.wants/systemd-resolved.service /usr/lib/systemd/system/systemd-resolved.service
+CreateLink /etc/systemd/system/dbus-org.freedesktop.resolve1.service /usr/lib/systemd/system/systemd-resolved.service
+CreateLink /etc/systemd/system/sockets.target.wants/systemd-resolved-varlink.socket /usr/lib/systemd/system/systemd-resolved-varlink.socket
+CreateLink /etc/systemd/system/sockets.target.wants/systemd-resolved-monitor.socket /usr/lib/systemd/system/systemd-resolved-monitor.socket
 CreateLink /etc/systemd/system/sysinit.target.wants/systemd-timesyncd.service /usr/lib/systemd/system/systemd-timesyncd.service
 CreateLink /etc/systemd/system/dbus-org.freedesktop.timesync1.service /usr/lib/systemd/system/systemd-timesyncd.service
 CreateLink /etc/systemd/system/multi-user.target.wants/limine-snapper-sync.service /usr/lib/systemd/system/limine-snapper-sync.service
