@@ -76,6 +76,18 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   hand would miss components added by later Plasma releases.
   `plasma-meta-deflatpak` (AUR) still depends on `discover`.
 
+## DNS
+
+- **Cloudflare over HTTPS, through `dnscrypt-proxy` on `127.0.0.1:53`.**
+  `systemd-resolved` only does DNS over TLS, so a local DoH proxy it is.
+  `server_names = ['cloudflare']` pins it to `dns.cloudflare.com`; the bootstrap
+  resolvers (plain DNS, only used to look up that name at start) are 1.1.1.1 /
+  1.0.0.1. NetworkManager's `[global-dns-domain-*]` overrides the DHCP servers
+  on every connection and still writes `/etc/resolv.conf`. The service is used
+  instead of the socket, so the config's `listen_addresses` stays as shipped.
+  A captive portal (hotel Wi-Fi) needs DNS before HTTPS works: stop
+  `dnscrypt-proxy` and remove `dns.conf` temporarily, or use the portal's IP.
+
 ## Hardware (home PC)
 
 - **NVIDIA**: `nvidia-open-dkms`; `options nvidia NVreg_PreserveVideoMemoryAllocations=1`
