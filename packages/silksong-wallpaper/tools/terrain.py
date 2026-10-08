@@ -316,6 +316,15 @@ class Canvas:
         self.h_units = world_size[1]
         self.img = Image.new("RGBA", (round(world_size[0] * ppu), round(world_size[1] * ppu)),
                              (0, 0, 0, 255 if opaque else 0))
+        self.swaying = None  # a list: pieces that sway are collected there instead of drawn (paste)
+        self._moving = None  # where they are
+
+    def start_swaying(self):
+        self.swaying, self._moving = [], np.zeros((self.img.height, self.img.width), bool)
+
+    def stop_swaying(self):
+        out, self.swaying, self._moving = self.swaying, None, None
+        return out
 
     def px(self, x, y):
         return x * self.ppu, (self.h_units - y) * self.ppu
@@ -324,12 +333,16 @@ class Canvas:
         ImageDraw.Draw(self.img).polygon([self.px(x, y) for x, y in pts], fill=fill)
 
     def paste(self, piece, x, y, width, height, angle=0.0, flip=False, anchor=(0.5, 0.5), tint=1.0, keep=None,
-              max_cut=None):
+              max_cut=None, sway=None):
         """Draw a piece scaled to width x height units, rotated (degrees, ccw) about its anchor,
         with the anchor (fractions from the bottom-left of the piece) at world (x, y).
         keep(x0, y0, w, h) -> bool array: the pixels of that canvas rectangle it may cover. With
         max_cut, a piece that would lose more than that share of itself isn't drawn at all (a
-        cut piece shows a straight edge). Returns whether it was drawn."""
+        cut piece shows a straight edge). Returns whether it was drawn.
+        sway: the kit piece, when the game sways it (its "sway" and "pivot"); while the canvas
+        collects `swaying` (start_swaying), the piece goes there as it would be drawn, with the
+        height of its origin (what it bends from), instead of into the image; so does a still
+        piece drawn over one of them ("sway" None), to stay in front of it."""
         w, h = max(1, round(width * self.ppu)), max(1, round(height * self.ppu))
         img = piece.resize((w, h), Image.LANCZOS)
         if flip:
@@ -365,6 +378,17 @@ class Canvas:
                     return False
             a[..., 3] = np.where(mask, a[..., 3], 0)
             crop = Image.fromarray(a, "RGBA")
+        if self.swaying is not None:
+            moves = sway is not None and "sway" in sway
+            covered = np.asarray(crop)[..., 3] > 8
+            under = self._moving[y0 + sy:y0 + sy + crop.height, x0 + sx:x0 + sx + crop.width]
+            if moves or (covered & under).any():
+                self.swaying.append({"image": crop, "px": (x0 + sx, y0 + sy), "x": x,
+                                     "root": y + ((sway["pivot"][1] if moves else 0.0) - anchor[1]) * height,  # rotation aside
+                                     "flip": flip, "sway": sway["sway"] if moves else None,
+                                     "react": sway.get("react") if moves else None})
+                under |= covered
+                return True
         self.img.alpha_composite(crop, (x0 + sx, y0 + sy))
         return True
 
@@ -566,7 +590,7 @@ def dress(rocks, biome_at, back, front, graded, seed, clear=(), underlay=None, n
                 if p[0] - w * 0.45 < min(xs) or p[0] + w * 0.45 > max(xs):
                     continue  # it would hang out past the rock, like a ledge that isn't there
                 if back.paste(graded(bio.kit, c, *out), p[0], p[1] + 0.25, w, h, 0, rng.random() < 0.5, anchor=(0.5, 1.0),
-                              keep=free(this_side(p, n)), max_cut=0.15):
+                              keep=free(this_side(p, n)), max_cut=0.15, sway=c):
                     used["ceiling"] = c["name"]
                     next_ceiling = along + w * rng.uniform(0.8, 1.1)
             elif bio.wall and not thin:  # a wall: pieces turned to face out
@@ -592,7 +616,7 @@ def dress(rocks, biome_at, back, front, graded, seed, clear=(), underlay=None, n
                 k = rng.uniform(0.35, 0.6)
                 w, h = c["width"] * k, c["height"] * k
                 front.paste(graded(bio.kit, c, *(p + n * 1.2)), p[0] + rng.uniform(-0.4, 0.4), p[1] - 0.15, w, h,
-                            rng.uniform(-6, 6), rng.random() < 0.5, anchor=(0.5, 0.0), keep=free(), max_cut=0.1)
+                            rng.uniform(-6, 6), rng.random() < 0.5, anchor=(0.5, 0.0), keep=free(), max_cut=0.1, sway=c)
             elif n[1] > 0.7 and bio.floor and bio.front_bits and rng.random() < 0.15:
                 c = choose(rng, bio.floor)
                 k = rng.uniform(0.18, 0.28)

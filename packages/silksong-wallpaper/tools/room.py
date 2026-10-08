@@ -84,6 +84,8 @@ class Item:
     z: float
     name: str
     go: int = 0
+    sway: dict = None  # how it sways, on the game's grass shaders (sway_info)
+    react: dict = None  # how it bends as Hornet walks through it (grass_react)
 
 
 _sprite_cache = {}
@@ -118,6 +120,61 @@ def material_info(sr):
     return color, shader
 
 
+def sway_info(sr, shader):
+    """How a sprite on the game's grass shaders (Hollow Knight/Grass-*) sways, from its material.
+    The shaders' OpenGL programs bend each vertex sideways by
+        sway(t) * (its height above the sprite's origin) * (1 + |z clamped to ClampZ|)
+    with t = time * SwaySpeed + (x + y + z) * WorldOffset (Grass-Default: x + z), time snapped to
+    SnappedFramerate under FRAMERATE_SNAPPING, and sway(t) = SwayAmount * SwayMultiplier *
+    (A sin(t TA) + B sin(t TB) + C sin(t TC)) under CUSTOM_FUNC, else 1.25 SwayAmount
+    (* SwayMultiplier) * sin(t). Pinned sprites (a mask holds parts still) and sprites swaying
+    up and down (SWAP_XY) are left out: None."""
+    try:
+        mat = sr.m_Materials[0].read()
+        keywords = set(mat.object_reader.read_typetree().get("m_ValidKeywords") or [])
+    except Exception:
+        return None
+    if keywords & {"PIN_TYPE", "SWAP_XY"}:
+        return None
+    f = dict(mat.m_SavedProperties.m_Floats)
+    diffuse = "Diffuse" in shader
+    custom = diffuse and "CUSTOM_FUNC" in keywords
+    amount = f.get("_SwayAmount", 1.0) * (f.get("_SwayMultiplier", 1.0) if diffuse else 1.0) * (1.0 if custom else 1.25)
+    if not amount:
+        return None
+    return {
+        "amount": round(amount, 5), "speed": f.get("_SwaySpeed", 1.0), "worldOffset": f.get("_WorldOffset", 1.0),
+        "phaseY": 1 if diffuse else 0, "clampZ": f.get("_ClampZ", 1.0),
+        "mags": [f.get(f"_MagnitudeMult{k}", 1.0) for k in "ABC"] if custom else [1.0, 0.0, 0.0],
+        "times": [f.get(f"_TimeMult{k}", 1.0) for k in "ABC"] if custom else [1.0, 0.0, 0.0],
+        "fps": f.get("_SnappedFramerate", 12.0) if "FRAMERATE_SNAPPING" in keywords else 0.0,
+    }
+
+
+def grass_react(scene, go_id):
+    """How grass bends as the hero walks into it (its GrassBehaviour, on it or its parent): the
+    push added to its sway (walkReactAmount) along a curve (time 0..1, value, in and out slopes)
+    over walkReactLength seconds, in the way she goes."""
+    for _ in range(2):
+        go = scene.gameobjects.get(go_id)
+        if go is None:
+            return None
+        for c in go.m_Components:
+            r = c.read()
+            if r.object_reader.type.name == "MonoBehaviour" and _class_of(r) == "GrassBehaviour":
+                t = r.object_reader.read_typetree()
+                if not t.get("walkReactAmount") or not t.get("walkReactLength"):
+                    return None
+                return {"amount": round(t["walkReactAmount"], 4), "length": round(t["walkReactLength"], 4),
+                        "keys": [[round(k["time"], 4), round(k["value"], 4), round(k["inSlope"], 4), round(k["outSlope"], 4)]
+                                 for k in t["walkReactCurve"]["m_Curve"]]}
+        father = scene.transforms[scene.go_transform[go_id]].m_Father.path_id
+        if father not in scene.transforms:
+            return None
+        go_id = scene.transforms[father].m_GameObject.path_id
+    return None
+
+
 def collect(scene):
     items = []
     for o in scene.objects:
@@ -143,7 +200,9 @@ def collect(scene):
         color = (c.r * mcol[0], c.g * mcol[1], c.b * mcol[2], c.a * mcol[3])
         m = scene.world(scene.go_transform[go])
         items.append(Item(img, np.array([[x0, y0], [x1, y0], [x0, y1]]), m, color, shader, layer,
-                          sr.m_SortingOrder, float(m[2, 3]), scene.gameobjects[go].m_Name, go))
+                          sr.m_SortingOrder, float(m[2, 3]), scene.gameobjects[go].m_Name, go,
+                          sway_info(sr, shader) if "Grass" in shader else None,
+                          grass_react(scene, go) if "Grass" in shader else None))
     items.extend(collect_tk2d(scene))
     return items
 

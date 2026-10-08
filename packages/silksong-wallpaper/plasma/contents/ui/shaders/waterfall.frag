@@ -32,20 +32,23 @@ float fbm(vec2 p) {
 }
 
 // Droplets falling beside one edge: one per cell of a column scrolling down, at a random
-// distance out from the water, some cells empty.
+// distance out from the water, most cells empty. Each is a streak as long as it falls in about
+// a frame (30 a second), fading to its tail: from one frame to the next a drop carries on from
+// where it was drawn, so they read as falling water even when frames come irregularly.
 float droplets(vec2 p, float edge, float side, float speed, float seed) {
-    float cell = 0.42;
+    float cell = 1.1;
     float y = p.y - time * speed;
     float row = floor(y / cell);
     float h = hash(vec2(row, seed));
-    if (h < 0.45) {
+    if (h < 0.6) {
         return 0.0;
     }
     float out_ = 0.04 + 0.22 * hash(vec2(row, seed + 1.0)) * (0.3 + 0.7 * clamp(p.y / extent.y, 0.0, 1.0));
-    vec2 c = vec2(edge + side * out_, (row + 0.5) * cell + time * speed);
-    vec2 d = p - c;
-    d.y /= 2.8;  // drawn as short streaks: they fall fast
-    return (1.0 - smoothstep(0.012, 0.035, length(d))) * (0.5 + 0.5 * h);
+    vec2 head = vec2(edge + side * out_, (row + 0.5) * cell + time * speed);
+    float tail = speed / 30.0;
+    float along = clamp((head.y - p.y) / tail, 0.0, 1.0);  // 0 at its head, 1 at its tail
+    float d = length(p - vec2(head.x, head.y - along * tail));
+    return (1.0 - smoothstep(0.01, 0.026, d)) * (1.0 - 0.75 * along) * (0.5 + 0.5 * h);
 }
 
 void main() {
