@@ -54,8 +54,11 @@ Item {
         running: root.live && root.hornetHere
         onTriggered: root.time = Date.now() / 1000
     }
+    // The clock's gears turn smoothly enough at 10 updates a second.
+    readonly property bool showsClock: clock !== null
+        && clock.x * unitMm > me.x - 30 && clock.x * unitMm < me.x + me.w + 30
     Timer {
-        interval: 250
+        interval: root.showsClock ? 100 : 250
         repeat: true
         running: root.live && !root.hornetHere
         onTriggered: root.time = Date.now() / 1000
@@ -159,9 +162,66 @@ Item {
 
     HeroLight {}
 
+    // The clock's gears, turning with the time: behind the great tree's frame (under the mid
+    // layer), or inside the dial, behind the hands.
+    component ClockGears: Repeater {
+        required property bool dial
+        model: root.clock ? root.clock.gears.filter(g => !!g.dial === dial) : []
+
+        Image {
+            required property var modelData
+            source: root.worldDir + "/" + modelData.file + root.build
+            width: modelData.size * root.pxPerUnit
+            height: width
+            x: root.toX(modelData.x * root.unitMm) - width / 2
+            y: root.toY(modelData.y * root.unitMm) - height / 2
+            rotation: (root.time / 60 * modelData.turns % 1) * 360
+            smooth: true
+            mipmap: true
+        }
+    }
+
+    ClockGears {
+        dial: false
+    }
+
     Layer {
         tiles: root.world?.layers.mid ?? []
     }
+
+    // The clock in the great tree's window: two Cogwork pointers for hands, on local time.
+    readonly property var clock: world?.clock ?? null
+    readonly property var now: new Date(time * 1000)
+    readonly property real minuteAngle: (now.getMinutes() + now.getSeconds() / 60) * 6
+    readonly property real hourAngle: (now.getHours() % 12 + now.getMinutes() / 60) * 30
+
+    component ClockHands: Repeater {
+        model: root.clock ? root.clock.hands : []
+
+        Item {
+            required property var modelData
+            // At the dial's centre; the needle image points left, a quarter turn points it at 12.
+            x: root.toX(root.clock.x * root.unitMm)
+            y: root.toY(root.clock.y * root.unitMm)
+            rotation: 90 + (modelData.name === "hour" ? root.hourAngle : root.minuteAngle)
+
+            Image {
+                source: root.worldDir + "/" + parent.modelData.file + root.build
+                width: parent.modelData.length * root.pxPerUnit
+                height: parent.modelData.height * root.pxPerUnit
+                x: -parent.modelData.pivot[0] * width
+                y: -parent.modelData.pivot[1] * height
+                smooth: true
+                mipmap: true
+            }
+        }
+    }
+
+    ClockGears {
+        dial: true
+    }
+
+    ClockHands {}
 
     // Hornet's sheets, only on the screen she's on or about to reach, only the clips she plays
     // in the next 40 seconds, loaded in the background; screens in one process share them.
@@ -289,6 +349,15 @@ Item {
     Layer {
         tiles: root.daylight.lights > 0.01 ? root.world?.layers.lights ?? [] : [] // loaded only after dusk
         opacity: root.daylight.lights
+    }
+
+    // After dark the hands keep a little of their shine, so the time stays readable.
+    Item {
+        anchors.fill: parent
+        opacity: root.daylight.lights * 0.45
+        visible: opacity > 0.01
+
+        ClockHands {}
     }
 
     Text {
