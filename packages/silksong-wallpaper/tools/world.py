@@ -187,9 +187,10 @@ ZONES = [
 HOME = {"region": (L0 + 0.9, TOP - 0.5, 20.5, CEILING), "door_x": 21.75, "biome": "house"}
 
 # The lake at the foot of the right monitor's cliff, and the waterfall pouring into it from a
-# crack in the rock above, down past the cliff's edge.
+# crack in the rock above, down past the cliff's edge into a deep pool between the stepping rock
+# and the cliff.
 LAKE = {"x0": 99.0, "x1": 121.0, "level": 3.0}
-WATERFALL = {"top": (119.7, 120.5, H + 0.1), "bottom": (119.0, 120.9), "zone": "verdania"}
+WATERFALL = {"top": (119.3, 119.95, H + 0.1), "bottom": (118.85, 120.35), "zone": "verdania"}
 
 
 def layout():
@@ -208,8 +209,8 @@ def layout():
                                 (47.0, 2.1), (48.0, 2.2), (49.4, 2.2), (50.6, 1.0), (51.6, 0.2)]))
     # (Under the laptop, the Citadel's own floor, level with the moss at both bezels: room_ground().)
     rocks.append(T.ground(rng, [(78.6, 0.2), (79.4, 1.2), (80.2, 2.2), (86.0, 2.2), (88.5, 1.9), (91.0, 2.3), (94.0, 3.4),
-                                (98.4, 3.6), (100.2, 2.4), (103.0, 1.1), (108.0, 0.6), (114.0, 0.7), (118.0, 1.4),
-                                (120.4, 3.0), (122.0, 3.9), (R1 + 1.5, 3.9)]))
+                                (98.4, 3.6), (100.2, 2.4), (103.0, 1.1), (108.0, 0.6), (114.0, 0.7), (118.2, 0.9),
+                                (119.5, 0.3), (120.4, 0.8), (120.8, 3.0), (122.0, 3.9), (R1 + 1.5, 3.9)]))
     # Outer walls (the left one with a step to climb), the rock along the top of the side
     # monitors with a mass hanging from it, the hidden band above the laptop.
     # (Openings are left in both outer walls, behind the step and behind the shrine, for the
@@ -240,8 +241,8 @@ def layout():
     # in the water by the niche behind the waterfall, the low cliff with the shrine on top, a
     # ledge high on the wall; rings to throw her needle to instead of more islands.
     rocks.append(T.island(rng, 103.0, 112.0, 9.6, depth=2.4))
-    rocks.append(T.blob(rng, [(115.6, 0.4), (115.9, 3.4), (116.6, 3.75), (117.8, 3.7), (118.4, 3.3), (118.6, 0.4)],
-                        rounds=1))
+    rocks.append(T.blob(rng, [(115.2, 0.3), (115.6, 2.5), (116.1, 3.5), (117.1, 3.85), (118.1, 3.6), (118.6, 2.7),
+                              (118.4, 1.4), (117.8, 0.3)], rounds=2))  # a boulder, undercut by the pool
     rocks.append(T.Rock(T.chaikin(CLIFF, 1)))
     rocks.append(T.Rock(T.chaikin(NICHE, 1), solid=False, dress=False))
     rocks.append(T.blob(rng, [(129.4, 18.8), (R1 + 1.5, 18.8), (R1 + 1.5, 16.6), (131.6, 17.0), (130.2, 17.8)],
@@ -921,13 +922,11 @@ def compose():
         canvases[prop.get("layer", "mid")].paste(img, *args, anchor=(0.5, 0.0))
         if prop.get("light"):
             canvases["lights"].paste(as_light(img), *args, anchor=(0.5, 0.0))
-    # The waterfall falls in front of Hornet: sitting in the niche, she's seen through it.
-    draw_waterfall(layers["front"], grades[WATERFALL["zone"]])
     rock_px = Image.new("1", (W, Hpx), 0)
     from PIL import ImageDraw
     for r in rocks:
         ImageDraw.Draw(rock_px).polygon([(x * PPU, (WORLD[1] - y) * PPU) for x, y in r.points], fill=1)
-    draw_water(layers, np.array(rock_px), grades[WATERFALL["zone"]])
+    water = draw_water(layers, np.array(rock_px), grades[WATERFALL["zone"]])
 
     clock = bake_clock(layers, canvases, metas, grades)
 
@@ -969,6 +968,7 @@ def compose():
         "heroFeet": HERO_FEET,
         "nav": nav_map,
         "clock": clock,
+        "water": water,
     }
     # Replaced in one step, so the running wallpapers' folder watch sees a new file and reloads.
     tmp = OUT / ".World.qml.tmp"
@@ -992,106 +992,61 @@ def ground_at(solid, x, near):
     return WORLD[1] - (r + 1) / nav.NAV_PPU
 
 
-def draw_waterfall(layer, grade):
-    """The waterfall: from the crack in the rock above down to the lake, widening; sheets of
-    water with streaks, brighter at its edges."""
-    rng = np.random.default_rng(4)
-    shallow, light = (grade.apply(np.array(c)) for c in ((0.42, 0.78, 0.72), (0.86, 1.0, 0.96)))
-    level = LAKE["level"]
-
-    def row(y):
-        return round((WORLD[1] - y) * PPU)
-
-    (tl, tr, ytop), (bl, br) = WATERFALL["top"], WATERFALL["bottom"]
-    ra, rb = row(ytop), row(level)
-    cx0, cx1 = round(min(tl, bl) * PPU) - 4, round(max(tr, br) * PPU) + 4
-    n = cx1 - cx0
-    u = np.arange(n) / PPU
-    streak = sum(rng.uniform(0.3, 1.0) * np.sin(u * f + rng.uniform(0, 6.3)) for f in rng.uniform(6, 40, 9))
-    streak = (streak - streak.min()) / (streak.max() - streak.min())
-    fall = np.zeros((rb - ra, n, 4), np.float32)
-    xs = np.arange(n)
-    for i in range(rb - ra):
-        f = i / max(1, rb - ra - 1)
-        fe = f ** 0.6  # it spreads quickly after the lip, then falls straight
-        left, right = (tl + (bl - tl) * fe) * PPU - cx0, (tr + (br - tr) * fe) * PPU - cx0
-        inside = (xs >= left) & (xs <= right)
-        edge = np.clip(1 - np.minimum(xs - left, right - xs) / (0.22 * PPU), 0, 1)
-        drift = streak[(xs + int(i * 0.03)) % n]  # streaks lean very slightly
-        a = (0.22 + 0.45 * drift + 0.3 * edge) * inside
-        mix = np.clip(edge * 0.7 + drift * 0.25, 0, 1)[:, None]
-        fall[i, :, :3] = shallow * (1 - mix) + light * mix
-        fall[i, :, 3] = a
-    layer.alpha_composite(Image.fromarray((fall.clip(0, 1) * 255).round().astype(np.uint8), "RGBA"), (cx0, ra))
-
-
 def draw_water(layers, rock, grade):
-    """The lake, in front of Hornet, with foam and ripples where the waterfall lands: still
-    placeholders in the game's manner, a tinted body with a bright edge."""
+    """The lake's still body (front layer: in front of Hornet), and what the wallpaper needs to
+    move the water (shaders/waterfall.frag and lake.frag): the waterfall's shape, the lake's
+    surface and a mask of where its shimmer may go (r: water, g: water or open air), in the
+    lake's colours."""
     Hpx, W = rock.shape
-    rng = np.random.default_rng(3)
     deep, shallow, light = (grade.apply(np.array(c)) for c in ((0.16, 0.42, 0.40), (0.42, 0.78, 0.72), (0.86, 1.0, 0.96)))
 
     def row(y):
         return round((WORLD[1] - y) * PPU)
 
-    # The lake: deeper, darker, more opaque; a bright line along the surface, glints under it.
+    # The body: clearer at the top, deeper and darker below.
     x0, x1, level = round(LAKE["x0"] * PPU), round(LAKE["x1"] * PPU), LAKE["level"]
     r0 = row(level)
     depth = (np.arange(r0, Hpx) - r0)[:, None] / PPU
     t = np.clip(depth / 2.2, 0, 1)
     body = np.zeros((Hpx - r0, x1 - x0, 4), np.float32)
     body[..., :3] = (shallow * (1 - t[..., None]) + deep * t[..., None]) * np.ones((1, x1 - x0, 1))
-    body[..., 3] = (0.42 + 0.4 * t) * np.ones((1, x1 - x0))
-    water = ~rock[r0:, x0:x1]
-    body[..., 3] *= water
-    body[:3, :, :3] = light
-    body[:3, :, 3] = 0.9 * water[:3]
-    for _ in range(70):  # glints
-        gy = r0 + int(rng.uniform(0.15, 1.3) * PPU)
-        gx = int(rng.uniform(0, x1 - x0 - 40))
-        n = int(rng.uniform(12, 50))
-        body[gy - r0, gx:gx + n, :3] = light
-        body[gy - r0, gx:gx + n, 3] = np.maximum(body[gy - r0, gx:gx + n, 3], 0.35 * water[gy - r0, gx:gx + n])
-    lake = Image.fromarray((body.clip(0, 1) * 255).round().astype(np.uint8), "RGBA")
-    layers["front"].alpha_composite(lake, (x0, r0))
+    body[..., 3] = (0.42 + 0.4 * t) * np.ones((1, x1 - x0)) * ~rock[r0:, x0:x1]
+    layers["front"].alpha_composite(Image.fromarray((body.clip(0, 1) * 255).round().astype(np.uint8), "RGBA"), (x0, r0))
 
-    bl, br = WATERFALL["bottom"]
-    # Ripples spreading on the lake from where it lands.
-    from PIL import ImageDraw
-    ripples = Image.new("RGBA", (round(8 * PPU), round(1.2 * PPU)), (0, 0, 0, 0))
-    d = ImageDraw.Draw(ripples)
-    rc = (ripples.width / 2, round(0.25 * PPU))
-    col = tuple(int(c * 255) for c in light)
-    for k, rx in enumerate((0.9, 1.6, 2.5, 3.5)):
-        ry = rx * 0.12
-        d.ellipse([rc[0] - rx * PPU, rc[1] - ry * PPU, rc[0] + rx * PPU, rc[1] + ry * PPU], outline=col + (int(150 / (k + 1)),),
-                  width=2)
-    rx0, ry0 = round((bl + br) / 2 * PPU - ripples.width / 2), r0 - rc[1] + 2
-    on_water = ~rock[ry0:ry0 + ripples.height, rx0:rx0 + ripples.width]
-    cols = rx0 + np.arange(ripples.width)
-    on_water &= ((cols >= x0) & (cols < x1))[None, :]
-    a = np.asarray(ripples).copy()
-    a[..., 3] = np.where(on_water, a[..., 3], 0)
-    layers["front"].alpha_composite(Image.fromarray(a, "RGBA"), (rx0, ry0))
+    (tl, tr, ytop), (bl, br) = WATERFALL["top"], WATERFALL["bottom"]
+    impact = (bl + br) / 2
+    # The lake's shimmer: from its left shore to past where the waterfall lands, from under its
+    # deepest glints to where the mist fades.
+    lx0, lx1, ly0, ly1 = LAKE["x0"] - 0.5, max(LAKE["x1"], br) + 3.5, level - 2.0, level + 4.0
+    mres = 16  # mask pixels per unit, sampled smoothly
+    cols = ((np.arange(round((lx1 - lx0) * mres)) + 0.5) / mres + lx0)
+    rows = (ly1 - (np.arange(round((ly1 - ly0) * mres)) + 0.5) / mres)
+    rc = np.clip((cols * PPU).astype(int), 0, W - 1)
+    rr = np.clip(((WORLD[1] - rows) * PPU).astype(int), 0, Hpx - 1)
+    solid = rock[rr[:, None], rc[None, :]]
+    in_lake = (cols[None, :] >= LAKE["x0"]) & (cols[None, :] <= LAKE["x1"]) & (rows[:, None] <= level + 0.15)
+    water = in_lake & ~solid
+    mask = np.zeros(solid.shape + (3,), np.uint8)
+    mask[..., 0] = water * 255
+    mask[..., 1] = ~solid * 255
+    Image.fromarray(mask, "RGB").save(OUT / "water_mask.png")
 
-    # Foam and mist where it meets the lake.
-    cx, cy = (bl + br) / 2, level
-    size = (round(6 * PPU), round(4 * PPU))
-    yy, xx = np.mgrid[0:size[1], 0:size[0]]
-    ux, uy = (xx - size[0] / 2) / PPU, (size[1] / 2 - yy) / PPU
-    mist = 0.28 * np.exp(-(ux ** 2 / 4.0 + (uy - 0.6) ** 2 / 1.6))
-    foam = np.zeros_like(mist)
-    for _ in range(40):
-        bx, by = rng.normal(0, 0.7), rng.uniform(-0.15, 0.35)
-        foam = np.maximum(foam, 0.8 * np.exp(-(((ux - bx) / 0.35) ** 2 + ((uy - by) / 0.18) ** 2)))
-    a = np.clip(np.maximum(mist, foam), 0, 1)
-    sx0, sy0 = round(cx * PPU - size[0] / 2), round((WORLD[1] - cy) * PPU - size[1] / 2)
-    a *= ~rock[sy0:sy0 + size[1], sx0:sx0 + size[0]]  # spray over water and air, never over the rock
-    spray = np.zeros(size[::-1] + (4,), np.float32)
-    spray[..., :3] = light
-    spray[..., 3] = a
-    layers["front"].alpha_composite(Image.fromarray((spray * 255).round().astype(np.uint8), "RGBA"), (sx0, sy0))
+    fl, fr = min(tl, bl) - 0.6, max(tr, br) + 0.6
+    sx0, sy0 = impact - 3.0, level - 0.8
+
+    def rgb(c):
+        return [round(float(v), 4) for v in c]
+    return {
+        "fall": {"left": round(fl, 3), "bottom": level, "width": round(fr - fl, 3), "height": round(ytop - level, 3),
+                 "edges": [round(v - fl, 3) for v in (tl, tr, bl, br)]},
+        "lake": {"left": lx0, "bottom": ly0, "width": round(lx1 - lx0, 3), "height": round(ly1 - ly0, 3),
+                 "level": round(level - ly0, 3), "impact": round(impact - lx0, 3), "mask": "water_mask.png"},
+        # Where it lands: droplets, foam, mist (the mask's rectangle relative to this one).
+        "splash": {"left": round(sx0, 3), "bottom": round(sy0, 3), "width": 6.0, "height": 4.4,
+                   "level": round(level - sy0, 3), "impact": 3.0, "fallWidth": round(br - bl, 3),
+                   "maskRect": [round(lx0 - sx0, 3), round(ly0 - sy0, 3), round(lx1 - lx0, 3), round(ly1 - ly0, 3)]},
+        "shallow": rgb(shallow), "light": rgb(light),
+    }
 
 
 def place_pois(nav_map, zones_out, pois):
