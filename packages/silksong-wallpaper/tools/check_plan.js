@@ -5,7 +5,8 @@
  *   node tools/check_plan.js [DAYS]
  *
  * For DAYS days from today: every place where her position jumps between one segment and the
- * next (a teleport), and her fastest speed inside each kind of move, sampled at 60 fps (walks
+ * next (a teleport), the Bell Beast's day (back to back, with clips that exist), and her
+ * fastest speed inside each kind of move, sampled at 60 fps (walks
  * stay near 5 units/s, falls at 30, the Clawline dash at 32). Exits with an error on a
  * teleport. The house animations and the bench sit on their own pivots, a few millimetres from
  * where she stands: those aren't counted.
@@ -17,7 +18,7 @@ const os = require("os");
 const root = path.join(__dirname, "..");
 const data = path.join(os.homedir(), ".local/share/silksong-wallpaper");
 const src = fs.readFileSync(path.join(root, "plasma/contents/ui/life.js"), "utf8").replace(".pragma library", "");
-const Life = new Function(src + "\nreturn { planDay, dayStart, pose };")();
+const Life = new Function(src + "\nreturn { planDay, planBeast, dayStart, pose };")();
 const grab = (file, prop) => {
     const t = fs.readFileSync(file, "utf8");
     const i = t.indexOf("(", t.indexOf(prop));
@@ -35,7 +36,19 @@ for (let d = 0; d < days; d++) {
     when.setDate(when.getDate() + d);
     const start = Life.dayStart(when);
     const key = start.getFullYear() * 10000 + (start.getMonth() + 1) * 100 + start.getDate();
-    const segs = Life.planDay(world, clips, start.getTime() / 1000, key);
+    const plan = Life.planDay(world, clips, start.getTime() / 1000, key);
+    const segs = plan.segments;
+    // The Bell Beast's day: back to back, with clips that exist.
+    const beast = Life.planBeast(world, clips, start.getTime() / 1000, key, plan);
+    for (let i = 0; i < beast.length; i++) {
+        const b = beast[i];
+        if (!clips[b.clip] || b.t1 < b.t0 || (i > 0 && Math.abs(b.t0 - beast[i - 1].t1) > 1e-6)) {
+            teleports++;
+            console.log(`Bell Beast: bad segment ${b.clip} ${b.t0}-${b.t1}`);
+        }
+    }
+    const sings = beast.filter(b => b.clip.indexOf("Sing End") >= 0).length;
+    const visits = plan.log.filter(v => v.id === "bell_beast").length;
     for (let i = 0; i + 1 < segs.length; i++) {
         const a = segs[i], b = segs[i + 1];
         const pa = Life.pose(world, clips, a, a.t1 - 1e-4);
@@ -65,7 +78,8 @@ for (let d = 0; d < days; d++) {
             }
         }
     }
-    console.log(`day ${key}: ${segs.length} segments`);
+    console.log(`day ${key}: ${segs.length} segments; Bell Beast: ${beast.length} segments, ${sings} songs, `
+        + `Hornet visits it ${visits} times`);
 }
 for (const [k, v] of Object.entries(fastest)) {
     console.log(`fastest ${k}: ${v.toFixed(1)} units/s`);

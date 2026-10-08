@@ -42,6 +42,7 @@ import shutil
 import subprocess
 import sys
 import time
+import zlib
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -76,7 +77,9 @@ H = WORLD[1]
 L0, L1 = 0.0, 47.62
 C0, C1, C_TOP = 49.12, 83.52, 21.5
 R0, R1 = 85.02, 132.64
-GROUND = 1.5  # the ground under the Citadel; it rolls and climbs elsewhere
+GROUND = 1.5  # the lowest flat ground; it rolls and climbs elsewhere
+PIT = 7.0  # the floor of the Bellway station's pit, in its room (bellway_city)
+CITADEL_FLOOR = 3.7  # the station's floor at both its ends, where the ground on either side meets it
 TREE = 11.5  # the walkway at the great tree's foot, from bridge to bridge across the laptop
 TOP = 17.5  # the floor of Hornet's house
 CEILING = 26.1  # underside of the rock along the top of the side monitors
@@ -166,11 +169,13 @@ ZONES = [
     Zone("grotto", "tut_02", x=(25.0, 72.62), floor=12.0, refine=False, below=0.0, world=(L0, 0.0), height=H + 0.2,
          region=(L0 - 0.8, 0.0, L1 + 0.8, H), margin=(0.0, BAND + 0.75), backdrop_z=2.5),
     # The Citadel's hall on the ground (2.5 units lower: the dark band under its bells is cut
-    # out), the great tree above it.
-    Zone("bell_beast", "bellway_city", x=(32.8, 67.2), floor=9.3, refine=False, world=(C0, GROUND), height=11.0,
-         below=1.5, region=(C0 - 0.8, 0.0, C1 + 0.8, TREE - 1.0), biome="moss", mode="full", cuts=[(12.6, 15.1)],
-         remove=[r"^Bone Beast NPC$"], haze=0.1, margin=(BAND + 0.75, BAND + 0.75), fade=(2 * BAND, 2 * BAND),
-         near_ceiling=16.0, ground=(C0 - 1.0, -8.0, C1 + 1.0, 3.0)),
+    # out), the great tree above it. Its Bellway station is open: no toll machine, the floor's
+    # gate slid away, the Bell Beast (drawn apart, it moves) in its pit of bells.
+    Zone("bell_beast", "bellway_city", x=(32.8, 67.2), floor=PIT, refine=False, world=(C0, 0.7), height=11.0,
+         below=0.7, region=(C0 - 0.8, 0.0, C1 + 0.8, TREE - 1.0), biome="moss", mode="full", cuts=[(12.6, 15.1)],
+         remove=[r"^Bone Beast NPC$", r"^Bellway Toll Machine", r"^bellway_floor_gate$", r"^Bellbeast Children"],
+         anchors={"bell_beast": r"^Bone Beast NPC$"}, haze=0.1, margin=(BAND + 0.75, BAND + 0.75), fade=(2 * BAND, 2 * BAND),
+         near_ceiling=16.0, ground=(C0 - 1.0, -8.0, C1 + 1.0, 4.6)),
     Zone("great_tree", "mosstown_02", x=(69.3, 103.7), floor=33.0, world=(C0, TREE), height=11.3, below=1.0,
          region=(C0 - 0.8, TREE - 1.0, C1 + 0.8, C_TOP + 0.8), haze=0.12,
          ground=(C0 - 1.0, TREE - 1.0, C1 + 1.0, TREE + 3.0),  # the clock's plinth
@@ -199,53 +204,56 @@ def layout():
     walkway across the laptop and both bezels, ending a few units into each side screen; a few
     well-spaced islands, a climbable step, Hornet's balcony and a cliff with a niche behind the
     waterfall make the ways between. Nothing Hornet stands on is hidden."""
-    rng = np.random.default_rng(11)
+    def R(name):
+        """Each rock's own randomness: reshaping one never reshapes the others."""
+        return np.random.default_rng([11, zlib.crc32(name.encode())])
+
     T = terrain
     rocks = []
     # The ground: Mosshome's village flat and a mossy hill on the left, the Citadel's own floor
     # in the middle, a rise to the lake shore, the lake bed and the cliff's foot on the right.
-    rocks.append(T.ground(rng, [(L0 - 1.5, 1.5), (6.0, 1.5), (13.0, 1.6), (16.5, 2.1), (20.0, 3.3), (24.0, 3.9),
-                                (28.0, 3.8), (31.0, 3.1), (34.0, 2.1), (37.0, 1.6), (42.0, 1.5), (45.0, 1.6),
-                                (47.0, 2.1), (48.0, 2.2), (49.4, 2.2), (50.6, 1.0), (51.6, 0.2)]))
+    rocks.append(T.ground(R("ground left"), [(L0 - 1.5, 1.5), (6.0, 1.5), (13.0, 1.6), (16.5, 2.1), (20.0, 3.3), (24.0, 3.9),
+                                (28.0, 3.8), (31.0, 3.1), (34.0, 2.1), (37.0, 1.6), (41.0, 1.5), (43.5, 1.8),
+                                (45.5, 2.6), (47.0, 3.4), (48.0, CITADEL_FLOOR), (49.4, CITADEL_FLOOR), (50.6, 2.5), (51.6, 1.7)]))
     # (Under the laptop, the Citadel's own floor, level with the moss at both bezels: room_ground().)
-    rocks.append(T.ground(rng, [(78.6, 0.2), (79.4, 1.2), (80.2, 2.2), (86.0, 2.2), (88.5, 1.9), (91.0, 2.3), (94.0, 3.4),
+    rocks.append(T.ground(R("ground right"), [(78.6, 1.7), (79.4, 2.7), (80.2, CITADEL_FLOOR), (86.0, CITADEL_FLOOR), (88.5, 3.2), (91.0, 2.9), (94.0, 3.4),
                                 (98.4, 3.6), (100.2, 2.4), (103.0, 1.1), (108.0, 0.6), (114.0, 0.7), (118.2, 0.9),
                                 (119.5, 0.3), (120.4, 0.8), (120.8, 3.0), (122.0, 3.9), (R1 + 1.5, 3.9)]))
     # Outer walls (the left one with a step to climb), the rock along the top of the side
     # monitors with a mass hanging from it, the hidden band above the laptop.
     # (Openings are left in both outer walls, behind the step and behind the shrine, for the
     # scenes beyond them one day.)
-    rocks.append(T.box(rng, L0 - 1.5, 0.0, L0 + 0.9, 9.6))
-    rocks.append(T.box(rng, L0 - 1.5, 13.4, L0 + 0.9, H + 1.0, walk_top=False))
-    rocks.append(T.box(rng, L0 - 1.5, 0.5, 3.6, 9.6))
-    rocks.append(T.box(rng, R1 - 0.9, 12.8, R1 + 1.5, H + 1.0, walk_top=False))
-    rocks.append(T.box(rng, L0 - 1.5, CEILING, L1 + 0.8, H + 1.0, walk_top=False))
-    rocks.append(T.blob(rng, [(31.0, CEILING + 0.3), (34.5, 24.2), (38.5, 23.4), (42.0, 24.0), (45.5, CEILING + 0.3)]))
-    rocks.append(T.box(rng, R0 - 0.8, CEILING, R1 + 1.5, H + 1.0, walk_top=False))
-    rocks.append(T.blob(rng, [(95.0, CEILING + 0.3), (98.0, 24.6), (102.5, 23.8), (106.0, 24.8), (109.0, CEILING + 0.3)]))
-    rocks.append(T.box(rng, C0 - 0.8, C_TOP + 0.3, C1 + 0.8, H + 1.0, walk_top=False, dress=False))
+    rocks.append(T.box(R("wall left"), L0 - 1.5, 0.0, L0 + 0.9, 9.6))
+    rocks.append(T.box(R("wall left high"), L0 - 1.5, 13.4, L0 + 0.9, H + 1.0, walk_top=False))
+    rocks.append(T.box(R("step"), L0 - 1.5, 0.5, 3.6, 9.6))
+    rocks.append(T.box(R("wall right high"), R1 - 0.9, 12.8, R1 + 1.5, H + 1.0, walk_top=False))
+    rocks.append(T.box(R("ceiling left"), L0 - 1.5, CEILING, L1 + 0.8, H + 1.0, walk_top=False))
+    rocks.append(T.blob(R("hanging mass left"), [(31.0, CEILING + 0.3), (34.5, 24.2), (38.5, 23.4), (42.0, 24.0), (45.5, CEILING + 0.3)]))
+    rocks.append(T.box(R("ceiling right"), R0 - 0.8, CEILING, R1 + 1.5, H + 1.0, walk_top=False))
+    rocks.append(T.blob(R("hanging mass right"), [(95.0, CEILING + 0.3), (98.0, 24.6), (102.5, 23.8), (106.0, 24.8), (109.0, CEILING + 0.3)]))
+    rocks.append(T.box(R("above the laptop"), C0 - 0.8, C_TOP + 0.3, C1 + 0.8, H + 1.0, walk_top=False, dress=False))
     # Hornet's house: its floor runs out of her door onto a balcony, over a foundation in the
     # rock; the wall with her door.
-    rocks.append(T.box(rng, L0 + 0.9, TOP - 0.6, 26.5, TOP, biome="bellhart"))
-    rocks.append(T.blob(rng, [(L0 - 1.5, TOP - 0.4), (21.2, TOP - 0.4), (20.6, 16.0), (15.0, 15.6), (8.0, 15.5),
+    rocks.append(T.box(R("house floor"), L0 + 0.9, TOP - 0.6, 26.5, TOP, biome="bellhart", level=True))
+    rocks.append(T.blob(R("house foundation"), [(L0 - 1.5, TOP - 0.4), (21.2, TOP - 0.4), (20.6, 16.0), (15.0, 15.6), (8.0, 15.5),
                               (2.0, 15.8), (L0 - 1.5, 15.4)], rounds=1))
-    rocks += T.wall(rng, 20.5, 23.0, TOP, H + 1.0, doors=[(TOP, TOP + 3.1)], biome="bellhart")
+    rocks += T.wall(R("house wall"), 20.5, 23.0, TOP, H + 1.0, doors=[(TOP, TOP + 3.1)], biome="bellhart")
     # Left monitor: from the hill up to an island, a higher one, and from there the balcony or
     # the walkway.
-    rocks.append(T.island(rng, 23.0, 28.0, 8.8, depth=1.8))
-    rocks.append(T.island(rng, 31.5, 36.5, 13.8, depth=1.8))
+    rocks.append(T.island(R("island left low"), 23.0, 28.0, 8.8, depth=1.8))
+    rocks.append(T.island(R("island left high"), 31.5, 36.5, 13.8, depth=1.8))
     # The walkway at the great tree's foot, on the Citadel's arcade.
     xs, _ = arcade_spans()
     rocks.append(T.Rock(arcade_points(), under="vault", under_x=(xs[0] + 0.1, xs[-1] - 0.1)))
     # Right monitor: the lake kept open. One island over it with the pod plant, a rock standing
     # in the water by the niche behind the waterfall, the low cliff with the shrine on top, a
     # ledge high on the wall; rings to throw her needle to instead of more islands.
-    rocks.append(T.island(rng, 103.0, 112.0, 9.6, depth=2.4))
-    rocks.append(T.blob(rng, [(115.2, 0.3), (115.6, 2.5), (116.1, 3.5), (117.1, 3.85), (118.1, 3.6), (118.6, 2.7),
+    rocks.append(T.island(R("island right"), 103.0, 112.0, 9.6, depth=2.4))
+    rocks.append(T.blob(R("boulder"), [(115.2, 0.3), (115.6, 2.5), (116.1, 3.5), (117.1, 3.85), (118.1, 3.6), (118.6, 2.7),
                               (118.4, 1.4), (117.8, 0.3)], rounds=2))  # a boulder, undercut by the pool
     rocks.append(T.Rock(T.chaikin(CLIFF, 1)))
     rocks.append(T.Rock(T.chaikin(NICHE, 1), solid=False, dress=False))
-    rocks.append(T.blob(rng, [(129.4, 18.8), (R1 + 1.5, 18.8), (R1 + 1.5, 16.6), (131.6, 17.0), (130.2, 17.8)],
+    rocks.append(T.blob(R("lookout"), [(129.4, 18.8), (R1 + 1.5, 18.8), (R1 + 1.5, 16.6), (131.6, 17.0), (130.2, 17.8)],
                         rounds=1))
     return rocks
 
@@ -262,7 +270,7 @@ def room_ground():
         meta = json.loads(meta_file.read_text()) if meta_file.exists() else {}
         if "terrain" not in meta:
             if zone.id == "bell_beast":
-                rocks.append(terrain.Rock([(C0 - 0.8, -1.0), (C1 + 0.8, -1.0), (C1 + 0.8, GROUND), (C0 - 0.8, GROUND)],
+                rocks.append(terrain.Rock([(C0 - 0.8, -1.0), (C1 + 0.8, -1.0), (C1 + 0.8, CITADEL_FLOOR), (C0 - 0.8, CITADEL_FLOOR)],
                                           draw=False))
             continue
         x0, y0, x1, y1 = zone.ground
@@ -416,7 +424,7 @@ POIS = [
     {"id": "step", "zone": "grotto", "x": 2.2, "near": 9.6, "activity": "map"},
     {"id": "hill", "zone": "grotto", "x": 30.5, "near": 3.2, "activity": "lookup"},
     {"id": "balcony", "zone": "grotto", "x": 25.0, "near": TOP, "activity": "lookup"},
-    {"id": "bell_beast", "zone": "bell_beast", "x": 62.5, "near": 0.7, "activity": "visit", "face": 1},
+    {"id": "bell_beast", "zone": "bell_beast", "x": 60.6, "near": 0.7, "activity": "visit", "face": 1},
     {"id": "clock", "zone": "great_tree", "x": 64.0, "near": 12.4, "activity": "lookup"},
     {"id": "lake", "zone": "verdania", "x": 97.4, "near": 3.6, "activity": "needolin_sit", "face": 1},
     {"id": "island", "zone": "verdania", "x": 105.5, "near": 9.6, "activity": "lookup"},
@@ -465,14 +473,20 @@ def render_zone(zone):
     out.mkdir(parents=True, exist_ok=True)
     scene = room.Scene(zone.room)
     room.apply_save_state(scene, zone.save)
+    anchored = {}
+    for name, rx in zone.anchors.items():
+        go_id = next((g for g, go in scene.gameobjects.items() if re.search(rx, go.m_Name)), None)
+        if go_id is not None:
+            m = scene.world(scene.go_transform[go_id])
+            anchored[name] = (float(m[0, 3]), float(m[1, 3]))
+    # What's removed is switched off, with everything under it: its sprites and its colliders.
     removes = [re.compile(r) for r in zone.remove]
+    for go_id, go in scene.gameobjects.items():
+        if any(r.search(go.m_Name) for r in removes):
+            scene.overrides[go_id] = False
+    scene._active.clear()
     props = [re.compile(r) for r in zone.props]
-    collected = room.collect(scene)
-    anchored = {name: next(((float(it.matrix[0, 3]), float(it.matrix[1, 3])) for it in collected if re.search(rx, it.name)), None)
-                for name, rx in zone.anchors.items()}
-    items = [it for it in collected
-             if not room.is_unwanted(scene, it.go) and not any(r.search(it.name) for r in removes)
-             and not DARKENERS.search(it.name)]
+    items = [it for it in room.collect(scene) if not room.is_unwanted(scene, it.go) and not DARKENERS.search(it.name)]
     if zone.mode == "background":
         items = [it for it in items if (it.z >= zone.backdrop_z or any(r.search(it.name) for r in props)) and not silhouette(it)]
     blur_z = next((float(scene.world(scene.go_transform[o.read().m_GameObject.path_id])[2, 3]) for o in scene.objects
@@ -818,7 +832,10 @@ def compose():
     biome_of = {z.id: z.biome for z in ZONES}
     biome_of["home"] = HOME["biome"]
     biomes = {}
-    pick = np.random.default_rng(8)
+
+    def pick(x, y):
+        """A number in [0, 1) fixed by the point alone, not by what was dressed before it."""
+        return math.sin(round(x, 2) * 12.9898 + round(y, 2) * 78.233) * 43758.5453 % 1.0
 
     def biome_at(x, y, own=None):
         """A face's biome. Moss gives way to clover gradually inside the right monitor, so a
@@ -831,7 +848,7 @@ def compose():
                 return None
             name = biome_of[zid]
             if name in ("moss", "clover"):
-                name = "clover" if pick.random() < smoothstep((x - 86.5) / 12.5) else "moss"
+                name = "clover" if pick(x, y) < smoothstep((x - 86.5) / 12.5) else "moss"
         if name not in biomes:
             biomes[name] = terrain.BIOMES[name]()
         return biomes[name]
@@ -872,8 +889,11 @@ def compose():
 
     # The arcade's gilding goes on its bare rock, under the moss on its walkway.
     standing = [(q["x"] - 2.4, q["near"] - 1.0, q["x"] + 2.4, q["near"] + 1.0) for q in PROPS]
+    # Nothing grows on the world's rock where it runs under the station's own floor, in front of
+    # the station's own bells.
+    standing.append((C0 + 0.6, -1.0, C1 - 0.6, CITADEL_FLOOR - 0.2))
     standing += [(m["pod"][0] - 3.0, m["from"][1] - 1.0, m["pod"][0] + 1.5, m["from"][1] + 1.0) for m in MOVES if "pod" in m]
-    terrain.dress(rocks, biome_at, canvases["mid"], canvases["front"], graded, np.random.default_rng(5),
+    terrain.dress(rocks, biome_at, canvases["mid"], canvases["front"], graded, 5,
                   underlay=lambda: place(vault_pieces()), no_plants=standing)
     place(DECOR)
     # Where a room's own floor is walked on, it's drawn over the world's moss running under it.
@@ -969,6 +989,11 @@ def compose():
         "nav": nav_map,
         "clock": clock,
         "water": water,
+        # The Bell Beast, where it stood in its room, a unit higher in its trench so its face clears
+        # the station's floor plates (its animations: life.js planBeast).
+        "beast": ({"x": metas["bell_beast"]["anchors"]["bell_beast"][0],
+                   "y": metas["bell_beast"]["anchors"]["bell_beast"][1], "zone": "bell_beast"}
+                  if "bell_beast" in metas["bell_beast"].get("anchors", {}) else None),
     }
     # Replaced in one step, so the running wallpapers' folder watch sees a new file and reloads.
     tmp = OUT / ".World.qml.tmp"
