@@ -130,9 +130,11 @@ Item {
 
                 visible: shown
                 source: shown ? root.worldDir + "/" + modelData.file + root.build : ""
-                x: Math.floor(root.toX(unitsX * root.unitMm))
+                // Neighbouring tiles share their edge exactly: an overlap would draw a translucent
+                // column twice (a line through the lake), a gap would show the black behind.
+                x: Math.round(root.toX(unitsX * root.unitMm))
                 y: Math.floor(root.toY(root.world.height * root.unitMm))
-                width: Math.ceil(unitsW * root.pxPerUnit) + 1
+                width: Math.round(root.toX((unitsX + unitsW) * root.unitMm)) - x
                 height: Math.ceil(root.world.height * root.pxPerUnit)
                 sourceSize.width: width
                 asynchronous: true
@@ -337,6 +339,64 @@ Item {
 
     Layer {
         tiles: root.world?.layers.front ?? []
+    }
+
+    // The water, moving (shaders/waterfall.frag, lake.frag): in front of Hornet, under the
+    // time of day. Its own clock, wrapped every hour (the shaders work in single precision).
+    readonly property var water: world?.water ?? null
+    readonly property bool showsWater: water !== null
+        && (water.lake.left - 1) * unitMm < me.x + me.w && (water.lake.left + water.lake.width + 1) * unitMm > me.x
+    property real waterTime: time % 3600
+    Timer {
+        interval: 33
+        repeat: true
+        running: root.live && root.showsWater && GraphicsInfo.api !== GraphicsInfo.Software
+        onTriggered: root.waterTime = (Date.now() / 1000) % 3600
+    }
+
+    component WaterEffect: ShaderEffect {
+        required property var area // left, bottom, width, height in units
+        readonly property real time: root.waterTime
+        readonly property vector2d extent: Qt.vector2d(area.width, area.height)
+        readonly property color shallow: Qt.rgba(root.water.shallow[0], root.water.shallow[1], root.water.shallow[2], 1)
+        readonly property color light: Qt.rgba(root.water.light[0], root.water.light[1], root.water.light[2], 1)
+
+        visible: root.showsWater && GraphicsInfo.api !== GraphicsInfo.Software
+        x: root.toX(area.left * root.unitMm)
+        y: root.toY((area.bottom + area.height) * root.unitMm)
+        width: area.width * root.pxPerUnit
+        height: area.height * root.pxPerUnit
+    }
+
+    WaterEffect {
+        area: root.water ? root.water.fall : { left: 0, bottom: 0, width: 0, height: 0, edges: [0, 0, 0, 0] }
+        readonly property vector4d edges: Qt.vector4d(area.edges[0], area.edges[1], area.edges[2], area.edges[3])
+        fragmentShader: Qt.resolvedUrl("shaders/waterfall.frag.qsb")
+    }
+
+    Image {
+        id: waterMask
+        visible: false
+        source: root.water ? root.worldDir + "/" + root.water.lake.mask + root.build : ""
+        smooth: true
+    }
+
+    WaterEffect {
+        area: root.water ? root.water.lake : { left: 0, bottom: 0, width: 0, height: 0, level: 0, impact: 0 }
+        readonly property real level: area.level
+        readonly property real impact: area.impact
+        readonly property Image mask: waterMask
+        fragmentShader: Qt.resolvedUrl("shaders/lake.frag.qsb")
+    }
+
+    WaterEffect {
+        area: root.water ? root.water.splash : { left: 0, bottom: 0, width: 0, height: 0, level: 0, impact: 0, fallWidth: 0, maskRect: [0, 0, 1, 1] }
+        readonly property real level: area.level
+        readonly property real impact: area.impact
+        readonly property real fallWidth: area.fallWidth
+        readonly property vector4d maskRect: Qt.vector4d(area.maskRect[0], area.maskRect[1], area.maskRect[2], area.maskRect[3])
+        readonly property Image mask: waterMask
+        fragmentShader: Qt.resolvedUrl("shaders/splash.frag.qsb")
     }
 
     // Time of day: a veil over everything, then the light sources shining through it.

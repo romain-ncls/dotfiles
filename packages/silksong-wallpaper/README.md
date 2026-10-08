@@ -59,7 +59,8 @@ under a memory cap as above. `world.py` renders its zones one per process for th
 A running wallpaper reloads the world by itself when `world.py` writes a new one; changes to
 the QML itself need plasmashell restarted (`systemctl --user restart plasma-plasmashell`),
 the lock screen picks them up at the next lock. Hornet's sheets are shared by every zone and
-coloured for the zone she's in by `shaders/hornet.frag`; after editing it, compile it with
-`qsb --glsl "100 es,120,150,300 es,330" --hlsl 50 --msl 12 -o hornet.frag.qsb hornet.frag`
+coloured for the zone she's in by `shaders/hornet.frag`; the waterfall and the lake move in
+`shaders/waterfall.frag` and `lake.frag`. After editing a shader, compile it, e.g.
+`qsb --glsl "100 es,120,150,300 es,330" --hlsl 50 --msl 12 -o lake.frag.qsb lake.frag`
 (qsb is in qt6.qtshadertools). Only the screen she's on (or about to reach) loads her sheets,
 and only those of the clips she plays in the next 40 seconds.
