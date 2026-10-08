@@ -35,8 +35,9 @@ under a memory cap as above. `world.py` renders its zones one per process for th
   screen shows a room's background, rendered with the game's camera, shaders, bloom and
   colour grading and receding a little behind the rock; Hornet's house is furnished with her
   Bellhart house's pieces and walled in Bellhart's timber; a lake and waterfall. Plants and
-  vines on the game's grass shaders are kept apart to sway (`sway.png`), and the rooms' own
-  ambient particles (Verdania's fireflies) are exported as emitters. Navigation (walk, drop,
+  vines on the game's grass shaders are kept apart to sway (`sway.png`), the station's floor
+  bells to jingle (their shake frames), and the rooms' own ambient particles (Verdania's
+  fireflies) are exported as emitters. Navigation (walk, drop,
   jump, climb) comes from the same rock, so nothing she stands on is hidden.
   `world.py --layout IMAGE` draws just the rock and her ways, quickly.
 - `kit.py`: harvests a room's sprites, at their in-game size, as pieces to dress with, with

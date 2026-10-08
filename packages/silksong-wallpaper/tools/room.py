@@ -93,9 +93,18 @@ _sprite_cache = {}
 
 def sprite_item_parts(sprite_ptr):
     key = (sprite_ptr.assetsfile.name if sprite_ptr.assetsfile else None, sprite_ptr.path_id)
+    return _sprite_parts(key, sprite_ptr.read)
+
+
+def sprite_reader_parts(reader):
+    """sprite_item_parts for a sprite found by game.resolve (an object reader)."""
+    return _sprite_parts((reader.assets_file.name, reader.path_id), reader.read)
+
+
+def _sprite_parts(key, read):
     if key not in _sprite_cache:
         try:
-            sp = sprite_ptr.read()
+            sp = read()
             img = sp.image.convert("RGBA")
             mesh = MeshHandler(sp.m_RD, sp.object_reader.version)
             mesh.process()

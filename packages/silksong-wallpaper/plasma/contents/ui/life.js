@@ -530,7 +530,8 @@ function planDay(world, clips, day0, dateKey) {
                     lookup: "curiosity", map: "curiosity", visit: "curiosity", kneel: "rest" };
     const recent = [bed.id];
     let stuck = 0;
-    while (p.t < bedtime - 600) {
+    // One thing she does: a wander, or an activity somewhere.
+    const step = () => {
         const hour = ((p.t - day0) / 3600 + 4) % 24;
         if (r() < 0.35 && spots.length) {
             // Wandering: somewhere else for a moment, a look around, and on.
@@ -547,7 +548,7 @@ function planDay(world, clips, day0, dateKey) {
                 } else {
                     p.hold("Idle", between(r, 2, 5));
                 }
-                continue;
+                return;
             }
         }
         const options = pois.filter(q => q.activity !== "sleep" && recent.indexOf(q.id) < 0);
@@ -580,7 +581,7 @@ function planDay(world, clips, day0, dateKey) {
                 p.hold("Idle", 60); // nowhere to go from here: wait a minute
                 stuck = 0;
             }
-            continue;
+            return;
         }
         stuck = 0;
         const start = p.t;
@@ -596,6 +597,49 @@ function planDay(world, clips, day0, dateKey) {
         }
         if (r() < 0.3) {
             p.hold("Idle", between(r, 1, 4));
+        }
+    };
+    // The Bell Beast sings the hours from 9 to 21 (planBeast). Whatever would run across one is
+    // undone: she waits about for it instead, and listens while it sings, turned towards it.
+    const songs = [];
+    for (let h = 9; h <= 21; h++) {
+        songs.push(day0 + (h - 4) * 3600);
+    }
+    const towards = world.beast ? world.beast.x : null;
+    const listen = at => {
+        while (at - p.t > 8) {
+            p.hold("Idle", Math.min(at - 4 - p.t, between(r, 3, 8)));
+            if (r() < 0.4) {
+                p.face(!p.facingRight);
+            }
+        }
+        if (towards !== null) {
+            p.face(towards > p.x);
+        }
+        if (at > p.t) {
+            p.hold("Idle", at - p.t);
+        }
+        p.hold("LookUp");
+        p.hold("LookingUp", between(r, 6, 9));
+        p.hold("LookUpEnd");
+    };
+    while (p.t < bedtime - 600) {
+        const mark = { segments: p.segments.length, log: p.log.length, t: p.t, x: p.x, surface: p.surface,
+                       facingRight: p.facingRight, needs: Object.assign({}, needs), recent: recent.slice(), stuck: stuck };
+        step();
+        const song = songs.find(at => at > mark.t && at <= p.t + 2);
+        if (song !== undefined) {
+            p.segments.length = mark.segments;
+            p.log.length = mark.log;
+            p.t = mark.t;
+            p.x = mark.x;
+            p.surface = mark.surface;
+            p.facingRight = mark.facingRight;
+            Object.assign(needs, mark.needs);
+            recent.length = 0;
+            recent.push(...mark.recent);
+            stuck = mark.stuck;
+            listen(song);
         }
     }
     p.goTo(bed.surface, bed.x);
