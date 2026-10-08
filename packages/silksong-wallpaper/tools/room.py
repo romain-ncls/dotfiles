@@ -46,6 +46,7 @@ class Scene:
                 self.gameobjects[o.path_id] = o.read()
         self.go_transform = {t.m_GameObject.path_id: pid for pid, t in self.transforms.items()}
         self._world, self._active = {}, {}
+        self.overrides = {}  # GameObject path id -> active, from apply_save_state
         self.manager = next((o.read_typetree() for o in self.objects
                              if o.type.name == "MonoBehaviour" and game.script_class(o) == "CustomSceneManager"), None)
         print(f"{name}: {len(self.objects)} objects, {len(self.env.files)} files, {time.time() - t0:.1f}s", file=sys.stderr)
@@ -63,7 +64,7 @@ class Scene:
     def active(self, go_id):
         if go_id not in self._active:
             go = self.gameobjects.get(go_id)
-            if go is None or not go.m_IsActive:
+            if go is None or not self.overrides.get(go_id, go.m_IsActive):
                 self._active[go_id] = False
             else:
                 father = self.transforms[self.go_transform[go_id]].m_Father.path_id
@@ -281,15 +282,18 @@ def draw(canvas, item, cam, tint):
     canvas.alpha_composite(piece, (x0, y0)) if x0 >= 0 and y0 >= 0 else canvas.alpha_composite(piece, (max(x0, 0), max(y0, 0)), (max(-x0, 0), max(-y0, 0)))
 
 
-def render(scene, items, cam, ambient_scale=2.0, blur_z=None, blur_units=0.13):
+def render(scene, items, cam, ambient_scale=2.0, blur_z=None, blur_units=0.13, mid_z=None):
     """Back (behind Hornet) and front layers, ungraded. Layers behind the blur plane get the
-    background camera's blur (360 px tall buffer, LightBlur passes): about blur_units of sigma."""
+    background camera's blur (360 px tall buffer, LightBlur passes): about blur_units of sigma.
+    With mid_z, what is behind Hornet but nearer than mid_z comes apart as a third, middle layer:
+    returns back, mid, front, grade."""
     grade = game.Grade(scene.manager)
     ambient = grade.ambient_rgb() * ambient_scale  # Sprites/Lit: texture * colour * ambient * 2
     size = (round(cam.width * cam.ppu), round(cam.height * cam.ppu))
     far = Image.new("RGBA", size, (0, 0, 0, 255))
     back = Image.new("RGBA", size, (0, 0, 0, 0))
     front = Image.new("RGBA", size, (0, 0, 0, 0))
+    mid = Image.new("RGBA", size, (0, 0, 0, 0))
     hero_key = (0, 0, -HERO_Z)
     items = sorted(items, key=lambda i: (i.layer, i.order, -i.z))
     for it in items:
@@ -300,14 +304,14 @@ def render(scene, items, cam, ambient_scale=2.0, blur_z=None, blur_units=0.13):
         if blur_z is not None and it.z > blur_z and it.layer == 0:
             target = far
         elif key < hero_key:
-            target = back
+            target = mid if mid_z is not None and it.z < mid_z else back
         else:
             target = front
         draw(target, it, cam, tint)
     if blur_units:
         far = far.filter(ImageFilter.GaussianBlur(blur_units * cam.ppu))
     far.alpha_composite(back)
-    return far, front, grade
+    return (far, front, grade) if mid_z is None else (far, mid, front, grade)
 
 
 TERRAIN_LAYERS = {8, 25}  # Terrain, Soft Terrain
@@ -367,3 +371,51 @@ def is_unwanted(scene, go_id, _cache={}):
                 bad = is_unwanted(scene, scene.transforms[father].m_GameObject.path_id)
     _cache[key] = bad
     return bad
+
+
+def _test_passes(test, save):
+    field = test["FieldName"]
+    kind = test["Type"]
+    if kind == 0:  # Bool
+        return bool(save.get(field, False)) == bool(test["BoolValue"])
+    if kind == 4:  # String
+        value, want = str(save.get(field, "")), test.get("StringValue", "")
+        return [value == want, value != want, want in value, want not in value][test.get("StringType", 0)]
+    value = save.get(field, 0)
+    want = test["FloatValue"] if kind == 2 else test["IntValue"]
+    return [value == want, value != want, value < want, value > want][test.get("NumType", 0)]
+
+
+def _test_groups_pass(test, save):
+    """PlayerDataTest: any group whose tests all pass; no groups at all passes."""
+    groups = test.get("TestGroups", [])
+    return not groups or any(all(_test_passes(t, save) for t in g.get("Tests", [])) for g in groups)
+
+
+def apply_save_state(scene, save=None):
+    """Switch objects the way the game does for a given save (PlayerData), by default a fresh
+    one: every flag false, every counter 0. That drops late-game variants such as Act 3's
+    black thread, which scenes keep active until a script turns them off."""
+    save = save or {}
+    for o in scene.objects:
+        if o.type.name != "MonoBehaviour":
+            continue
+        cls = game.script_class(o)
+        if cls not in ("DeactivateIfPlayerdataTrue", "DeactivateIfPlayerdataFalse", "TestGameObjectActivator"):
+            continue
+        t = o.read_typetree()
+        own = t["m_GameObject"]["m_PathID"]
+        if cls == "TestGameObjectActivator":
+            passed = _test_groups_pass(t.get("playerDataTest", {}), save)
+            if t.get("questTests") or t.get("equipTests") or t.get("entryGateWhitelist"):
+                passed = False  # quests, tools and entry gates belong to a playthrough we don't have
+            for key, state in (("activateGameObject", passed), ("deactivateGameObject", not passed)):
+                ref = t.get(key) or {}
+                if ref.get("m_PathID"):
+                    scene.overrides[ref["m_PathID"]] = state
+            continue
+        value = bool(save.get(t["boolName"], False))
+        if value == (cls == "DeactivateIfPlayerdataTrue"):
+            target = (t.get("objectToDeactivate") or {}).get("m_PathID") or own
+            scene.overrides[target] = False
+    scene._active.clear()

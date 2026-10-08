@@ -118,10 +118,10 @@ def grade_layer(img, grade, ppu, with_bloom):
     return Image.fromarray((a.clip(0, 1) * 255).round().astype(np.uint8), "RGBA")
 
 
-def bake_hornet(grade, out, sheet_ppu=64):
-    """Hornet's sheets in this room's colours, with her share of the camera bloom around her."""
+def bake_hornet(grade, out_dir, sheet_ppu=64):
+    """Hornet's sheets in a room's colours, with her share of the camera bloom around her."""
     src = DATA / "hornet"
-    (out / "hornet").mkdir(exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
     for png in sorted(src.glob("*.png")):
         a = np.asarray(Image.open(png).convert("RGBA")).astype(np.float32) / 255
         alpha = a[..., 3:4]
@@ -136,10 +136,10 @@ def bake_hornet(grade, out, sheet_ppu=64):
         out_a = body[..., 3:4] + glow[..., 3:4] * (1 - body[..., 3:4])
         out_rgb = (body[..., :3] * body[..., 3:4] + glow[..., :3] * glow[..., 3:4] * (1 - body[..., 3:4])) / np.maximum(out_a, 1e-6)
         sheet = np.concatenate([out_rgb, out_a], -1)
-        Image.fromarray((sheet * 255).round().astype(np.uint8), "RGBA").save(out / "hornet" / png.name, optimize=True)
+        Image.fromarray((sheet * 255).round().astype(np.uint8), "RGBA").save(out_dir / png.name, optimize=True)
 
 
-def bake_light(grade, out):
+def bake_light(grade, out, name="light.png"):
     """HeroLight is screen-blended, which for its near-grey colour is white at alpha = its brightness."""
     light = game.hero_light()
     tex = np.asarray(light["image"]).astype(np.float32) / 255
@@ -149,11 +149,11 @@ def bake_light(grade, out):
     img = np.zeros(tex.shape, np.float32)
     img[..., :3] = grade.apply(np.ones(3))
     img[..., 3] = strength
-    Image.fromarray((img * 255).round().astype(np.uint8), "RGBA").save(out / "light.png", optimize=True)
+    Image.fromarray((img * 255).round().astype(np.uint8), "RGBA").save(out / name, optimize=True)
     x0, y0, x1, y1 = light["box"]
     sx, sy = light["scale"]
     ox, oy = light["offset"]
-    return {"file": "light.png", "left": ox + x0 * sx, "bottom": oy + y0 * sy, "width": (x1 - x0) * sx, "height": (y1 - y0) * sy}
+    return {"file": name, "left": ox + x0 * sx, "bottom": oy + y0 * sy, "width": (x1 - x0) * sx, "height": (y1 - y0) * sy}
 
 
 def bake(scene_id, ppu):
@@ -182,7 +182,7 @@ def bake(scene_id, ppu):
     step = 0.25
     heights = ground_profile(room.terrain(scene), left, bottom, width, height, step)
     walk = walk_span(heights, step)
-    bake_hornet(grade, out)
+    bake_hornet(grade, out / "hornet")
     light = bake_light(grade, out)
 
     data = {

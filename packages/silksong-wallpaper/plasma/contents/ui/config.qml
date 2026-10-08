@@ -12,11 +12,14 @@ Kirigami.FormLayout {
     property alias cfg_GapMm: gap.value
     property real cfg_UnitMm
     property alias cfg_Debug: debug.checked
+    property real cfg_Latitude
+    property real cfg_Longitude
     property alias formLayout: root
 
     QQC2.TextField {
         id: scene
         Kirigami.FormData.label: "Scene:"
+        placeholderText: "world"
     }
 
     QQC2.SpinBox {
@@ -35,6 +38,18 @@ Kirigami.FormLayout {
         textFromValue: (v, locale) => Number(v / 10).toLocaleString(locale, "f", 1)
         valueFromText: (text, locale) => Math.round(Number.fromLocaleString(locale, text) * 10)
         onValueModified: root.cfg_UnitMm = value / 10
+    }
+
+    QQC2.TextField {
+        Kirigami.FormData.label: "Latitude, longitude:"
+        text: `${root.cfg_Latitude}, ${root.cfg_Longitude}`
+        onEditingFinished: {
+            const parts = text.split(",").map(p => Number(p.trim()));
+            if (parts.length === 2 && parts.every(Number.isFinite)) {
+                root.cfg_Latitude = parts[0];
+                root.cfg_Longitude = parts[1];
+            }
+        }
     }
 
     QQC2.CheckBox {

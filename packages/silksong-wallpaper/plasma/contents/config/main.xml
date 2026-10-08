@@ -15,8 +15,16 @@
       <default>16.3</default>
     </entry>
     <entry name="SceneId" type="String">
-      <label>Scene baked by tools/bake.py, under ~/.local/share/silksong-wallpaper/scenes</label>
+      <label>"world" for the aquarium from tools/world.py, or a scene baked by tools/bake.py</label>
       <default>mosshome</default>
+    </entry>
+    <entry name="Latitude" type="Double">
+      <label>Latitude for sunrise and sunset</label>
+      <default>48.85</default>
+    </entry>
+    <entry name="Longitude" type="Double">
+      <label>Longitude for sunrise and sunset</label>
+      <default>2.35</default>
     </entry>
     <entry name="Debug" type="Bool">
       <label>Draw alignment guides</label>
