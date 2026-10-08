@@ -29,15 +29,33 @@ UnityPy.config.FALLBACK_UNITY_VERSION = "6000.0.50f1"
 
 DEFAULT_GAME = Path.home() / ".local/share/Steam/steamapps/common/Hollow Knight Silksong"
 DEFAULT_OUT = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "silksong-wallpaper"
-BUNDLES = ["herodynamic_assets_all.bundle", "herocollections_assets_shared.bundle"]
-# Hornet's tk2dSpriteAnimation still carries Hollow Knight's name.
-LIBRARY = "Knight"
-CLIPS = [
-    "Idle", "Walk", "Turn", "TurnWalk", "Walk To Idle", "Run", "Run To Idle",
-    "Sit", "Sit Idle", "Sit Fall Asleep", "Sitting Asleep", "Wake To Sit",
-    "SitLook 1", "SitLook 2", "SitLook 3", "SitLook 4",
-    "NeedolinSit Start", "NeedolinSit Play", "NeedolinSit End",
-    "LookUp", "LookingUp", "LookUpEnd", "Map Open", "Map Idle", "Map Away",
+# Animation libraries Hornet's clips come from: (library, bundles, load their dependencies, clips).
+LIBRARIES = [
+    # Her own moves. Hornet's tk2dSpriteAnimation still carries Hollow Knight's name.
+    ("Knight", ["herodynamic_assets_all.bundle", "herocollections_assets_shared.bundle"], False, [
+        "Idle", "Walk", "Turn", "TurnWalk", "Walk To Idle", "Run", "Run To Idle", "Idle To Run",
+        "Airborne", "Fall", "Land", "Land To Walk", "Double Jump", "Hop", "Hop Land",
+        "Wall Cling", "Wall Scramble", "Wall Scramble Repeat", "Wall Scramble Mantle", "Walljump",
+        "Mantle Cling", "Mantle Land",
+        "Sit", "Sit Idle", "Sit Fall Asleep", "Sitting Asleep", "Wake To Sit",
+        "SitLook 1", "SitLook 2", "SitLook 3", "SitLook 4",
+        "NeedolinSit Start", "NeedolinSit Play", "NeedolinSit End",
+        "Needolin Start", "Needolin Play", "Needolin End",
+        "LookUp", "LookingUp", "LookUpEnd", "Map Open", "Map Idle", "Map Away",
+        "Abyss Kneel", "Abyss Kneel Idle", "Abyss Kneel to Stand",
+        "Double Jump Effect", "Double Jump Wings 2",
+        "Sit Map Open", "Sit Map Close", "Sit Lean",
+        # The Clawline: her needle thrown to a ring on its silk thread, then the dash to it.
+        "Harpoon Antic", "Harpoon Throw", "Harpoon Needle", "Harpoon Thread", "Harpoon Dash", "Harpoon Catch",
+        # Striking down on a pod and bouncing off it.
+        "DownSpike Antic", "DownSpike", "DownSpikeBounce 1", "DownSpikeBounce 2", "Downspike Recovery",
+        "Downspike Recovery Land",
+    ]),
+    # At home in Bellhart: desk, bed, the map read in bed.
+    ("Belltown House Anim", ["tk2danimations_assets_areabell.bundle"], True, [
+        "Hornet Desk Sit", "Hornet Desk Stand", "Hornet Lay Down", "Hornet Sit Up",
+        "Hornet Lay Map Open", "Hornet Lay Map Close",
+    ]),
 ]
 # Transparent border around each cell: keeps smooth scaling from bleeding a neighbour in, and
 # leaves room for the bloom halo bake.py adds around Hornet (about 10 sheet pixels of sigma).
@@ -136,29 +154,40 @@ def extract_clip(collections, clip, out_dir):
     }
 
 
+def load_library(bundles_dir, library, bundles, with_deps):
+    if with_deps:
+        import game  # the scene tools' loader follows CAB references across bundles
+        env = game.load_with_deps(bundles[0], max_depth=2)
+    else:
+        monoscripts = next(bundles_dir.glob("*_monoscripts.bundle"))
+        env = UnityPy.load(*[str(bundles_dir / b) for b in bundles], str(monoscripts))
+    anim = mono_behaviours(env, "tk2dSpriteAnimation")[library][0].read_typetree()
+    return env, {c["name"]: c for c in anim["clips"] if c["name"]}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--game", type=Path, default=DEFAULT_GAME, help=f"game install (default: {DEFAULT_GAME})")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help=f"output folder (default: {DEFAULT_OUT})")
-    parser.add_argument("--list", action="store_true", help="print every clip name in Hornet's library and exit")
-    parser.add_argument("clips", nargs="*", default=CLIPS, help="clip names (default: the set the wallpaper uses)")
+    parser.add_argument("--list", metavar="LIBRARY", help="print every clip name in a library and exit (e.g. Knight)")
     args = parser.parse_args()
 
-    bundles = args.game / "Hollow Knight Silksong_Data/StreamingAssets/aa/StandaloneLinux64"
-    monoscripts = next(bundles.glob("*_monoscripts.bundle"))
-    env = UnityPy.load(*[str(bundles / b) for b in BUNDLES], str(monoscripts))
-    library = mono_behaviours(env, "tk2dSpriteAnimation")[LIBRARY][0].read_typetree()
-    by_name = {c["name"]: c for c in library["clips"] if c["name"]}
+    bundles_dir = args.game / "Hollow Knight Silksong_Data/StreamingAssets/aa/StandaloneLinux64"
     if args.list:
+        spec = next(l for l in LIBRARIES if l[0] == args.list)
+        _, by_name = load_library(bundles_dir, *spec[:3])
         print("\n".join(sorted(by_name)))
         return
 
     (args.out / "hornet").mkdir(parents=True, exist_ok=True)
-    collections = Collections(env)
     manifest = {}
-    for name in args.clips:
-        manifest[name] = extract_clip(collections, by_name[name], args.out)
-        print(f"{name}: {manifest[name]['frames']} frames, {max(manifest[name]['sequence']) + 1} unique")
+    for library, bundles, with_deps, clips in LIBRARIES:
+        env, by_name = load_library(bundles_dir, library, bundles, with_deps)
+        collections = Collections(env)
+        for name in clips:
+            manifest[name] = extract_clip(collections, by_name[name], args.out)
+            print(f"{library} / {name}: {manifest[name]['frames']} frames, {max(manifest[name]['sequence']) + 1} unique,"
+                  f" wrap {manifest[name]['wrapMode']}, {manifest[name]['fps']:g} fps")
     (args.out / "Sprites.qml").write_text(
         "// Generated by packages/silksong-wallpaper/tools/extract.py\n"
         "import QtQml\n\n"

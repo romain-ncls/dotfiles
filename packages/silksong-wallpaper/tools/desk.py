@@ -33,17 +33,17 @@ def main():
     shots = defaultdict(dict)
     for f in args.dir.glob("*@*.png"):
         name, time = re.match(r"(.+)@(.+)\.png", f.name).groups()
-        shots[float(time)][name] = f
+        shots[time][name] = f
 
     k = args.scale
     width = round((sum(w for _, w, _ in DESK) + args.gap * (len(DESK) - 1)) * k) + 20
     row_h = round(max(h for _, _, h in DESK) * k) + 30
     out = Image.new("RGB", (width, row_h * len(shots)), (60, 60, 60))
     draw = ImageDraw.Draw(out)
-    for row, time in enumerate(sorted(shots)):
+    for row, time in enumerate(sorted(shots, key=lambda t: (len(t), t))):
         top = row * row_h + 20
         bottom = top + round(max(h for _, _, h in DESK) * k)
-        draw.text((10, top - 16), f"t = {time:g} s", fill=(230, 230, 230))
+        draw.text((10, top - 16), f"t = {time}", fill=(230, 230, 230))
         x = 10.0
         for name, w, h in DESK:
             img = Image.open(shots[time][name]).convert("RGB").resize((round(w * k), round(h * k)), Image.LANCZOS)

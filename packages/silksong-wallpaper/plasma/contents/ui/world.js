@@ -109,3 +109,56 @@ function hornetAt(clips, scene, t) {
     }
     return null;
 }
+
+// ---------------------------------------------------------------- the aquarium (tools/world.py)
+
+// The zone drawn on top at a point of the world (later zones cover earlier ones), or the
+// nearest one when the point is in a bezel or the rock between zones.
+function zoneAt(world, x, y) {
+    let found = null;
+    let nearest = null;
+    let best = Infinity;
+    for (const z of world.zones) {
+        const dx = Math.max(z.left - x, 0, x - (z.left + z.width));
+        const dy = Math.max(z.bottom - y, 0, y - (z.bottom + z.height));
+        if (dx === 0 && dy === 0) {
+            found = z;
+        } else if (dx * dx + dy * dy < best) {
+            best = dx * dx + dy * dy;
+            nearest = z;
+        }
+    }
+    return found ?? nearest;
+}
+
+// Until navigation lands: Hornet paces Mosshome's floor.
+function worldRoutine(clips, world) {
+    const home = world.zones.find(z => z.id === "mosshome") ?? world.zones[0];
+    return {
+        floor: home.floor,
+        steps: routine(clips, { walk: [home.left + 3, home.left + home.width - 3] }),
+    };
+}
+
+function clipsUsedInWorld(clips, world) {
+    return [...new Set(worldRoutine(clips, world).steps.map(s => s.clip))];
+}
+
+function hornetInWorld(clips, world, t) {
+    const r = worldRoutine(clips, world);
+    const period = r.steps.reduce((sum, s) => sum + s.duration, 0);
+    let local = t % period;
+    for (const s of r.steps) {
+        if (local < s.duration) {
+            return {
+                clip: s.clip,
+                frame: frameAt(clips[s.clip], local),
+                x: s.x + (s.vx || 0) * local,
+                y: r.floor + world.heroFeet,
+                facingRight: s.facingRight,
+            };
+        }
+        local -= s.duration;
+    }
+    return null;
+}
