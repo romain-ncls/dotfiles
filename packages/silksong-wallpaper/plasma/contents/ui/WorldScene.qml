@@ -54,11 +54,12 @@ Item {
         running: root.live && root.hornetHere
         onTriggered: root.time = Date.now() / 1000
     }
-    // The clock's gears turn smoothly enough at 10 updates a second.
+    // The clock's gears turn smoothly enough at 10 updates a second, the Bell Beast's 12 fps
+    // animations need 12.
     readonly property bool showsClock: clock !== null
         && clock.x * unitMm > me.x - 30 && clock.x * unitMm < me.x + me.w + 30
     Timer {
-        interval: root.showsClock ? 100 : 250
+        interval: root.showsBeast ? 83 : root.showsClock ? 100 : 250
         repeat: true
         running: root.live && !root.hornetHere
         onTriggered: root.time = Date.now() / 1000
@@ -230,7 +231,8 @@ Item {
     readonly property bool hornetNear: hornet !== null
         && hornet.x * unitMm > me.x - 150 && hornet.x * unitMm < me.x + me.w + 150
     readonly property int lookahead: Math.floor(time / 5)
-    readonly property var clipsAhead: hornetNear ? Life.clipsAhead(world, clips, lookahead * 5, 45) : []
+    readonly property var clipsAhead: (hornetNear ? Life.clipsAhead(world, clips, lookahead * 5, 45) : [])
+        .concat(showsBeast ? Life.beastClipsAhead(world, clips, lookahead * 5, 45) : [])
     readonly property real sheetScale: Math.min(1, pxPerUnit / 64)
     property var sheets: ({})
     property var luts: ({})
@@ -277,6 +279,32 @@ Item {
                 }
             }
         }
+    }
+
+    // The Bell Beast in its station: behind Hornet, its lower body in the trench behind the
+    // station's floor (the front layer). Coloured like a character of its zone.
+    readonly property var beast: world?.beast ?? null
+    readonly property bool showsBeast: beast !== null
+        && (beast.x - 5) * unitMm < me.x + me.w && (beast.x + 5) * unitMm > me.x
+    readonly property var beastPose: showsBeast && clips ? Life.beastAt(world, clips, time) : null
+    readonly property var beastZone: beast ? world.zones.find(z => z.id === beast.zone) ?? null : null
+
+    HornetSprite {
+        readonly property string clip: root.beastPose?.clip ?? ""
+
+        visible: root.beastPose !== null && root.sheets[clip] !== undefined && root.beastZone !== null
+            && root.luts[root.beastZone.id] !== undefined
+        sheet: root.clips && root.clips[clip] ? root.clips[clip]
+            : { sequence: [0], frames: 1, columns: 1, cellWidth: 1, cellHeight: 1, anchorX: 0, anchorY: 0, pixelsPerUnit: 64 }
+        texture: root.sheets[clip] ?? null
+        grade: root.beastZone ? { ambient: root.beastZone.grade.ambient, heroSaturation: 1.0,
+                                  saturation: root.beastZone.grade.saturation }
+                              : { ambient: [0.5, 0.5, 0.5], heroSaturation: 1, saturation: 1 }
+        lut: root.beastZone ? root.luts[root.beastZone.id] ?? null : null
+        frame: root.beastPose?.frame ?? 0
+        pixelScale: root.pxPerUnit / sheet.pixelsPerUnit
+        x: root.beast ? Math.round(root.toX(root.beast.x * root.unitMm)) : 0
+        y: root.beast ? Math.round(root.toY(root.beast.y * root.unitMm)) : 0
     }
 
     // Her silk thread, when she has thrown her needle: from her hand to the needle or ring.

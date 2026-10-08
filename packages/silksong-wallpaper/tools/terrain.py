@@ -8,6 +8,7 @@ masses of moss cover the inside, and pieces chosen by the surface's direction li
 import json
 import math
 import re
+import zlib
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -46,9 +47,10 @@ def wobble(rng, a, b, n_per_unit=2.0, amp=0.12):
     return pts
 
 
-def box(rng, x0, y0, x1, y1, biome=None, walk_top=True, **kw):
-    """A rectangle of rock with organic edges; the top stays gentle enough to walk on."""
-    top_amp = 0.06 if walk_top else 0.15
+def box(rng, x0, y0, x1, y1, biome=None, walk_top=True, level=False, **kw):
+    """A rectangle of rock with organic edges; the top stays gentle enough to walk on, or dead
+    level for a built floor (`level`)."""
+    top_amp = 0.0 if level else 0.06 if walk_top else 0.15
     pts = (wobble(rng, (x0, y0), (x1, y0), amp=0.18)[:-1]  # bottom, left to right
            + wobble(rng, (x1, y0), (x1, y1), amp=0.18)[:-1]  # right side, up
            + wobble(rng, (x1, y1), (x0, y1), amp=top_amp)[:-1]  # top, right to left
@@ -400,14 +402,15 @@ def choose(rng, pieces, last=None):
     return pieces[int(rng.integers(len(pieces)))]
 
 
-def dress(rocks, biome_at, back, front, graded, rng, clear=(), underlay=None, no_plants=()):
+def dress(rocks, biome_at, back, front, graded, seed, clear=(), underlay=None, no_plants=()):
     """Draw rocks onto the back layer (fill, silhouettes, inside, edges) and plants onto the front.
 
     biome_at(x, y, own) is the biome at a point of air next to the rock (each face of a floor is
     dressed for the level it faces), or the rock's own biome when it has one; graded(kit, piece, x, y) returns a piece in the
     colours of the zone at (x, y). `clear` are holes (x0, bottom, x1, top) through floors: no
     dressing covers the way through them. underlay() draws what goes on the bare rock, under
-    its dressing.
+    its dressing. Each rock draws its dressing from its own randomness (from `seed` and its
+    outline), so reshaping one rock leaves the others' dressing as it was.
 
     Rules from reviewing the renders: a piece that would be cut is left out, the same piece
     never follows itself, floors and ceilings are lined end to end rather than piled, and the
@@ -429,6 +432,7 @@ def dress(rocks, biome_at, back, front, graded, rng, clear=(), underlay=None, no
     # The way through each hole, from under the floor to Hornet's height above it, with edges
     # that wander a little so cut pieces don't line up.
     passage = np.zeros_like(solid)
+    rng = np.random.default_rng(seed)
     for x0, bottom, x1, top in clear:
         r0, r1 = (round(v) for v in (back.px(0, top + 2.8)[1], back.px(0, bottom - 0.6)[1]))
         phase = rng.uniform(0, 6.3)
@@ -472,6 +476,7 @@ def dress(rocks, biome_at, back, front, graded, rng, clear=(), underlay=None, no
         if not rock.dress:
             continue
         pts = rock.points
+        rng = np.random.default_rng([seed, zlib.crc32(np.round(np.asarray(pts, float), 2).tobytes())])
         xs, ys = [p[0] for p in pts], [p[1] for p in pts]
         # 1. Black organic shapes across the outline: no straight edges.
         def biome(q, n=None):
@@ -520,8 +525,9 @@ def dress(rocks, biome_at, back, front, graded, rng, clear=(), underlay=None, no
         used = {"strip": None, "floor": None, "ceiling": None, "wall": None}
         thin = "island" in rock.tags or max(ys) - min(ys) < 4.0
         for (p, n) in edge_samples(pts, 1.3, rng):
-            along += 0.0 if last is None else float(np.linalg.norm(p - last))
-            last = p
+            step = 0.0 if last is None else float(np.linalg.norm(p - last))
+            along += step
+            prev, last = last, p
             out = p + n * 1.2  # a point in the air next to this edge, for the zone's colours
             bio = biome(out, n)
             if bio is None:
@@ -529,18 +535,20 @@ def dress(rocks, biome_at, back, front, graded, rng, clear=(), underlay=None, no
             angle = math.degrees(math.atan2(n[1], n[0])) - 90
             if n[1] > 0.6 and (bio.strips or bio.floor):  # a floor: a strip along it, now and then a clump
                 if bio.strips and along >= next_strip:
-                    # Laid end to end; a piece that would be cut is swapped for another, then a
-                    # smaller one, then nudged down, rather than leaving the floor bare.
+                    # Laid end to end, each where it's due rather than at the next sample past
+                    # that (up to 1.3 later: a gap after a narrow one); a piece that would be cut
+                    # is swapped for another, then a smaller one, rather than leaving the floor bare.
+                    q = p if prev is None or step < 1e-6 else p + (prev - p) * min(1.0, (along - next_strip) / step)
                     tries = [(choose(rng, bio.strips, used["strip"]), 1.0, bio.strip_lift) for _ in range(3)]
                     tries += [(choose(rng, bio.strips), scale, bio.strip_lift) for scale in (0.75, 0.75, 0.55, 0.55)]
                     for c, scale, lift in tries:
                         k = bio.strip_h * scale * rng.uniform(0.9, 1.1) / c["height"]
                         w, h = c["width"] * k, c["height"] * k
-                        cx = min(max(p[0], min(xs) + w * 0.4), max(xs) - w * 0.4) if max(xs) - min(xs) > w * 0.8 else p[0]
-                        if back.paste(graded(bio.kit, c, *out), cx, p[1] + h * lift, w, h, angle * 0.6, rng.random() < 0.5,
-                                      keep=free(this_side(p, n)), max_cut=0.12 if scale > 0.6 else 0.25):
+                        cx = min(max(q[0], min(xs) + w * 0.4), max(xs) - w * 0.4) if max(xs) - min(xs) > w * 0.8 else q[0]
+                        if back.paste(graded(bio.kit, c, *out), cx, q[1] + h * lift, w, h, angle * 0.6, rng.random() < 0.5,
+                                      keep=free(this_side(q, n)), max_cut=0.12 if scale > 0.6 else 0.25):
                             used["strip"] = c["name"]
-                            next_strip = along + w * rng.uniform(0.55, 0.7)
+                            next_strip = along - float(np.linalg.norm(p - q)) + w * rng.uniform(0.55, 0.7)
                             break
                 if bio.floor and (not bio.strips or rng.random() < bio.clump_p):
                     c = choose(rng, bio.floor, used["floor"])

@@ -3,7 +3,7 @@
 # requires-python = ">=3.11"
 # dependencies = ["UnityPy>=1.25", "pillow", "numpy"]
 # ///
-"""Extract Hornet's animation clips from an installed Hollow Knight: Silksong.
+"""Extract Hornet's (and the Bell Beast's) animation clips from an installed Hollow Knight: Silksong.
 
 The sprites stay out of the repo (they're Team Cherry's): this writes them,
 plus a Sprites.qml manifest the wallpaper loads, to
@@ -56,7 +56,13 @@ LIBRARIES = [
         "Hornet Desk Sit", "Hornet Desk Stand", "Hornet Lay Down", "Hornet Sit Up",
         "Hornet Lay Map Open", "Hornet Lay Map Close",
     ]),
+    # The Bell Beast, in its station (its clips are prefixed "Bell Beast ").
+    ("Bone Beast NPC Anim", ["tk2danimations_assets_areabellway.bundle"], True, [
+        "Idle Left", "Idle Right", "Turn Left", "Turn Right", "Sleep", "Wake", "Shake",
+        "Sing", "Sing End", "Sing Right", "Sing End Right",
+    ]),
 ]
+PREFIX = {"Bone Beast NPC Anim": "Bell Beast "}
 # Transparent border around each cell: keeps smooth scaling from bleeding a neighbour in, and
 # leaves room for the bloom halo bake.py adds around Hornet (about 10 sheet pixels of sigma).
 PADDING = 28
@@ -117,7 +123,7 @@ def render(collections, obj, d):
     return atlas.transform(size, Image.AFFINE, coeffs, resample=Image.NEAREST), left, top, texel
 
 
-def extract_clip(collections, clip, out_dir):
+def extract_clip(collections, clip, out_dir, name):
     # Clips often hold a pose by repeating a sprite: draw each sprite once and
     # keep the playback order in "sequence".
     keys = [(f["spriteCollection"]["m_PathID"], f["spriteId"]) for f in clip["frames"]]
@@ -136,7 +142,7 @@ def extract_clip(collections, clip, out_dir):
     for i, (img, l, t, _) in enumerate(cells):
         cx, cy = (i % columns) * cell_w, (i // columns) * cell_h
         sheet.alpha_composite(img, (cx + PADDING + round((l - left) / texel), cy + PADDING + round((top - t) / texel)))
-    file = "hornet/" + clip["name"].replace(" ", "_") + ".png"
+    file = "hornet/" + name.replace(" ", "_") + ".png"
     sheet.save(out_dir / file, optimize=True)
     return {
         "file": file,
@@ -184,8 +190,9 @@ def main():
     for library, bundles, with_deps, clips in LIBRARIES:
         env, by_name = load_library(bundles_dir, library, bundles, with_deps)
         collections = Collections(env)
-        for name in clips:
-            manifest[name] = extract_clip(collections, by_name[name], args.out)
+        for clip in clips:
+            name = PREFIX.get(library, "") + clip
+            manifest[name] = extract_clip(collections, by_name[clip], args.out, name)
             print(f"{library} / {name}: {manifest[name]['frames']} frames, {max(manifest[name]['sequence']) + 1} unique,"
                   f" wrap {manifest[name]['wrapMode']}, {manifest[name]['fps']:g} fps")
     (args.out / "Sprites.qml").write_text(

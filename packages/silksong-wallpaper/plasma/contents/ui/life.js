@@ -213,6 +213,7 @@ function Planner(world, clips, seed) {
     this.clips = clips;
     this.r = rng(seed);
     this.segments = [];
+    this.log = []; // what she did where: { id, t0, t1 }
     this.routes = {};
     this.t = 0;
     this.surface = 0;
@@ -582,7 +583,9 @@ function planDay(world, clips, day0, dateKey) {
             continue;
         }
         stuck = 0;
+        const start = p.t;
         p.activity(poi);
+        p.log.push({ id: poi.id, t0: start, t1: p.t });
         for (const k in needs) {
             needs[k] = Math.min(2, needs[k] + (p.t - before) / 3600 * { rest: 0.6, music: 0.9, curiosity: 1.5 }[k] * 4);
         }
@@ -598,7 +601,132 @@ function planDay(world, clips, day0, dateKey) {
     p.goTo(bed.surface, bed.x);
     p.face(!bed.mirror);
     p.sleep(bed, nextWake, r() < 0.6);
-    return p.segments;
+    return { segments: p.segments, log: p.log, wake: wake, bedtime: bedtime };
+}
+
+// The day's plans (Hornet's and the Bell Beast's), made once per day and per world build.
+let cache = { key: "", segments: [], beast: [] };
+
+// ------------------------------------------------------------------ the Bell Beast
+
+// The Bell Beast's day in its station, from Hornet's: it wakes a little after her, sings the
+// hours, looks about, turns to her and shakes happily when she visits, and lies down to sleep
+// in the evening. Clips are its own ("Bell Beast ..."); it doesn't move from its spot.
+function planBeast(world, clips, day0, dateKey, hornet) {
+    const r = rng(dateKey * 7 + 3);
+    const segs = [];
+    let t = day0;
+    let right = false; // which way it's looking
+    const clip = name => "Bell Beast " + name;
+    const push = (name, duration, extra) => {
+        const seg = { kind: "clip", clip: clip(name), t0: t, t1: t + duration };
+        for (const k in extra || {}) {
+            seg[k] = extra[k];
+        }
+        segs.push(seg);
+        t += duration;
+    };
+    const once = name => push(name, clipLength(clips, clip(name)));
+    const idle = until => {
+        if (until > t) {
+            push(right ? "Idle Right" : "Idle Left", until - t);
+        }
+    };
+    const turn = toRight => {
+        if (toRight !== right) {
+            once(toRight ? "Turn Right" : "Turn Left");
+            right = toRight;
+        }
+    };
+
+    const wake = hornet.wake + between(r, 600, 1500);
+    const asleep = day0 + (17.5 + between(r, 0, 0.6)) * 3600; // 21:30-22:06
+    push("Sleep", wake - t);
+    once("Wake");
+    // Things that happen at set times: the hourly songs, Hornet's visits.
+    const events = [];
+    for (let h = 9; h <= 21; h++) {
+        const at = day0 + (h - 4) * 3600;
+        if (at > t && at < asleep - 60) {
+            events.push({ t: at, kind: "sing" });
+        }
+    }
+    for (const v of hornet.log) {
+        if (v.id === "bell_beast" && v.t0 > t && v.t1 < asleep) {
+            events.push({ t: v.t0 + 1.0, kind: "visit", until: v.t1 });
+        }
+    }
+    events.sort((a, b) => a.t - b.t);
+    let next = 0;
+    let greeted = -Infinity;
+    while (t < asleep) {
+        const e = events[next];
+        // Until the next event, idle, now and then looking the other way or shaking.
+        const wander = t + between(r, 25, 90);
+        if (!e || wander < e.t - 3) {
+            idle(Math.min(wander, asleep));
+            if (t >= asleep) {
+                break;
+            }
+            if (r() < 0.3 && !right) {
+                once("Shake");
+            } else {
+                turn(!right);
+            }
+            continue;
+        }
+        idle(e.t);
+        next++;
+        if (e.kind === "sing") {
+            // The hour: a song, some seconds long.
+            push(right ? "Sing Right" : "Sing", between(r, 5, 9));
+            once(right ? "Sing End Right" : "Sing End");
+        } else {
+            // Hornet came to see it: it looks at her, and shakes for joy (not every time).
+            turn(false);
+            if (t - greeted > 1800) {
+                idle(t + 1.2);
+                once("Shake");
+                greeted = t;
+            }
+            idle(Math.max(t, Math.min(e.until, asleep)));
+        }
+    }
+    // Lying down: waking played backwards, from looking left.
+    turn(false);
+    push("Wake", clipLength(clips, clip("Wake")), { reverse: true });
+    push("Sleep", day0 + 24 * 3600 + 1 - t);
+    return segs;
+}
+
+// The Bell Beast at time t: { clip, frame }.
+function beastAt(world, clips, t) {
+    if (!world || !world.nav || !clips || !clips["Bell Beast Sleep"]) {
+        return null;
+    }
+    daySegments(world, clips, t);
+    const segs = cache.beast;
+    const seg = segs[segmentIndex(segs, t)];
+    const c = clips[seg.clip];
+    let frame = frameAt(c, t - seg.t0);
+    if (seg.reverse) {
+        frame = c.frames - 1 - frame;
+    }
+    return { clip: seg.clip, frame: frame };
+}
+
+// The Bell Beast's clips from t to t + horizon seconds.
+function beastClipsAhead(world, clips, t, horizon) {
+    if (!world || !world.nav || !clips || !clips["Bell Beast Sleep"]) {
+        return [];
+    }
+    daySegments(world, clips, t);
+    const segs = cache.beast;
+    const names = {};
+    for (let i = segmentIndex(segs, t); i < segs.length && segs[i].t0 < t + horizon; i++) {
+        names[segs[i].clip] = true;
+    }
+    return Object.keys(names).sort();
 }
 
 // ------------------------------------------------------------------ sampling
@@ -690,7 +818,6 @@ function pose(world, clips, seg, t) {
     return out;
 }
 
-let cache = { key: "", segments: [] };
 
 function dayStart(date) {
     const d = new Date(date.getTime());
@@ -707,7 +834,8 @@ function daySegments(world, clips, t) {
     const dateKey = start.getFullYear() * 10000 + (start.getMonth() + 1) * 100 + start.getDate();
     const key = dateKey + ":" + (world.build || 0) + ":" + world.nav.surfaces.length + ":" + world.nav.links.length;
     if (cache.key !== key) {
-        cache = { key: key, segments: planDay(world, clips, start.getTime() / 1000, dateKey) };
+        const plan = planDay(world, clips, start.getTime() / 1000, dateKey);
+        cache = { key: key, segments: plan.segments, beast: planBeast(world, clips, start.getTime() / 1000, dateKey, plan) };
     }
     return cache.segments;
 }
