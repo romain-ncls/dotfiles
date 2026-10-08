@@ -115,6 +115,7 @@ class Zone:
     backdrop_z: float = BACKDROP_Z  # in a background, what stands nearer than this is left out
     near_ceiling: float = None  # in a full room, near pieces hanging above this (room height) are left out
     ground: tuple = None  # world box (x0, y0, x1, y1): the room's own solid shapes inside it are walked on
+    anchors: dict = field(default_factory=dict)  # name -> regex on GameObject names: where it is, in the world
     margin: tuple = (0.0, 0.0)  # units rendered past the screen's left and right edges, to cross-fade
     fade: tuple = (0.0, 0.0)  # over these first and last units its backdrop fades in over its neighbours'
 
@@ -174,7 +175,9 @@ ZONES = [
          region=(C0 - 0.8, TREE - 1.0, C1 + 0.8, C_TOP + 0.8), haze=0.12,
          ground=(C0 - 1.0, TREE - 1.0, C1 + 1.0, TREE + 3.0),  # the clock's plinth
          # Its own clock frame and the plinth it stands on; the walkway's moss is the world's.
-         props=[r"^(Inert Sign|backing_(front|back)|writing|glow_text_sprite|string|Loom_Room_00(14|15|23|24)|Fallen Sign)"],
+         # (its glyphs are left out: the window is the clock's dial, centred where they were).
+         props=[r"^(Inert Sign|backing_(front|back)|string|Loom_Room_00(14|15|23|24)|Fallen Sign)"],
+         anchors={"clock": r"^writing$"},
          margin=(BAND + 0.75, BAND + 0.75), fade=(2 * BAND, 2 * BAND)),
     Zone("verdania", "clover_02c", x=(155.0, 202.62), floor=41.4, refine=False, below=0.0, world=(R0, 0.0),
          height=H + 0.2, region=(R0 - 0.8, 0.0, R1 + 0.8, H), biome="clover", margin=(BAND + 0.75, 0.0)),
@@ -463,7 +466,10 @@ def render_zone(zone):
     room.apply_save_state(scene, zone.save)
     removes = [re.compile(r) for r in zone.remove]
     props = [re.compile(r) for r in zone.props]
-    items = [it for it in room.collect(scene)
+    collected = room.collect(scene)
+    anchored = {name: next(((float(it.matrix[0, 3]), float(it.matrix[1, 3])) for it in collected if re.search(rx, it.name)), None)
+                for name, rx in zone.anchors.items()}
+    items = [it for it in collected
              if not room.is_unwanted(scene, it.go) and not any(r.search(it.name) for r in removes)
              and not DARKENERS.search(it.name)]
     if zone.mode == "background":
@@ -548,6 +554,7 @@ def render_zone(zone):
     meta = {
         "key": zone.key(),
         "terrain": room_terrain,
+        "anchors": {name: to_world([xy])[0] for name, xy in anchored.items() if xy is not None},
         "roomFloor": round(room_floor, 3),
         "src": [round(v, 3) for v in src],
         "at": [round(v, 3) for v in at],
@@ -922,11 +929,15 @@ def compose():
         ImageDraw.Draw(rock_px).polygon([(x * PPU, (WORLD[1] - y) * PPU) for x, y in r.points], fill=1)
     draw_water(layers, np.array(rock_px), grades[WATERFALL["zone"]])
 
+    clock = bake_clock(layers, canvases, metas, grades)
+
     for old in OUT.glob("*_??.png"):
         old.unlink()
     # What earlier builds left: lights and curves of zones that are gone, per-zone Hornet sheets.
     current = {z["light"]["file"] for z in zones_out} | {z["grade"]["lut"] for z in zones_out}
-    for old in [*OUT.glob("light_*.png"), *OUT.glob("lut_*.png")]:
+    if clock:
+        current |= {p["file"] for p in clock["hands"] + clock["gears"]}
+    for old in [*OUT.glob("light_*.png"), *OUT.glob("lut_*.png"), *OUT.glob("clock_*.png")]:
         if old.name not in current:
             old.unlink()
     if (OUT / "zones").is_dir():
@@ -957,6 +968,7 @@ def compose():
         "zones": zones_out,
         "heroFeet": HERO_FEET,
         "nav": nav_map,
+        "clock": clock,
     }
     # Replaced in one step, so the running wallpapers' folder watch sees a new file and reloads.
     tmp = OUT / ".World.qml.tmp"
@@ -1177,6 +1189,118 @@ def hero_grade(zone_id, g):
     Image.fromarray(lut, "RGB").save(OUT / name)
     return {"lut": name, "ambient": [round(float(v), 4) for v in grade.ambient_rgb()],
             "heroSaturation": round(float(grade.hero_saturation), 4), "saturation": round(float(grade.saturation), 4)}
+
+
+# The clock in the great tree's round window, built from Cogwork Core parts (kit "cog", the
+# cog.spriteatlas). Measured on the window: its ring's band runs at about 1.33 x 1.38 units from
+# the centre (slightly oval), the glass inside it is about 1.1 across in radius.
+#   marks: the Core's fleur clasps across the band at 12, 3, 6 and 9, bronze studs at the other
+#          hours: set into the frame itself;
+#   face:  the wooden glass darkened, so the bronze reads on it;
+#   gears: (piece, centre offset, diameter, turns per minute (+ clockwise), shade, in the dial)
+#          a big bronze one behind the frame showing its teeth around the ring, two steel ones in
+#          the openings under the window, and a small train inside the dial behind the hands;
+#   hands: two of the Core's ornate pointers.
+CLOCK = {
+    "zone": "great_tree", "ring": (0.04, 0.0, 1.33, 1.38), "glass": (1.1, 1.18), "shine": 1.9,
+    "clasp": ("cog_plat_spin__0003_cp", 0.62), "stud": ("cog_cylinder_rivet0002", 0.24),
+    "pointer": "cog_plat_spin__0007_cp_top", "pointer_hub": 0.685, "pointer_tail": 0.8,
+    "hands": (("hour", 0.74, 1.5), ("minute", 1.12, 1.15)),  # name, tip to centre, thickness
+    "gears": (("cog_plat_spin__0009_c1", 0.0, 0.0, 3.6, 1.0, 1.0, False),
+              ("cog_plat_spin__0014_cp", -1.42, -1.95, 1.65, -2.18, 1.3, False),
+              ("cog_plat_spin__0014_cp", 1.42, -1.95, 1.65, -2.18, 1.3, False),
+              ("cog_plat_spin__0009_c1", 0.0, 0.0, 1.0, 0.5, 1.45, True),
+              ("cog_plat_spin__0014_cp", -0.5, -0.56, 0.58, -0.86, 1.7, True),
+              ("cog_lever_wind_up_0003_1", 0.52, 0.5, 0.52, -0.96, 1.9, True)),
+}
+
+
+def bake_clock(layers, canvases, metas, grades):
+    """The face and the marks onto the window (mid layer); images for the hands and the gears,
+    which the wallpaper turns. Returns what it needs to draw them."""
+    from PIL import ImageDraw, ImageFilter
+    anchor = metas[CLOCK["zone"]].get("anchors", {}).get("clock")
+    if anchor is None:
+        print("warning: no clock anchor in the great tree's render", file=sys.stderr)
+        return None
+    ox, oy, rx, ry = CLOCK["ring"]
+    cx, cy = anchor[0] + ox, anchor[1] + oy
+    cog = terrain.Kit("cog")
+    g = grades[CLOCK["zone"]]
+    lit = np.asarray(g.ambient_rgb()) * 2  # Sprites/Lit, as in the Core
+    shine = CLOCK["shine"]  # the metal catches the light: it has to read on 2 cm of glass
+
+    def part(name, width, rows=None, shade=1.0, scale=2):
+        """A piece in the tree's colours, `width` units wide, at `scale` x the world's density."""
+        img = cog.image(find_piece(cog, name))
+        if rows:
+            img = img.crop((0, round(rows[0] * img.height), img.width, round(rows[1] * img.height)))
+        a = np.asarray(img).astype(np.float32) / 255
+        a[..., :3] = g.apply((a[..., :3] * lit * shade).clip(0, 1))
+        img = Image.fromarray((a * 255).round().astype(np.uint8), "RGBA")
+        w = max(2, round(width * PPU * scale))
+        return img.resize((w, max(2, round(w * img.height / img.width))), Image.LANCZOS)
+
+    def shadowed(img, spread):
+        """The image over a soft dark shadow of itself, so it stands out from what's behind."""
+        pad = round(spread * 3)
+        out = Image.new("RGBA", (img.width + 2 * pad, img.height + 2 * pad), (0, 0, 0, 0))
+        shadow = Image.new("RGBA", out.size, (0, 0, 0, 0))
+        shadow.paste((4, 8, 6, 255), (pad, pad), img.getchannel("A"))
+        a = np.asarray(shadow.filter(ImageFilter.GaussianBlur(spread))).copy()
+        a[..., 3] = (a[..., 3].astype(np.float32) * 0.8).astype(np.uint8)
+        out.alpha_composite(Image.fromarray(a, "RGBA"))
+        out.alpha_composite(img, (pad, pad))
+        return out, pad
+
+    # The face and the marks, drawn at 4x and brought down to the world's density.
+    k = 4
+    size = round(3.2 * PPU * k)
+    face = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    gx, gy = CLOCK["glass"]
+    m = Image.new("L", (size, size), 0)
+    ImageDraw.Draw(m).ellipse([size / 2 - gx * PPU * k, size / 2 - gy * PPU * k, size / 2 + gx * PPU * k, size / 2 + gy * PPU * k],
+                             fill=150)
+    m = m.filter(ImageFilter.GaussianBlur(0.08 * PPU * k))
+    face.paste((6, 14, 12, 255), (0, 0), m)
+    clasp_name, clasp_len = CLOCK["clasp"]
+    stud_name, stud_d = CLOCK["stud"]
+    clasp = part(clasp_name, clasp_len, shade=shine, scale=k)
+    stud = part(stud_name, stud_d, shade=shine, scale=k)
+    for h in range(12):
+        a = math.radians(h * 30)
+        x, y = size / 2 + math.sin(a) * rx * PPU * k, size / 2 - math.cos(a) * ry * PPU * k
+        if h % 3 == 0:
+            piece = clasp.rotate(90 - h * 30, expand=True, resample=Image.BICUBIC)  # across the band, radially
+            piece, pad = shadowed(piece, 0.04 * PPU * k)
+        else:
+            piece, pad = shadowed(stud, 0.03 * PPU * k)
+        face.alpha_composite(piece, (round(x - piece.width / 2), round(y - piece.height / 2)))
+    face = face.resize((size // k, size // k), Image.LANCZOS)
+    layers["mid"].alpha_composite(face, (round(cx * PPU - face.width / 2), round((WORLD[1] - cy) * PPU - face.height / 2)))
+
+    # The hands: the pointer turned to point left (the wallpaper turns it about its hub), its tail
+    # cut short, over a soft shadow. Twice the density, so they stay sharp as they turn.
+    hub, tail = CLOCK["pointer_hub"], CLOCK["pointer_tail"]
+    pointer = cog.image(find_piece(cog, CLOCK["pointer"]))
+    hands = []
+    for name, reach, thick in CLOCK["hands"]:
+        length = reach / hub * tail  # tip to the end of the cut tail
+        img = part(CLOCK["pointer"], length * pointer.width / (pointer.height * tail) * thick, rows=(0, tail), shade=shine)
+        img = img.resize((img.width, round(length * PPU * 2)), Image.LANCZOS).rotate(90, expand=True)
+        img, pad = shadowed(img, 0.035 * PPU * 2)
+        img.save(OUT / f"clock_{name}.png")
+        hands.append({"name": name, "file": f"clock_{name}.png", "length": round(img.width / (PPU * 2), 3),
+                      "height": round(img.height / (PPU * 2), 3),
+                      "pivot": [round((pad + hub / tail * (img.width - 2 * pad)) / img.width, 4), 0.5]})
+
+    gears = []
+    for i, (name, dx, dy, d, turns, shade, dial) in enumerate(CLOCK["gears"]):
+        img = part(name, d, shade=shade)
+        img.save(OUT / f"clock_gear{i}.png")
+        gears.append({"file": f"clock_gear{i}.png", "x": round(cx + dx, 3), "y": round(cy + dy, 3), "size": d,
+                      "turns": turns, "dial": dial})
+    return {"x": round(cx, 3), "y": round(cy, 3), "hands": hands, "gears": gears}
 
 
 def bake_light(zone_id, g):

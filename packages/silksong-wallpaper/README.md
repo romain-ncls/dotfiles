@@ -13,6 +13,7 @@ cap="systemd-run --user --scope -p MemoryMax=6G -p MemorySwapMax=0"
 tools/extract.py                    # Hornet's animations, from the Steam install
 for room in tut_02 clover_02c bellway_city belltown mosstown_01; do $cap tools/kit.py harvest $room; done
 $cap tools/kit.py atlas ring           # the Clawline rings and poles
+$cap tools/kit.py atlas cog            # Cogwork Core parts: the clock's marks, hands and gears
 $cap tools/kit.py harvest belltown_room_spare --save BelltownFurnishingDesk \
     BelltownFurnishingFairyLights BelltownFurnishingSpa BelltownFurnishingGramaphone
 $cap tools/world.py                 # the aquarium world
