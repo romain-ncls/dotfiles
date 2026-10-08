@@ -43,7 +43,7 @@ import subprocess
 import sys
 import time
 import zlib
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 
 import numpy as np
@@ -85,6 +85,11 @@ TOP = 17.5  # the floor of Hornet's house
 CEILING = 26.1  # underside of the rock along the top of the side monitors
 BEZELS = ((L1 + C0) / 2, (C1 + R0) / 2)  # their middles
 BAND = 7.0  # across a bezel, backdrops, colours and dressing change over this far on each side
+# How far the backdrops cross-fade on each side of each bezel: the right one joins two unlike
+# rooms (the great tree's haze, Verdania's clover), over more of both screens.
+BANDS = (BAND, 10.0)
+SOFTEN = 0.1  # at a bezel, the backdrops blur by this much (units) too: they meet as soft as each other
+# (not a room drawn in full, whose back layer stands right behind its floor)
 CENTERS = ((L0 + L1) / 2, (C0 + C1) / 2, (R0 + R1) / 2)
 
 
@@ -120,6 +125,7 @@ class Zone:
     ground: tuple = None  # world box (x0, y0, x1, y1): the room's own solid shapes inside it are walked on
     anchors: dict = field(default_factory=dict)  # name -> regex on GameObject names: where it is, in the world
     particles: list = field(default_factory=list)  # regexes on GameObject names: its ambient particles, kept
+    animated: dict = field(default_factory=dict)  # group -> regex on GameObject names: pieces animated apart
     margin: tuple = (0.0, 0.0)  # units rendered past the screen's left and right edges, to cross-fade
     fade: tuple = (0.0, 0.0)  # over these first and last units its backdrop fades in over its neighbours'
 
@@ -175,7 +181,8 @@ ZONES = [
     Zone("bell_beast", "bellway_city", x=(32.8, 67.2), floor=PIT, refine=False, world=(C0, 0.7), height=11.0,
          below=0.7, region=(C0 - 0.8, 0.0, C1 + 0.8, TREE - 1.0), biome="moss", mode="full", cuts=[(12.6, 15.1)],
          remove=[r"^Bone Beast NPC$", r"^Bellway Toll Machine", r"^bellway_floor_gate$", r"^Bellbeast Children"],
-         anchors={"bell_beast": r"^Bone Beast NPC$"}, haze=0.1, margin=(BAND + 0.75, BAND + 0.75), fade=(2 * BAND, 2 * BAND),
+         animated={"floor_bells": r"^Bell Boss Floor"},  # they jingle when something stirs among them
+         anchors={"bell_beast": r"^Bone Beast NPC$"}, haze=0.1, margin=(BANDS[0] + 0.75, BANDS[1] + 0.75), fade=(2 * BANDS[0], 2 * BANDS[1]),
          near_ceiling=16.0, ground=(C0 - 1.0, -8.0, C1 + 1.0, 4.6)),
     Zone("great_tree", "mosstown_02", x=(69.3, 103.7), floor=33.0, world=(C0, TREE), height=11.3, below=1.0,
          region=(C0 - 0.8, TREE - 1.0, C1 + 0.8, C_TOP + 0.8), haze=0.12,
@@ -184,9 +191,9 @@ ZONES = [
          # (its glyphs are left out: the window is the clock's dial, centred where they were).
          props=[r"^(Inert Sign|backing_(front|back)|string|Loom_Room_00(14|15|23|24)|Fallen Sign)"],
          anchors={"clock": r"^writing$"},
-         margin=(BAND + 0.75, BAND + 0.75), fade=(2 * BAND, 2 * BAND)),
+         margin=(BANDS[0] + 0.75, BANDS[1] + 0.75), fade=(2 * BANDS[0], 2 * BANDS[1])),
     Zone("verdania", "clover_02c", x=(155.0, 202.62), floor=41.4, refine=False, below=0.0, world=(R0, 0.0),
-         height=H + 0.2, region=(R0 - 0.8, 0.0, R1 + 0.8, H), biome="clover", margin=(BAND + 0.75, 0.0),
+         height=H + 0.2, region=(R0 - 0.8, 0.0, R1 + 0.8, H), biome="clover", margin=(BANDS[1] + 0.75, 0.0),
          particles=[r"^immediate_BG"]),  # its fireflies
 ]
 
@@ -530,6 +537,9 @@ def render_zone(zone):
     for it in items:
         if HAZE.search(it.name) and it.z < BACKDROP_Z and area(it) > 30:
             it.z = BACKDROP_Z
+    animated = {name: re.compile(rx) for name, rx in zone.animated.items()}
+    moving = [(name, it) for it in items for name, rx in animated.items() if rx.search(it.name)]
+    items = [it for it in items if not any(it is m for _, m in moving)]
     back, mid, front, grade = room.render(scene, items, cam, blur_z=blur_z, mid_z=BACKDROP_Z)
 
     # Light sources are small: a huge lit window or a soft halo around a whole scene is background
@@ -556,6 +566,8 @@ def render_zone(zone):
         if zone.flip:
             img = img.transpose(Image.FLIP_LEFT_RIGHT)
         img.save(out / f"{name}.png")
+    pieces = animate(scene, zone, moving, cam, blur_z, at, graded, out)
+
     def to_world(pts):
         out = []
         for x, y in pts:
@@ -576,11 +588,67 @@ def render_zone(zone):
         "src": [round(v, 3) for v in src],
         "at": [round(v, 3) for v in at],
         "grade": grade_json(grade),
+        "animated": pieces,
         "particles": [e for i, (go_id, t) in enumerate(particle_systems(scene, zone))
                       if (e := emitter(scene, go_id, t, zone, cam, at, grade, out, i)) is not None],
     }
     (out / "zone.json").write_text(json.dumps(meta))
     print(f"{zone.id}: floor {room_floor:.2f} in the room, {len(items)} sprites, {len(lights)} lights", file=sys.stderr)
+
+
+def animate(scene, zone, moving, cam, blur_z, at, graded, out):
+    """The pieces the zone animates apart (zone.animated: sprites flipped through by a
+    BasicSpriteAnimator, such as the station's floor bells), each frame rendered on its own as
+    the room is, cut to where it stands; in one sheet (animated.png), a row per piece: its rest
+    sprite, then its animation's frames."""
+    import game
+    import room
+
+    rows = []
+    for group, it in moving:
+        go = scene.gameobjects[it.go]
+        anim = next((c.read() for c in go.m_Components if c.read().object_reader.type.name == "MonoBehaviour"
+                     and game.script_class(c.read().object_reader) == "BasicSpriteAnimator"), None)
+        if anim is None or zone.flip:
+            continue
+        t = anim.object_reader.read_typetree()
+        frames = [it]
+        for ref in t["frames"]:
+            sprite = game.resolve(anim.object_reader, ref)
+            parts = room.sprite_reader_parts(sprite) if sprite is not None else None
+            if parts is None:
+                break
+            img, x0, x1, y0, y1, _ = parts
+            if it.corners[1, 0] < it.corners[0, 0]:  # drawn flipped
+                x0, x1 = -x0, -x1
+            frames.append(replace(it, image=img, corners=np.array([[x0, y0], [x1, y0], [x0, y1]])))
+        else:
+            drawn = []
+            for f in frames:
+                _, mid_, front_, _ = room.render(scene, [f], cam, blur_z=blur_z, mid_z=BACKDROP_Z)
+                layer, img = ("front", front_) if front_.getchannel("A").getbbox() else ("mid", mid_)
+                drawn.append((layer, graded(img, layer != "front")))
+            boxes = [img.getchannel("A").point(lambda a: 255 if a > 8 else 0).getbbox() for _, img in drawn]
+            if not all(boxes) or len({layer for layer, _ in drawn}) > 1:
+                continue
+            box = (min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes))
+            rows.append((group, drawn[0][0], box, [img.crop(box) for _, img in drawn], t.get("fps", 12.0)))
+    if not rows:
+        return []
+    pad = 2
+    W = max(len(cells) * (cells[0].width + pad) for _, _, _, cells, _ in rows)
+    sheet = Image.new("RGBA", (W, sum(cells[0].height + pad for _, _, _, cells, _ in rows)), (0, 0, 0, 0))
+    pieces, y = [], 0
+    for group, layer, box, cells, fps in rows:
+        cw, ch = cells[0].width, cells[0].height
+        for k, cell in enumerate(cells):
+            sheet.paste(cell, (k * (cw + pad), y))
+        pieces.append({"group": group, "layer": layer, "fps": fps, "frames": len(cells) - 1,
+                       "x": round(at[0] + box[0] / PPU, 3), "y": round(at[1] + zone.height - box[3] / PPU, 3),
+                       "w": round(cw / PPU, 3), "h": round(ch / PPU, 3), "cell": [0, y, cw, ch], "step": cw + pad})
+        y += ch + pad
+    sheet.save(out / "animated.png")
+    return pieces
 
 
 def particle_systems(scene, zone):
@@ -748,18 +816,25 @@ def smoothstep(t):
 def recede(img, zone, at_x, fogs):
     """Atmospheric depth: the backdrop drifts towards a haze colour and softens, so the rock
     Hornet walks on stands out in front of it. The haze colour runs from screen to screen
-    (each screen's own in its middle), and thickens near the bezels: neighbouring backdrops
-    meet in the same haze."""
+    (each screen's own in its middle); near the bezels it thickens and the backdrop blurs:
+    neighbouring backdrops meet in the same haze, as soft as each other."""
     a = np.asarray(img).astype(np.float32) / 255
     x = at_x + (np.arange(a.shape[1]) + 0.5) / PPU
     laptop = fogs[zone.id] if zone.id in ("bell_beast", "great_tree") else (fogs["bell_beast"] + fogs["great_tree"]) / 2
     anchors = np.array([fogs["grotto"], laptop, fogs["verdania"]])
     fog = np.stack([np.interp(x, CENTERS, anchors[:, c]) for c in range(3)], -1)  # per column
-    haze = zone.haze + 0.3 * sum(np.exp(-((x - b) / BAND) ** 2) for b in BEZELS)
+    near = sum(np.exp(-((x - b) / band) ** 2) for b, band in zip(BEZELS, BANDS))
+    haze = zone.haze + 0.3 * near
     a[..., :3] = a[..., :3] * (1 - haze[None, :, None]) + fog[None] * haze[None, :, None]
     out = Image.fromarray((a.clip(0, 1) * 255).round().astype(np.uint8), "RGBA")
     from PIL import ImageFilter
-    return out.filter(ImageFilter.GaussianBlur(zone.haze * 4))
+    out = out.filter(ImageFilter.GaussianBlur(zone.haze * 4))
+    if zone.mode == "full":
+        return out
+    sharp = np.asarray(out).astype(np.float32)
+    soft = np.asarray(out.filter(ImageFilter.GaussianBlur(SOFTEN * PPU))).astype(np.float32)
+    w = np.clip(near, 0.0, 1.0)[None, :, None]
+    return Image.fromarray((sharp * (1 - w) + soft * w).round().astype(np.uint8), "RGBA")
 
 
 def zone_fog(img):
@@ -1056,7 +1131,9 @@ def compose():
     if clock:
         current |= {p["file"] for p in clock["hands"] + clock["gears"]}
     current |= {f"particle_{zid}_{p['texture']}" for zid, z in metas.items() for p in z.get("particles", [])}
-    for old in [*OUT.glob("light_*.png"), *OUT.glob("lut_*.png"), *OUT.glob("clock_*.png"), *OUT.glob("particle_*.png")]:
+    current |= {f"animated_{zid}.png" for zid, z in metas.items() if z.get("animated")}
+    for old in [*OUT.glob("light_*.png"), *OUT.glob("lut_*.png"), *OUT.glob("clock_*.png"), *OUT.glob("particle_*.png"),
+                *OUT.glob("animated_*.png")]:
         if old.name not in current:
             old.unlink()
     if (OUT / "zones").is_dir():
@@ -1064,8 +1141,17 @@ def compose():
     tiles = {name: save_tiles(img, name) for name, img in layers.items()}
     sway = export_sway(swaying)
     particles = export_particles(metas)
+    animated = []
+    for zone in ZONES:
+        if metas[zone.id].get("animated"):
+            shutil.copyfile(CACHE / zone.id / "animated.png", OUT / f"animated_{zone.id}.png")
+            animated += [{**a, "sheet": f"animated_{zone.id}.png", "zone": zone.id} for a in metas[zone.id]["animated"]]
     preview = layers["back"].copy()
-    for name in ("mid", "front"):  # the swaying pieces at rest
+    for name in ("mid", "front"):  # the swaying and animated pieces at rest
+        for a in animated:
+            if a["layer"] == name and name == "front":
+                cell = Image.open(OUT / a["sheet"]).crop((a["cell"][0], a["cell"][1], a["cell"][0] + a["cell"][2], a["cell"][1] + a["cell"][3]))
+                preview.alpha_composite(cell, (round(a["x"] * PPU), round((WORLD[1] - a["y"] - a["h"]) * PPU)))
         preview.alpha_composite(layers[name])
         for p in swaying[name]:
             preview.alpha_composite(p["image"], p["px"])
@@ -1095,6 +1181,7 @@ def compose():
         "water": water,
         "sway": sway,
         "particles": particles,
+        "animated": animated,
         # The Bell Beast, where it stands in its room (its animations: life.js planBeast).
         "beast": ({"x": metas["bell_beast"]["anchors"]["bell_beast"][0],
                    "y": metas["bell_beast"]["anchors"]["bell_beast"][1], "zone": "bell_beast"}

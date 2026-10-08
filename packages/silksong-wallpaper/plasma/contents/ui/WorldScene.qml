@@ -518,6 +518,41 @@ Item {
         rotation: mirrored ? -tilt : tilt
     }
 
+    // The station's floor bells, drawn apart from the layer in front of them: they jingle (their
+    // shake frames, as the game's BasicSpriteAnimator plays them) while Hornet walks among them,
+    // and around the Bell Beast while it sings, shakes, gets up or lies down.
+    readonly property var stirring: beastPose && /Sing|Shake|Wake/.test(beastPose.clip) ? beast.x : null
+    Repeater {
+        model: root.world?.animated?.filter(a => (a.x + a.w) * root.unitMm > root.me.x && a.x * root.unitMm < root.me.x + root.me.w) ?? []
+
+        Item {
+            id: piece
+            required property var modelData
+            readonly property var a: modelData
+            readonly property real feet: root.hornetHere ? root.hornet.y - root.world.heroFeet : -1e6
+            readonly property bool stirred: (root.hornetHere && root.hornet.x > a.x && root.hornet.x < a.x + a.w
+                    && feet > a.y - 1.0 && feet < a.y + a.h + 0.4)
+                || (root.stirring !== null && Math.abs(a.x + a.w / 2 - root.stirring) < 4.5)
+            readonly property int frame: stirred ? 1 + Math.floor(root.time * a.fps) % a.frames : 0
+            readonly property real scale: root.pxPerUnit / root.world.pixelsPerUnit
+
+            x: root.toX(a.x * root.unitMm)
+            y: root.toY((a.y + a.h) * root.unitMm)
+            width: a.w * root.pxPerUnit
+            height: a.h * root.pxPerUnit
+            clip: true
+
+            Image {
+                source: root.worldDir + "/" + piece.a.sheet + root.build
+                x: -(piece.a.cell[0] + piece.frame * piece.a.step) * piece.scale
+                y: -piece.a.cell[1] * piece.scale
+                width: sourceSize.width * piece.scale
+                height: sourceSize.height * piece.scale
+                smooth: true
+            }
+        }
+    }
+
     Layer {
         tiles: root.world?.layers.front ?? []
     }
