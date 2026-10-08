@@ -119,6 +119,7 @@ class Zone:
     near_ceiling: float = None  # in a full room, near pieces hanging above this (room height) are left out
     ground: tuple = None  # world box (x0, y0, x1, y1): the room's own solid shapes inside it are walked on
     anchors: dict = field(default_factory=dict)  # name -> regex on GameObject names: where it is, in the world
+    particles: list = field(default_factory=list)  # regexes on GameObject names: its ambient particles, kept
     margin: tuple = (0.0, 0.0)  # units rendered past the screen's left and right edges, to cross-fade
     fade: tuple = (0.0, 0.0)  # over these first and last units its backdrop fades in over its neighbours'
 
@@ -185,7 +186,8 @@ ZONES = [
          anchors={"clock": r"^writing$"},
          margin=(BAND + 0.75, BAND + 0.75), fade=(2 * BAND, 2 * BAND)),
     Zone("verdania", "clover_02c", x=(155.0, 202.62), floor=41.4, refine=False, below=0.0, world=(R0, 0.0),
-         height=H + 0.2, region=(R0 - 0.8, 0.0, R1 + 0.8, H), biome="clover", margin=(BAND + 0.75, 0.0)),
+         height=H + 0.2, region=(R0 - 0.8, 0.0, R1 + 0.8, H), biome="clover", margin=(BAND + 0.75, 0.0),
+         particles=[r"^immediate_BG"]),  # its fireflies
 ]
 
 # Hornet's home: the top-left corner, built from her Bellhart house's own pieces.
@@ -574,9 +576,93 @@ def render_zone(zone):
         "src": [round(v, 3) for v in src],
         "at": [round(v, 3) for v in at],
         "grade": grade_json(grade),
+        "particles": [e for i, (go_id, t) in enumerate(particle_systems(scene, zone))
+                      if (e := emitter(scene, go_id, t, zone, cam, at, grade, out, i)) is not None],
     }
     (out / "zone.json").write_text(json.dumps(meta))
     print(f"{zone.id}: floor {room_floor:.2f} in the room, {len(items)} sprites, {len(lights)} lights", file=sys.stderr)
+
+
+def particle_systems(scene, zone):
+    """The room's particle systems the zone keeps (zone.particles), active and looping."""
+    rx = [re.compile(r) for r in zone.particles]
+    for o in scene.objects if rx else ():
+        if o.type.name != "ParticleSystem":
+            continue
+        t = o.read_typetree()
+        go_id = t["m_GameObject"]["m_PathID"]
+        go = scene.gameobjects.get(go_id)
+        if go is not None and scene.active(go_id) and t.get("looping") and any(r.search(go.m_Name) for r in rx):
+            yield go_id, t
+
+
+def emitter(scene, go_id, t, zone, cam, at, grade, out, index):
+    """One of the room's particle systems as shaders/particles.frag draws it, where the zone's
+    camera shows it (smaller and slower with depth): its shape (a circle or a box), rate,
+    lifetimes and sizes, drift, gravity and spin (each random between two constants, as these
+    are), the alpha keys of its colour over lifetime, a sheet played over each life, and its
+    texture in the zone's colours."""
+    import game
+
+    init, shape, emission = t["InitialModule"], t["ShapeModule"], t["EmissionModule"]
+    if shape["type"] not in (5, 10) or zone.flip or zone.cuts:
+        return None
+
+    def pair(c):
+        """A MinMaxCurve kept constant, or random between two constants."""
+        return sorted((c["minScalar"], c["scalar"])) if c["minMaxState"] == 3 else [c["scalar"]] * 2
+
+    def module(name):
+        m = t.get(name) or {}
+        return m if m.get("enabled") else None
+
+    m = scene.world(scene.go_transform[go_id])
+    ex, ey, ez = (float(v) for v in m[:3, 3])
+    s = game.CAM_Z / (game.CAM_Z + ez)
+    px, py = cam.project(ex, ey, ez, ex, ey)
+    cx, cy = at[0] + px / PPU, at[1] + zone.height - py / PPU
+    half = shape["radius"]["value"] if shape["type"] == 10 else 0.5
+    ax = m[:2, 0] * shape["m_Scale"]["x"] * half * s
+    ay = m[:2, 1] * shape["m_Scale"]["y"] * half * s
+    life, size = pair(init["startLifetime"]), [v * s for v in pair(init["startSize"])]
+    velocity = [0.0, 0.0, 0.0, 0.0]
+    if (vel := module("VelocityModule")) is not None:
+        velocity = [v * s for v in pair(vel["x"]) + pair(vel["y"])]
+    spin = pair(rot["curve"]) if (rot := module("RotationModule")) is not None else [0.0, 0.0]
+    gravity = 9.81 * sum(pair(init["gravityModifier"])) / 2 * s
+    keys = [(0.0, 1.0), (1.0, 1.0)]
+    if (col := module("ColorModule")) is not None and col["gradient"]["minMaxState"] == 1:
+        g = col["gradient"]["maxGradient"]
+        keys = [(g[f"atime{i}"] / 65535, g[f"key{i}"]["a"]) for i in range(g["m_NumAlphaKeys"])]
+    keys = (keys + [(1.0, keys[-1][1])] * 8)[:8]
+    start = init["startColor"]
+    alpha = start["maxColor"]["a"] if start["minMaxState"] == 0 else (start["minColor"]["a"] + start["maxColor"]["a"]) / 2
+    sheet = [1, 1, 1.0]
+    if (uv := module("UVModule")) is not None:
+        sheet = [uv["tilesX"], uv["tilesY"], uv["cycles"]]
+    rate = sum(pair(emission["rateOverTime"])) / 2
+    slots = min(64, init["maxNumParticles"] or 64, round(rate * sum(life) / 2))
+    go = scene.gameobjects[go_id]
+    renderer = next((c.read() for c in go.m_Components if c.read().object_reader.type.name == "ParticleSystemRenderer"), None)
+    tex, additive = None, False
+    for ref in (renderer.m_Materials[:1] if renderer is not None else []):
+        mat = ref.read()
+        additive = "Additive" in mat.m_Shader.read().m_ParsedForm.m_Name
+        tex = next((v.m_Texture.read() for k, v in mat.m_SavedProperties.m_TexEnvs if k == "_MainTex" and v.m_Texture.path_id), None)
+    if tex is None or slots < 1:
+        return None
+    a = np.asarray(tex.image.convert("RGBA")).astype(np.float32) / 255
+    a[..., :3] = grade.apply(a[..., :3])
+    file = f"particle_{index}.png"
+    Image.fromarray((a.clip(0, 1) * 255).round().astype(np.uint8), "RGBA").save(out / file)
+    reach = max(abs(v) for v in velocity) * life[1] + 0.5 * abs(gravity) * life[1] ** 2 + size[1]
+    ext = np.abs(ax) + np.abs(ay) + reach
+    return {"name": go.m_Name, "x": round(cx, 3), "y": round(cy, 3), "shape": "circle" if shape["type"] == 10 else "box",
+            "thickness": shape.get("radiusThickness", 1.0), "axes": [round(float(v), 4) for v in (*ax, *ay)],
+            "life": life, "size": [round(v, 4) for v in size], "velocity": [round(v, 4) for v in velocity],
+            "spin": spin, "rotation": pair(init["startRotation"]), "gravity": round(gravity, 4),
+            "alpha": alpha, "keys": keys, "sheet": sheet, "slots": slots, "texture": file, "additive": additive,
+            "area": [round(float(v), 3) for v in (cx - ext[0], cy - ext[1], 2 * ext[0], 2 * ext[1])]}
 
 
 def grade_json(grade):
@@ -883,7 +969,7 @@ def compose():
             piece = find_piece(kit, v["piece"])
             img = graded(kit, piece, v["x"], v["y"] - 0.5)
             args = (v["x"], v["y"], v["w"], v["w"] * piece["height"] / piece["width"], v.get("angle", 0), v.get("flip", False))
-            canvases[v.get("layer", "mid")].paste(img, *args, anchor=v["anchor"])
+            canvases[v.get("layer", "mid")].paste(img, *args, anchor=v["anchor"], sway=piece)
             if v.get("light"):
                 canvases["lights"].paste(as_light(img), *args, anchor=v["anchor"])
 
@@ -893,9 +979,22 @@ def compose():
     # the station's own bells.
     standing.append((C0 + 0.6, -1.0, C1 - 0.6, CITADEL_FLOOR - 0.2))
     standing += [(m["pod"][0] - 3.0, m["from"][1] - 1.0, m["pod"][0] + 1.5, m["from"][1] + 1.0) for m in MOVES if "pod" in m]
+    # Plants and hanging vines on the game's grass shaders sway in the wallpaper: they're
+    # collected apart, with what's drawn over them, in order; under the lake they stay in the
+    # layer, under its water, and keep still.
+    canvases["mid"].start_swaying()
+    canvases["front"].start_swaying()
     terrain.dress(rocks, biome_at, canvases["mid"], canvases["front"], graded, 5,
                   underlay=lambda: place(vault_pieces()), no_plants=standing)
     place(DECOR)
+    swaying = {}
+    for name in ("mid", "front"):
+        swaying[name] = []
+        for p in canvases[name].stop_swaying():
+            if LAKE["x0"] < p["x"] < LAKE["x1"] and p["root"] < LAKE["level"]:
+                canvases[name].img.alpha_composite(p["image"], p["px"])
+            else:
+                swaying[name].append(p)
     # Where a room's own floor is walked on, it's drawn over the world's moss running under it.
     for zone in ZONES:
         if zone.ground is not None and zone.mode == "full":
@@ -956,15 +1055,20 @@ def compose():
     current = {z["light"]["file"] for z in zones_out} | {z["grade"]["lut"] for z in zones_out}
     if clock:
         current |= {p["file"] for p in clock["hands"] + clock["gears"]}
-    for old in [*OUT.glob("light_*.png"), *OUT.glob("lut_*.png"), *OUT.glob("clock_*.png")]:
+    current |= {f"particle_{zid}_{p['texture']}" for zid, z in metas.items() for p in z.get("particles", [])}
+    for old in [*OUT.glob("light_*.png"), *OUT.glob("lut_*.png"), *OUT.glob("clock_*.png"), *OUT.glob("particle_*.png")]:
         if old.name not in current:
             old.unlink()
     if (OUT / "zones").is_dir():
         shutil.rmtree(OUT / "zones")
     tiles = {name: save_tiles(img, name) for name, img in layers.items()}
+    sway = export_sway(swaying)
+    particles = export_particles(metas)
     preview = layers["back"].copy()
-    preview.alpha_composite(layers["mid"])
-    preview.alpha_composite(layers["front"])
+    for name in ("mid", "front"):  # the swaying pieces at rest
+        preview.alpha_composite(layers[name])
+        for p in swaying[name]:
+            preview.alpha_composite(p["image"], p["px"])
     preview.convert("RGB").save(OUT / "preview.jpg", quality=85)
 
     # 5. Navigation over the same rock; she keeps out of the lake.
@@ -989,8 +1093,9 @@ def compose():
         "nav": nav_map,
         "clock": clock,
         "water": water,
-        # The Bell Beast, where it stood in its room, a unit higher in its trench so its face clears
-        # the station's floor plates (its animations: life.js planBeast).
+        "sway": sway,
+        "particles": particles,
+        # The Bell Beast, where it stands in its room (its animations: life.js planBeast).
         "beast": ({"x": metas["bell_beast"]["anchors"]["bell_beast"][0],
                    "y": metas["bell_beast"]["anchors"]["bell_beast"][1], "zone": "bell_beast"}
                   if "bell_beast" in metas["bell_beast"].get("anchors", {}) else None),
@@ -1115,6 +1220,66 @@ def draw_nav(img, nav_map):
         d.ellipse([x - 10, y - 10, x + 10, y + 10], outline=(255, 80, 80), width=4)
         d.text((x + 12, y - 8), poi["id"], fill=(255, 255, 255))
     return img
+
+
+def export_sway(swaying):
+    """The pieces that sway (shaders/sway.vert), packed into one image (sway.png): where each
+    stands, the height of the origin it bends from, and the game's sway settings, with the phase
+    its position gives it and its depth's share: the game sways a sprite (1 + |z|) times more,
+    z clamped to ClampZ, and what stands in front of Hornet is the foreground (z -1 and nearer).
+    Grass that bends as she walks into it says how (GrassBehaviour: WorldScene pushes it)."""
+    items = [(layer, p) for layer, ps in swaying.items() for p in ps]
+    pad, W = 2, 2048
+    spots, x, y, shelf = {}, 0, 0, 0
+    for i in sorted(range(len(items)), key=lambda i: -items[i][1]["image"].height):
+        im = items[i][1]["image"]
+        if x + im.width + 2 * pad > W:
+            x, y, shelf = 0, y + shelf, 0
+        spots[i] = (x + pad, y + pad)
+        x, shelf = x + im.width + 2 * pad, max(shelf, im.height + 2 * pad)
+    Ha = max(1, y + shelf)
+    atlas = Image.new("RGBA", (W, Ha), (0, 0, 0, 0))
+    out = []
+    for i, (layer, p) in enumerate(items):
+        im, (ax, ay) = p["image"], spots[i]
+        sw = p["sway"] or {"amount": 0.0, "speed": 0.0, "worldOffset": 0.0, "phaseY": 0, "clampZ": 0.0,
+                           "mags": [0.0, 0.0, 0.0], "times": [0.0, 0.0, 0.0], "fps": 0.0}  # still, drawn over one that sways
+        atlas.paste(im, (ax, ay))
+        left, top = p["px"][0] / PPU, WORLD[1] - p["px"][1] / PPU
+        w, h = im.width / PPU, im.height / PPU
+        phase = (p["x"] + sw["phaseY"] * p["root"]) * sw["worldOffset"]
+        if all(float(m).is_integer() for m in sw["times"]):
+            phase %= 2 * math.pi  # the same sway, in a shader's single precision
+        depth = 1 + min(1.0, sw["clampZ"]) if layer == "front" else 1.0
+        react = p["react"] if layer == "front" else None
+        out.append({"layer": layer, "x": round(left, 3), "y": round(top - h, 3), "w": round(w, 3), "h": round(h, 3),
+                    "uv": [round(v, 6) for v in (ax / W, ay / Ha, (ax + im.width) / W, (ay + im.height) / Ha)],
+                    "root": round((top - p["root"]) / h, 4),  # down from its top, in heights
+                    "amount": round(sw["amount"] * depth * (-1 if p["flip"] else 1), 5), "speed": sw["speed"],
+                    "phase": round(phase, 4), "mags": sw["mags"], "times": sw["times"], "fps": sw["fps"],
+                    **({"react": {**react, "amount": round(react["amount"] * depth, 4)}} if react else {})})
+    atlas.save(OUT / "sway.png", optimize=True)
+    return {"atlas": "sway.png", "size": [W, Ha], "items": out}
+
+
+def export_particles(metas):
+    """The rooms' ambient particles the zones keep (render_zone's emitters): those that stand on
+    the zone's own screen, kept to it, their textures copied next to the world."""
+    out = []
+    for zone in ZONES:
+        for p in metas.get(zone.id, {}).get("particles", []):
+            r = zone.region
+            if not (r[0] <= p["x"] <= r[2] and r[1] <= p["y"] <= r[3]):
+                continue  # the room beyond what the zone shows of it
+            x0, y0 = max(p["area"][0], r[0]), max(p["area"][1], r[1])
+            x1, y1 = min(p["area"][0] + p["area"][2], r[2]), min(p["area"][1] + p["area"][3], r[3])
+            if x1 <= x0 or y1 <= y0:
+                continue
+            file = f"particle_{zone.id}_{p['texture']}"
+            shutil.copyfile(CACHE / zone.id / p["texture"], OUT / file)
+            out.append({**p, "texture": file, "zone": zone.id,
+                        "area": [round(v, 3) for v in (x0, y0, x1 - x0, y1 - y0)]})
+    return out
 
 
 def save_tiles(img, prefix):

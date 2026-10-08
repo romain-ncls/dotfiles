@@ -62,6 +62,8 @@ def harvest(room_name, save=None):
                 # pivot: where the object's origin sits inside the image, as fractions from the bottom-left
                 "pivot": [round(float(-it.corners[0, 0] / max(1e-6, it.corners[1, 0] - it.corners[0, 0])), 3),
                           round(float(-it.corners[0, 1] / max(1e-6, it.corners[2, 1] - it.corners[0, 1])), 3)],
+                **({"sway": it.sway} if it.sway else {}),  # the game's grass shader moves it
+                **({"react": it.react} if it.sway and it.react else {}),  # and Hornet walking into it
             }
         p["count"] += 1
         p["z"].append(round(it.z, 2))

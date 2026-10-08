@@ -34,10 +34,13 @@ under a memory cap as above. `world.py` renders its zones one per process for th
   floating islands, a climbable step, a cliff) and dressed with pieces from the rooms; each
   screen shows a room's background, rendered with the game's camera, shaders, bloom and
   colour grading and receding a little behind the rock; Hornet's house is furnished with her
-  Bellhart house's pieces and walled in Bellhart's timber; a lake and waterfall (placeholders
-  for now). Navigation (walk, drop, jump, climb) comes from the same rock, so nothing she
-  stands on is hidden. `world.py --layout IMAGE` draws just the rock and her ways, quickly.
-- `kit.py`: harvests a room's sprites, at their in-game size, as pieces to dress with.
+  Bellhart house's pieces and walled in Bellhart's timber; a lake and waterfall. Plants and
+  vines on the game's grass shaders are kept apart to sway (`sway.png`), and the rooms' own
+  ambient particles (Verdania's fireflies) are exported as emitters. Navigation (walk, drop,
+  jump, climb) comes from the same rock, so nothing she stands on is hidden.
+  `world.py --layout IMAGE` draws just the rock and her ways, quickly.
+- `kit.py`: harvests a room's sprites, at their in-game size, as pieces to dress with, with
+  how the game's grass shaders sway them and how grass bends as Hornet walks into it.
 - `terrain.py`: rock shapes and the dressing (silhouettes, moss masses, edge pieces by the
   way a surface faces, plants in front).
 - `nav.py`: surfaces and links sized with Hornet's real movement.
@@ -60,7 +63,9 @@ A running wallpaper reloads the world by itself when `world.py` writes a new one
 the QML itself need plasmashell restarted (`systemctl --user restart plasma-plasmashell`),
 the lock screen picks them up at the next lock. Hornet's sheets are shared by every zone and
 coloured for the zone she's in by `shaders/hornet.frag`; the waterfall and the lake move in
-`shaders/waterfall.frag` and `lake.frag`. After editing a shader, compile it, e.g.
+`shaders/waterfall.frag` and `lake.frag`; plants sway in `sway.vert` (the game's grass
+formula, read from its shaders; grass bends as Hornet walks through it) and the fireflies fly
+in `particle.vert` (Unity's particle system, one grid per emitter). After editing a shader, compile it, e.g.
 `qsb --glsl "100 es,120,150,300 es,330" --hlsl 50 --msl 12 -o lake.frag.qsb lake.frag`
 (qsb is in qt6.qtshadertools). Only the screen she's on (or about to reach) loads her sheets,
 and only those of the clips she plays in the next 40 seconds.
