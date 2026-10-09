@@ -47,7 +47,7 @@ from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 import nav
 import terrain
@@ -213,6 +213,7 @@ HOME = {"region": (L0 + 0.9, TOP - 0.5, 20.5, CEILING), "door_x": 21.75, "biome"
 # crack in the rock above, down past the cliff's edge into a deep pool between the stepping rock
 # and the cliff.
 LAKE = {"x0": 99.0, "x1": 121.0, "level": 3.0}
+LAKE_BED_SOFT = 0.25  # how softly the water's body meets the bed and the shores (units)
 WATERFALL = {"top": (119.3, 119.95, H + 0.1), "bottom": (118.85, 120.35), "zone": "verdania"}
 
 
@@ -1367,13 +1368,22 @@ def draw_water(layers, rock, grade):
         return round((WORLD[1] - y) * PPU)
 
     # The body: clearer at the top, deeper and darker below.
-    x0, x1, level = round(LAKE["x0"] * PPU), round(LAKE["x1"] * PPU), LAKE["level"]
+    # Its edge on the bed and the shores is soft: the water reaches a little over the rock, the
+    # bed seen through it rather than cut by it.
+    lx0, lx1, level = round(LAKE["x0"] * PPU), round(LAKE["x1"] * PPU), LAKE["level"]
+    pad = round(3 * LAKE_BED_SOFT * PPU)
+    x0, x1 = lx0 - pad, lx1 + pad
     r0 = row(level)
+    water = np.zeros((Hpx - r0 + pad, x1 - x0), bool)  # with the open air above the surface
+    water[:, pad:pad + lx1 - lx0] = ~rock[r0 - pad:, lx0:lx1]
+    water[:pad, pad:pad + lx1 - lx0] = True
+    soft = np.asarray(Image.fromarray(water.astype(np.uint8) * 255, "L").filter(ImageFilter.GaussianBlur(LAKE_BED_SOFT * PPU)))
+    soft = (np.maximum(soft[pad:].astype(np.float32) / 255 * 1.6 - 0.15, 0)).clip(0, 1)  # as before over open water
     depth = (np.arange(r0, Hpx) - r0)[:, None] / PPU
     t = np.clip(depth / 2.2, 0, 1)
     body = np.zeros((Hpx - r0, x1 - x0, 4), np.float32)
     body[..., :3] = (shallow * (1 - t[..., None]) + deep * t[..., None]) * np.ones((1, x1 - x0, 1))
-    body[..., 3] = (0.42 + 0.4 * t) * np.ones((1, x1 - x0)) * ~rock[r0:, x0:x1]
+    body[..., 3] = (0.42 + 0.4 * t) * soft
     layers["front"].alpha_composite(Image.fromarray((body.clip(0, 1) * 255).round().astype(np.uint8), "RGBA"), (x0, r0))
 
     (tl, tr, ytop), (bl, br) = WATERFALL["top"], WATERFALL["bottom"]
