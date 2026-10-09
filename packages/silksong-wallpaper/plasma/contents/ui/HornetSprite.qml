@@ -13,6 +13,7 @@ Item {
     property int frame: 0
     property bool mirrored: false
     property real pixelScale: 1 // screen pixels per sheet pixel
+    property color tint: "white" // the sprite's own colour (the game tints some creatures)
 
     readonly property int cell: sheet.sequence[Math.min(frame, sheet.frames - 1)]
     readonly property int rows: Math.ceil((Math.max.apply(null, sheet.sequence) + 1) / sheet.columns)
@@ -49,6 +50,7 @@ Item {
                                                             sprite.grade.ambient[2], 1)
             readonly property real heroSaturation: sprite.grade.heroSaturation
             readonly property real saturation: sprite.grade.saturation
+            readonly property color tint: sprite.tint
 
             fragmentShader: Qt.resolvedUrl("shaders/hornet.frag.qsb")
         }

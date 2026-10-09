@@ -10,6 +10,8 @@
                                    and a labelled contact sheet to choose from
     tools/kit.py atlas NAME        the sprites of a sprite atlas (sprites/_atlases/NAME.spriteatlas),
                                    e.g. "ring" for the Clawline rings, into kits/NAME
+    tools/kit.py particles ROOM    a room's looping particle systems (motes, drips, smoke, dust),
+                                   as templates the world places, into kits/ROOM/particles.json
 
 Pieces keep the tint and ambient light they have in their room; the colour grade is applied
 when the world is composed, with the zone's own grade.
@@ -82,6 +84,37 @@ def harvest(room_name, save=None):
     print(f"{room_name}: {len(listing)} distinct pieces from {len(items)} sprites -> {out}", file=sys.stderr)
 
 
+def particles(room_name):
+    """Every distinct active, looping particle system of a room (room.particle_template), its
+    texture as it is (graded where it's placed)."""
+    import room
+
+    out = KITS / room_name
+    (out / "particles").mkdir(parents=True, exist_ok=True)
+    scene = room.Scene(room_name)
+    room.apply_save_state(scene, {})
+    listing, seen = [], set()
+    for o in scene.objects:
+        if o.type.name != "ParticleSystem":
+            continue
+        t = o.read_typetree()
+        go_id = t["m_GameObject"]["m_PathID"]
+        go = scene.gameobjects.get(go_id)
+        if go is None or not scene.active(go_id) or not t.get("looping") or room.is_unwanted(scene, go_id):
+            continue
+        base = re.sub(r" \(\d+\)$", "", go.m_Name)
+        made = room.particle_template(scene, go_id, t)
+        if made is None or base in seen:
+            continue
+        seen.add(base)
+        tpl, image = made
+        file = f"particles/{re.sub(r'[^A-Za-z0-9_.-]+', '_', base)}.png"
+        image.save(out / file)
+        listing.append({**tpl, "name": base, "texture": file})
+    (out / "particles.json").write_text(json.dumps(listing, indent=1))
+    print(f"{room_name}: {len(listing)} particle systems -> {out / 'particles.json'}", file=sys.stderr)
+
+
 def atlas(name):
     """Sprites that live in an atlas rather than in a room, as a kit (no room tint)."""
     import UnityPy
@@ -136,11 +169,15 @@ def main():
     h.add_argument("--save", nargs="*", default=[], metavar="FLAG", help="save flags (PlayerData bools) to turn on")
     a = sub.add_parser("atlas")
     a.add_argument("name")
+    pt = sub.add_parser("particles")
+    pt.add_argument("room")
     args = p.parse_args()
     if args.cmd == "harvest":
         harvest(args.room, {f: True for f in args.save})
     elif args.cmd == "atlas":
         atlas(args.name)
+    elif args.cmd == "particles":
+        particles(args.room)
 
 
 if __name__ == "__main__":

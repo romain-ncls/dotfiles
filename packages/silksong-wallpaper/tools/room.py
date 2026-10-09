@@ -487,3 +487,108 @@ def apply_save_state(scene, save=None):
             target = (t.get("objectToDeactivate") or {}).get("m_PathID") or own
             scene.overrides[target] = False
     scene._active.clear()
+
+
+def particle_template(scene, go_id, t):
+    """A looping particle system's look and motion, as shaders/particle.vert runs it, in world
+    units at its own transform (not yet scaled by its depth): its shape (circle, box, or edge;
+    a mesh is taken as a box), lifetimes, sizes and their change over a life, start speed (out
+    of a circle, up from an edge), drift (VelocityModule), force, gravity, spin, colour and alpha
+    over a life (up to 4 colour and 8 alpha keys), its texture sheet and how it's blended; each
+    value random between two constants where Unity's is. With the texture (PIL image), or None
+    for what it can't show (other shapes, no texture)."""
+    init, shape, emission = t["InitialModule"], t["ShapeModule"], t["EmissionModule"]
+    kind = {10: "circle", 5: "box", 6: "box", 12: "edge"}.get(shape["type"])
+    if kind is None:
+        return None
+
+    def pair(c):
+        """A MinMaxCurve as two constants (a curve: its scale, as a constant)."""
+        return sorted((c["minScalar"], c["scalar"])) if c["minMaxState"] == 3 else [c["scalar"]] * 2
+
+    def module(name):
+        m = t.get(name) or {}
+        return m if m.get("enabled") else None
+
+    def curve_keys(c, n):
+        """A MinMaxCurve over a life as up to n (time, value) keys."""
+        if c["minMaxState"] == 1:
+            keys = [(k["time"], k["value"] * c["scalar"]) for k in c["maxCurve"]["m_Curve"]][:n]
+        else:
+            keys = [(0.0, 1.0), (1.0, 1.0)]
+        return [[round(a, 4), round(b, 4)] for a, b in (keys + [(1.0, keys[-1][1])] * n)[:n]]
+
+    m = scene.world(scene.go_transform[go_id])
+    angle = math.atan2(m[1, 0], m[0, 0])
+    rot = np.array([[math.cos(angle), -math.sin(angle)], [math.sin(angle), math.cos(angle)]])
+
+    def turned(xr, yr):
+        """Ranges (x min, max), (y min, max) in the system's own axes, turned as it is."""
+        pts = [rot @ np.array([x, y]) for x in xr for y in yr]
+        return [min(p[0] for p in pts), max(p[0] for p in pts), min(p[1] for p in pts), max(p[1] for p in pts)]
+
+    scale = shape["m_Scale"]
+    if kind == "circle":
+        ax = m[:2, 0] * shape["radius"]["value"] * scale["x"]
+        ay = m[:2, 1] * shape["radius"]["value"] * scale["y"]
+    elif kind == "edge":
+        ax, ay = m[:2, 0] * shape["radius"]["value"] * scale["x"], np.zeros(2)
+    else:
+        ax, ay = m[:2, 0] * 0.5 * scale["x"], m[:2, 1] * 0.5 * scale["y"]
+    up = m[:2, 1] / max(np.linalg.norm(m[:2, 1]), 1e-6)  # an edge's particles leave it this way
+    grow = float(np.mean([np.linalg.norm(m[:3, i]) for i in range(2)])) if t.get("scalingMode", 0) in (0, 1) else 1.0
+    velocity = [0.0] * 4
+    if (vel := module("VelocityModule")) is not None:
+        velocity = pair(vel["x"]) + pair(vel["y"])
+        if not vel.get("inWorldSpace"):
+            velocity = turned(velocity[:2], velocity[2:])
+    force = [0.0] * 4
+    if (f := module("ForceModule")) is not None:
+        force = pair(f["x"]) + pair(f["y"])
+        if not f.get("inWorldSpace"):
+            force = turned(force[:2], force[2:])
+    size_keys, size_range = [[0.0, 1.0], [1.0, 1.0], [1.0, 1.0], [1.0, 1.0]], [1.0, 1.0]
+    if (sz := module("SizeModule")) is not None:
+        if sz["curve"]["minMaxState"] == 3:
+            size_range = pair(sz["curve"])
+        else:
+            size_keys = curve_keys(sz["curve"], 4)
+    start = init["startColor"]
+    c0 = start["maxColor"] if start["minMaxState"] == 0 else {k: (start["minColor"][k] + start["maxColor"][k]) / 2 for k in "rgba"}
+    alpha_keys, colour_keys = [(0.0, 1.0), (1.0, 1.0)], [(0.0, 1.0, 1.0, 1.0), (1.0, 1.0, 1.0, 1.0)]
+    if (col := module("ColorModule")) is not None and col["gradient"]["minMaxState"] == 1:
+        g = col["gradient"]["maxGradient"]
+        alpha_keys = [(g[f"atime{i}"] / 65535, g[f"key{i}"]["a"]) for i in range(g["m_NumAlphaKeys"])]
+        colour_keys = [(g[f"ctime{i}"] / 65535, g[f"key{i}"]["r"], g[f"key{i}"]["g"], g[f"key{i}"]["b"]) for i in range(g["m_NumColorKeys"])]
+    alpha_keys = [[round(a, 4), round(b, 4)] for a, b in (alpha_keys + [(1.0, alpha_keys[-1][1])] * 8)[:8]]
+    colour_keys = [[round(v, 4) for v in k] for k in (colour_keys[:4] + [(1.0, *colour_keys[-1][1:])] * 4)[:4]]
+    spin = pair(r["curve"]) if (r := module("RotationModule")) is not None else [0.0, 0.0]
+    sheet = [1, 1, 1.0]
+    if (uv := module("UVModule")) is not None:
+        sheet = [uv["tilesX"], uv["tilesY"], uv["cycles"]]
+    go = scene.gameobjects[go_id]
+    renderer = next((c.read() for c in go.m_Components if c.read().object_reader.type.name == "ParticleSystemRenderer"), None)
+    tex, shader, tint = None, "", (1.0, 1.0, 1.0, 1.0)
+    for ref in (renderer.m_Materials[:1] if renderer is not None else []):
+        mat = ref.read()
+        shader = mat.m_Shader.read().m_ParsedForm.m_Name
+        tex = next((v.m_Texture.read() for k, v in mat.m_SavedProperties.m_TexEnvs if k == "_MainTex" and v.m_Texture.path_id), None)
+        colours = {k: (v.r, v.g, v.b, v.a) for k, v in mat.m_SavedProperties.m_Colors}
+        tint = colours.get("_Color", tint) if "Particles/" not in shader else tuple(2 * v for v in colours.get("_TintColor", (0.5,) * 4))
+    if tex is None:
+        return None
+    life = pair(init["startLifetime"])
+    rate = sum(pair(emission["rateOverTime"])) / 2
+    return {
+        "name": go.m_Name, "z": round(float(m[2, 3]), 3), "at": [round(float(m[0, 3]), 3), round(float(m[1, 3]), 3)],
+        "shape": kind, "thickness": shape.get("radiusThickness", 1.0), "arc": shape["arc"]["value"],
+        "axes": [round(float(v), 4) for v in (*ax, *ay)], "up": [round(float(v), 4) for v in up],
+        "life": life, "size": [round(v * grow, 4) for v in pair(init["startSize"])], "sizeRange": size_range, "sizeKeys": size_keys,
+        "speed": pair(init["startSpeed"]), "velocity": [round(v, 4) for v in velocity], "force": [round(v, 4) for v in force],
+        "gravity": round(9.81 * sum(pair(init["gravityModifier"])) / 2, 4),
+        "spin": spin, "rotation": pair(init["startRotation"]),
+        "colour": [round(c0[k] * tint[i], 4) for i, k in enumerate("rgb")], "alpha": round(c0["a"] * tint[3], 4),
+        "colourKeys": colour_keys, "keys": alpha_keys, "sheet": sheet,
+        "rate": rate, "count": min(64, init["maxNumParticles"] or 64, round(rate * sum(life) / 2)),
+        "lit": "Lit" in shader or "Diffuse" in shader, "additive": "Additive" in shader,
+    }, tex.image.convert("RGBA")

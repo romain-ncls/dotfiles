@@ -1,6 +1,7 @@
 // Hornet in the colours of the zone she's in (tools/world.py hero_grade), the way the game
 // draws her: Sprites/Default-ColorFlash with IS_HERO (40% of the room's ambient light, then
-// _HeroDesaturation), then the camera's ColorCorrectionCurves and saturation.
+// _HeroDesaturation), then the camera's ColorCorrectionCurves and saturation. The creatures drawn
+// from sheets come through here too, with their own tint and a neutral ambient (0.5: unlit).
 // Compiled with qsb (see README); the .qsb sits next to this file.
 #version 440
 
@@ -14,6 +15,7 @@ layout(std140, binding = 0) uniform buf {
     vec4 ambient;         // the room's ambient light (rgb)
     float heroSaturation;
     float saturation;
+    vec4 tint;            // the sprite's own colour (tk2dSprite colour), 1 for Hornet
 };
 
 layout(binding = 1) uniform sampler2D source;  // her sheet, premultiplied
@@ -32,7 +34,7 @@ void main() {
         fragColor = vec4(0.0);
         return;
     }
-    vec3 c = p.rgb / p.a;
+    vec3 c = p.rgb / p.a * tint.rgb;
     c = c + (c * ambient.rgb * 2.0 - c) * 0.4;
     float l = clamp(dot(c, LUMA), 0.0, 1.0);
     c = clamp(l + (c - l) * heroSaturation, 0.0, 1.0);

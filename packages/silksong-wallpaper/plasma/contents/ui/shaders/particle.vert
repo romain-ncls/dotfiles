@@ -1,6 +1,7 @@
-// A room's own ambient particle system (Verdania's fireflies), run the way Unity runs it
-// (tools/world.py emitter): particles born in the emitter's shape, drifting at a speed of their
-// own, spinning, fading by the alpha keys of their colour over lifetime, their sheet played over
+// A particle system from the game (room.particle_template; tools/world.py place_particles), run
+// the way Unity runs it: particles born in the emitter's shape (a circle, a box or an edge),
+// leaving it at their start speed (out of a circle, up from an edge), drifting, pushed by a force
+// and by gravity, spinning, growing and fading, coloured over their life, their sheet played over
 // each life. One item per emitter: a grid of 2 * slots - 1 cells, a slot's quad in every other
 // one (the cells between are dropped by particle.frag). Each slot lives a whole number of times
 // an hour, so the clock's hourly wrap is seamless, and draws each life's randomness from the
@@ -10,26 +11,38 @@
 layout(location = 0) in vec4 qt_Vertex;
 layout(location = 1) in vec2 qt_MultiTexCoord0;
 layout(location = 0) out vec2 texCoord;
-layout(location = 1) out float alpha;
-layout(location = 2) out float column;  // its column in the grid: a slot's cells have an even floor
+layout(location = 1) out vec4 colour;
+layout(location = 2) out float column;  // its column in the grid: a slot's cells have an even one
 
 layout(std140, binding = 0) uniform buf {
     mat4 qt_Matrix;
     float qt_Opacity;
-    float time;       // seconds, wrapped every hour
+    float time;        // seconds, wrapped every hour
     float slots;
     float pxPerUnit;
-    vec4 area;        // the item: left, bottom, width, height (units)
-    vec4 centre;      // the emitter: x, y; shape (0 circle, 1 box); the circle's thickness
-    vec4 axes;        // the shape's half axes: x (xy), y (zw)
-    vec4 lifeSize;    // lifetime min, max (s); size min, max (units)
-    vec4 velocity;    // x min, max; y min, max (units/s)
-    vec4 spin;        // rotation speed min, max (rad/s); start rotation min, max (rad)
-    vec4 misc;        // start alpha, gravity (units/s/s), additive
-    vec4 sheet;       // tiles across, down, cycles over a life
-    vec4 keyT0;       // the alpha keys' times (8)
+    vec4 area;         // the item: left, bottom, width, height (units)
+    vec4 centre;       // the emitter: x, y; shape (0 circle, 1 box, 2 edge); the circle's thickness
+    vec4 axes;         // the shape's half axes: x (xy), y (zw)
+    vec4 shapeMore;    // a circle's arc (radians); the way an edge's particles leave it (zw unused: x, y)
+    vec4 lifeSize;     // lifetime min, max (s); start size min, max (units)
+    vec4 sizeMore;     // a random size factor: min, max
+    vec4 sizeT;        // size over a life: the keys' times
+    vec4 sizeV;        // and values
+    vec4 speed;        // start speed min, max (units/s)
+    vec4 velocity;     // drift x min, max; y min, max (units/s)
+    vec4 force;        // x min, max; y min, max (units/s/s)
+    vec4 spin;         // rotation speed min, max (rad/s); start rotation min, max (rad)
+    vec4 misc;         // start alpha, gravity (units/s/s, down), additive
+    vec4 tint;         // start colour (rgb)
+    vec4 colourT;      // colour over a life: the keys' times
+    vec4 colour0;      // and colours
+    vec4 colour1;
+    vec4 colour2;
+    vec4 colour3;
+    vec4 sheet;        // tiles across, down, cycles over a life
+    vec4 keyT0;        // alpha over a life: the keys' times (8)
     vec4 keyT1;
-    vec4 keyA0;       // and their alphas
+    vec4 keyA0;        // and alphas
     vec4 keyA1;
 };
 
@@ -54,6 +67,30 @@ float fade(float u) {
     return a[7];
 }
 
+float grow(float u) {
+    float t[4] = float[4](sizeT.x, sizeT.y, sizeT.z, sizeT.w);
+    float v[4] = float[4](sizeV.x, sizeV.y, sizeV.z, sizeV.w);
+    if (u <= t[0])
+        return v[0];
+    for (int i = 1; i < 4; i++) {
+        if (u <= t[i])
+            return mix(v[i - 1], v[i], (u - t[i - 1]) / max(t[i] - t[i - 1], 1e-4));
+    }
+    return v[3];
+}
+
+vec3 hue(float u) {
+    float t[4] = float[4](colourT.x, colourT.y, colourT.z, colourT.w);
+    vec3 c[4] = vec3[4](colour0.rgb, colour1.rgb, colour2.rgb, colour3.rgb);
+    if (u <= t[0])
+        return c[0];
+    for (int i = 1; i < 4; i++) {
+        if (u <= t[i])
+            return mix(c[i - 1], c[i], (u - t[i - 1]) / max(t[i] - t[i - 1], 1e-4));
+    }
+    return c[3];
+}
+
 void main() {
     column = floor(qt_MultiTexCoord0.x * (2.0 * slots - 1.0) + 0.5);
     float slot = floor(column * 0.5);
@@ -66,29 +103,37 @@ void main() {
     float age = tt - n * life;
     float seed = fi * 1013.0 + mod(n, lives) * 7.31;
 
+    // Where it's born, and the way its start speed sends it.
     vec2 q;
+    vec2 away = vec2(0.0);
     if (centre.z < 0.5) {
         float r = sqrt(mix((1.0 - centre.w) * (1.0 - centre.w), 1.0, hash(seed + 1.0)));
-        float a = hash(seed + 2.0) * 6.2831853;
+        float a = hash(seed + 2.0) * shapeMore.x;
         q = r * vec2(cos(a), sin(a));
-    } else {
+        away = normalize(axes.xy * cos(a) + axes.zw * sin(a) + vec2(1e-6, 0.0));
+    } else if (centre.z < 1.5) {
         q = vec2(hash(seed + 1.0), hash(seed + 2.0)) * 2.0 - 1.0;
+    } else {
+        q = vec2(hash(seed + 1.0) * 2.0 - 1.0, 0.0);
+        away = shapeMore.yz;
     }
     vec2 p = centre.xy + axes.xy * q.x + axes.zw * q.y;
-    p += vec2(mix(velocity.x, velocity.y, hash(seed + 3.0)), mix(velocity.z, velocity.w, hash(seed + 4.0))) * age;
-    p.y -= 0.5 * misc.y * age * age;
-    float size = mix(lifeSize.z, lifeSize.w, hash(seed + 5.0));
-    float rot = mix(spin.z, spin.w, hash(seed + 6.0)) + mix(spin.x, spin.y, hash(seed + 7.0)) * age;
+    vec2 v = away * mix(speed.x, speed.y, hash(seed + 8.0))
+        + vec2(mix(velocity.x, velocity.y, hash(seed + 3.0)), mix(velocity.z, velocity.w, hash(seed + 4.0)));
+    vec2 f = vec2(mix(force.x, force.y, hash(seed + 9.0)), mix(force.z, force.w, hash(seed + 10.0))) - vec2(0.0, misc.y);
+    p += v * age + 0.5 * f * age * age;
 
+    float u = age / life;
+    float size = mix(lifeSize.z, lifeSize.w, hash(seed + 5.0)) * mix(sizeMore.x, sizeMore.y, hash(seed + 11.0)) * grow(u);
+    float rot = mix(spin.z, spin.w, hash(seed + 6.0)) + mix(spin.x, spin.y, hash(seed + 7.0)) * age;
     vec2 corner = (side - 0.5) * vec2(1.0, -1.0) * size;  // y up
     float c = cos(rot), s = sin(rot);
     vec2 world = p + vec2(c * corner.x - s * corner.y, s * corner.x + c * corner.y);
     gl_Position = qt_Matrix * vec4((world.x - area.x) * pxPerUnit, (area.y + area.w - world.y) * pxPerUnit, 0.0, 1.0);
 
-    float u = age / life;
     float frames = sheet.x * sheet.y;
-    float f = mod(min(floor(u * frames * sheet.z), frames * sheet.z - 1.0), frames);
-    vec2 cell = vec2(mod(f, sheet.x), floor(f / sheet.x));  // left to right, top to bottom
+    float k = mod(min(floor(u * frames * sheet.z), frames * sheet.z - 1.0), frames);
+    vec2 cell = vec2(mod(k, sheet.x), floor(k / sheet.x));  // left to right, top to bottom
     texCoord = (cell + side) / sheet.xy;
-    alpha = misc.x * fade(u);
+    colour = vec4(tint.rgb * hue(u), misc.x * fade(u));
 }

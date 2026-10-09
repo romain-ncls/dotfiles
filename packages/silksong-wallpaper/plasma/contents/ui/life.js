@@ -649,7 +649,7 @@ function planDay(world, clips, day0, dateKey) {
 }
 
 // The day's plans (Hornet's and the Bell Beast's), made once per day and per world build.
-let cache = { key: "", segments: [], beast: [] };
+let cache = { key: "", segments: [], beast: [], critters: { songs: [], flights: {} } };
 
 // ------------------------------------------------------------------ the Bell Beast
 
@@ -773,6 +773,219 @@ function beastClipsAhead(world, clips, t, horizon) {
     return Object.keys(names).sort();
 }
 
+// ------------------------------------------------------------------ small life
+
+// The grotto's moss flies and dragonflies, Verdania's lilypad flies (tools/world.py CRITTERS),
+// as functions of time, so every screen sees them alike. Hornet's day sets what they react to:
+// the songs she plays on her needolin (dragonflies hold still, lilypad flies sing along) and the
+// moments she comes close to a lilypad fly (it flies to its next perch).
+const SONG_REACH = 20;   // units: how far her needolin is heard (across the lake)
+const STARTLE = 2.0;     // units: how close she comes before a lilypad fly takes off
+const FLIGHT_SPEED = 4.5;
+
+function hashOf(a, b, c) {
+    const x = Math.sin(a * 12.9898 + b * 78.233 + c * 37.719) * 43758.5453;
+    return x - Math.floor(x);
+}
+
+function idNumber(id) {
+    let n = 0;
+    for (let i = 0; i < id.length; i++) {
+        n = (n * 31 + id.charCodeAt(i)) % 100003;
+    }
+    return n;
+}
+
+// From Hornet's day: her songs ([t0, t1, x, y]) and, for each lilypad fly, its flights
+// ({ t0, t1, from, to } perch indices) as she comes close to the perch it's on.
+function planCritters(world, clips, segs) {
+    const songs = [];
+    for (const seg of segs) {
+        if (seg.kind === "clip" && /Needolin(Sit)? Play/.test(seg.clip)) {
+            songs.push([seg.t0, seg.t1, seg.x, seg.y]);
+        }
+    }
+    const flights = {};
+    for (const c of world.critters || []) {
+        if (c.species !== "lilypad_fly" || c.perches.length < 2) {
+            continue;
+        }
+        const out = [];
+        let at = 0;
+        let free = -Infinity;
+        for (const seg of segs) {
+            if (seg.t1 < free || !(seg.kind === "walk" || seg.kind === "line" || seg.kind === "fall" || seg.kind === "jump")) {
+                continue;
+            }
+            const perch = c.perches[at];
+            if (seg.x0 !== undefined && Math.min(seg.x0, seg.x1) - STARTLE > perch[0]
+                || seg.x0 !== undefined && Math.max(seg.x0, seg.x1) + STARTLE < perch[0]) {
+                continue;
+            }
+            // Where she is along the segment, every 0.2 s, until she comes close.
+            for (let t = Math.max(seg.t0, free); t < seg.t1; t += 0.2) {
+                const h = pose(world, clips, seg, t);
+                const feet = h.y - world.heroFeet;
+                if (Math.abs(h.x - perch[0]) < STARTLE && Math.abs(feet - perch[1]) < 1.6) {
+                    const next = (at + 1) % c.perches.length;
+                    const to = c.perches[next];
+                    const d = Math.hypot(to[0] - perch[0], to[1] - perch[1]);
+                    const dur = 0.4 + d / FLIGHT_SPEED;
+                    out.push({ t0: t, t1: t + dur, from: at, to: next });
+                    at = next;
+                    free = t + dur + 90; // it settles a while before it minds her again
+                    break;
+                }
+            }
+        }
+        flights[c.id] = out;
+    }
+    return { songs: songs, flights: flights };
+}
+
+// The song she's playing at t within reach of (x, y), or null.
+function songAt(plan, t, x, y) {
+    for (const s of plan.songs) {
+        if (s[0] <= t && t < s[1] && Math.abs(s[2] - x) < SONG_REACH && Math.abs(s[3] - y) < SONG_REACH) {
+            return s;
+        }
+    }
+    return null;
+}
+
+// The time a dragonfly has spent flying by t: its clock stops while she plays near it.
+function dragonflyTime(plan, t, c) {
+    let held = 0;
+    for (const s of plan.songs) {
+        if (s[0] >= t) {
+            break;
+        }
+        if (Math.abs(s[2] - c.home[0]) < SONG_REACH && Math.abs(s[3] - c.home[1]) < SONG_REACH) {
+            held += Math.min(t, s[1]) - s[0];
+        }
+    }
+    return t - held;
+}
+
+function catmull(p0, p1, p2, p3, u) {
+    const u2 = u * u, u3 = u2 * u;
+    return 0.5 * (2 * p1 + (p2 - p0) * u + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u2 + (3 * p1 - p0 - 3 * p2 + p3) * u3);
+}
+
+function critterPose(world, clips, plan, c, t) {
+    const n = idNumber(c.id);
+    const tw = t % 3600; // for frames: an hourly wrap in a clip is never seen (positions use t itself)
+    const out = { id: c.id, layer: c.layer, zone: c.zone, scale: c.scale, tint: c.tint || null, clip: "", frame: 0,
+                  x: 0, y: 0, facingRight: false };
+    if (c.species === "moss_fly") {
+        // The game's TinyMossFly: a new point within its range every 0.75-1 s, flown to and
+        // through smoothly, facing the way it goes.
+        const period = 0.75 + 0.25 * hashOf(n, 1, 0);
+        const k = Math.floor(t / period);
+        const u = t / period - k;
+        const point = (j, axis) => {
+            const a = hashOf(n, j, 2) * 2 * Math.PI, r = Math.sqrt(hashOf(n, j, 3));
+            return c.home[axis] + c.range[axis] * r * (axis ? Math.sin(a) : Math.cos(a));
+        };
+        const xs = [k - 1, k, k + 1, k + 2].map(j => point(j, 0));
+        out.x = catmull(xs[0], xs[1], xs[2], xs[3], u);
+        out.y = catmull(point(k - 1, 1), point(k, 1), point(k + 1, 1), point(k + 2, 1), u);
+        out.facingRight = xs[2] > xs[1];
+        out.clip = "Moss Fly Fly";
+        out.frame = frameAt(clips[out.clip], tw + hashOf(n, 4, 4));
+    } else if (c.species === "dragonfly") {
+        // Hovering, then a dart up, down, left or right (its FSM's Up, Down, L and R), turning
+        // the way it darts; all of it holding still while she plays near.
+        const tau = dragonflyTime(plan, t, c);
+        const period = 1.3 + 0.7 * hashOf(n, 5, 0);
+        const k = Math.floor(tau / period);
+        const u = tau - k * period;
+        const X = j => c.home[0] + c.range[0] * (2 * hashOf(n, j, 6) - 1);
+        const Y = j => c.home[1] + c.range[1] * (2 * hashOf(n, j, 7) - 1);
+        const at = j => [X(Math.floor((j + 1) / 2)), Y(Math.floor(j / 2))];
+        const start = period * (0.45 + 0.25 * hashOf(n, k, 8)); // the dart ends within the hop
+        const s = Math.min(1, Math.max(0, (u - start) / 0.3));
+        const e = s * s * (3 - 2 * s);
+        const a = at(k), b = at(k + 1);
+        out.x = lerp(a[0], b[0], e);
+        out.y = lerp(a[1], b[1], e);
+        const lastX = k % 2 === 0 && s > 0 ? Math.floor((k + 2) / 2) : Math.floor((k + 1) / 2);
+        out.facingRight = X(lastX) > X(lastX - 1);
+        out.clip = "Dragonfly Idle";
+        out.frame = frameAt(clips[out.clip], tw + hashOf(n, 9, 9));
+    } else if (c.species === "lilypad_fly") {
+        const fl = (plan.flights[c.id] || []);
+        let perch = 0;
+        let flying = null;
+        for (const f of fl) {
+            if (f.t0 > t) {
+                break;
+            }
+            if (t < f.t1) {
+                flying = f;
+                break;
+            }
+            perch = f.to;
+        }
+        if (flying) {
+            // To the next perch in a low arc.
+            const a = c.perches[flying.from], b = c.perches[flying.to];
+            const s = (t - flying.t0) / (flying.t1 - flying.t0);
+            const e = s * s * (3 - 2 * s);
+            out.x = lerp(a[0], b[0], e);
+            out.y = lerp(a[1], b[1], e) + c.feet * c.scale + Math.sin(Math.PI * s) * (1.2 + 0.15 * Math.abs(b[0] - a[0]));
+            out.facingRight = b[0] > a[0];
+            out.clip = "Lilypad Fly Fly";
+            out.frame = frameAt(clips[out.clip], t - flying.t0);
+        } else {
+            const p = c.perches[perch];
+            out.x = p[0];
+            out.y = p[1] + c.feet * c.scale;
+            out.facingRight = p[2];
+            const song = songAt(plan, t, p[0], p[1]);
+            if (song) {
+                out.clip = "Lilypad Fly Sing";
+                out.facingRight = song[2] > p[0];
+                out.frame = frameAt(clips[out.clip], t - song[0]);
+            } else {
+                // One of its three idles, a few seconds each.
+                const slot = Math.floor(tw / 7.5);
+                out.clip = "Lilypad Fly Idle 0" + (1 + Math.floor(hashOf(n, slot, 10) * 3));
+                out.frame = frameAt(clips[out.clip], tw - slot * 7.5);
+            }
+        }
+    }
+    return clips[out.clip] ? out : null;
+}
+
+// The creatures (default: all of them) at time t, in the world's order.
+function crittersAt(world, clips, t, which) {
+    if (!world || !world.nav || !world.critters || !clips) {
+        return [];
+    }
+    daySegments(world, clips, t);
+    return (which || world.critters).map(c => critterPose(world, clips, cache.critters, c, t)).filter(p => p !== null);
+}
+
+// The clips a set of creatures can play.
+const CRITTER_CLIPS = {
+    moss_fly: ["Moss Fly Fly"],
+    dragonfly: ["Dragonfly Idle"],
+    lilypad_fly: ["Lilypad Fly Idle 01", "Lilypad Fly Idle 02", "Lilypad Fly Idle 03", "Lilypad Fly Sing", "Lilypad Fly Fly"],
+};
+
+function critterClips(clips, which) {
+    const names = {};
+    for (const c of which) {
+        for (const n of CRITTER_CLIPS[c.species] || []) {
+            if (clips[n]) {
+                names[n] = true;
+            }
+        }
+    }
+    return Object.keys(names).sort();
+}
+
 // ------------------------------------------------------------------ sampling
 
 function lerp(a, b, t) {
@@ -879,7 +1092,8 @@ function daySegments(world, clips, t) {
     const key = dateKey + ":" + (world.build || 0) + ":" + world.nav.surfaces.length + ":" + world.nav.links.length;
     if (cache.key !== key) {
         const plan = planDay(world, clips, start.getTime() / 1000, dateKey);
-        cache = { key: key, segments: plan.segments, beast: planBeast(world, clips, start.getTime() / 1000, dateKey, plan) };
+        cache = { key: key, segments: plan.segments, beast: planBeast(world, clips, start.getTime() / 1000, dateKey, plan),
+                  critters: planCritters(world, clips, plan.segments) };
     }
     return cache.segments;
 }
