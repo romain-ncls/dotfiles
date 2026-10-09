@@ -127,6 +127,10 @@ class Zone:
     particles: list = field(default_factory=list)  # regexes on GameObject names: its ambient particles, kept
     animated: dict = field(default_factory=dict)  # group -> regex on GameObject names: pieces animated apart
     margin: tuple = (0.0, 0.0)  # units rendered past the screen's left and right edges, to cross-fade
+    # Per side, a depth: in that margin, pieces standing wholly in it are kept only from that depth
+    # back (None: all of them). What's near in a margin belongs to the room beyond the screen, and
+    # it would land in the bezel's gap with an edge of its own; the far background cross-fades.
+    margin_far: tuple = (None, None)
     fade: tuple = (0.0, 0.0)  # over these first and last units its backdrop fades in over its neighbours'
 
     def squeeze(self, y):
@@ -166,6 +170,8 @@ class Zone:
     def key(self):
         """What the render depends on (the region and biome only matter when composing)."""
         spec = {k: v for k, v in asdict(self).items() if k not in ("region", "biome", "haze", "ground")}
+        if not any(v is not None for v in self.margin_far):
+            del spec["margin_far"]
         spec["render"] = RENDER_VERSION
         return hashlib.sha1(json.dumps(spec, sort_keys=True).encode()).hexdigest()[:12]
 
@@ -191,7 +197,8 @@ ZONES = [
          # (its glyphs are left out: the window is the clock's dial, centred where they were).
          props=[r"^(Inert Sign|backing_(front|back)|string|Loom_Room_00(14|15|23|24)|Fallen Sign)"],
          anchors={"clock": r"^writing$"},
-         margin=(BANDS[0] + 0.75, BANDS[1] + 0.75), fade=(2 * BANDS[0], 2 * BANDS[1])),
+         margin=(BANDS[0] + 0.75, BANDS[1] + 0.75), fade=(2 * BANDS[0], 2 * BANDS[1]),
+         margin_far=(None, 6.0)),  # its moss pillar stands just past the laptop's right edge
     Zone("verdania", "clover_02c", x=(155.0, 202.62), floor=41.4, refine=False, below=0.0, world=(R0, 0.0),
          height=H + 0.2, region=(R0 - 0.8, 0.0, R1 + 0.8, H), biome="clover", margin=(BANDS[1] + 0.75, 0.0),
          particles=[r"^immediate_BG"]),  # its fireflies
@@ -644,6 +651,20 @@ def render_zone(zone):
                 and any(lo < e < hi for e in edges))
 
     items = [it for it in items if not cut_by_edge(it)]
+
+    def near_in_margin(it):
+        """A near piece standing wholly in a margin whose depth rule leaves it out (margin_far)."""
+        w = it.matrix
+        c = it.corners
+        pts = [w @ np.array([x, y, 0, 1]) for x, y in (*c, c[1] + c[2] - c[0])]
+        centre = w @ np.array([c[:, 0].mean(), c[:, 1].mean(), 0, 1])
+        xs = [cam.project(q[0], q[1], float(centre[2]), centre[0], centre[1])[0] for q in pts]
+        tol = 0.25 * PPU
+        left, right = zone.margin_far
+        return ((left is not None and it.z < left and max(xs) < screen[0] + tol)
+                or (right is not None and it.z < right and min(xs) > screen[1] - tol))
+
+    items = [it for it in items if not near_in_margin(it)]
     # Haze and fog spread over the whole view, near or not: they belong with the backdrop, which
     # cross-fades into the next screen instead of stopping at the bezel.
     for it in items:
@@ -948,7 +969,8 @@ def paste_region(layer, img, at, size, region, fade=0.0, hfade=(0.0, 0.0), top_f
     the floor, where it meets the level below); `hfade`, over that many units from its left
     and right ends (cross-fading with the next screen's); `top_fade`, over that many units
     below its top, outside the laptop (where the laptop's backdrops reach into the side screens
-    lower than their own)."""
+    lower than their own): beside the laptop it fades over only its last bit, more the further
+    from the laptop, so across a bezel the two sides match up to the laptop's top."""
     Hpx = layer.height
     x0, y0 = round(at[0] * PPU), Hpx - round((at[1] + size[1]) * PPU)
     piece = Image.new("RGBA", layer.size, (0, 0, 0, 0))
@@ -974,10 +996,12 @@ def paste_region(layer, img, at, size, region, fade=0.0, hfade=(0.0, 0.0), top_f
         m *= ramp[None, :]
     if top_fade:
         rows = H - (np.arange(layer.height) + 0.5) / PPU
-        vramp = smoothstep((region[3] - rows) / top_fade)
         cols = (np.arange(layer.width) + 0.5) / PPU
-        outside = ((cols < C0) | (cols > C1)).astype(np.float32)
-        m *= 1 - outside[None, :] * (1 - vramp[:, None])
+        top = min(region[3], at[1] + size[1])
+        away = np.maximum(C0 - cols, cols - C1)  # outside the laptop, from its edge
+        length = np.maximum(0.6, top_fade * smoothstep(away / 6.0))
+        vramp = smoothstep((top - rows[:, None]) / length[None, :])
+        m *= np.where(away[None, :] > 0, vramp, 1.0)
     piece.putalpha(Image.fromarray(np.minimum(np.asarray(piece.getchannel("A")), m.round().astype(np.uint8))))
     layer.alpha_composite(piece)
 
