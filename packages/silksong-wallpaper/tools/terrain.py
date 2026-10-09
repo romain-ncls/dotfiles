@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 KITS = Path.home() / ".cache/silksong-wallpaper/kits"
 
@@ -30,6 +30,7 @@ class Rock:
     under: str = None  # biome of the faces that don't look up (and of the inside), if not the zone's
     under_x: tuple = None  # ... only between these x (the arcade's ends are the zone's)
     solid: bool = True  # False: drawn only (a dark cave back), nothing stands on it
+    soft: float = 0.0  # a cave back's edges fade over about this much (units)
 
 
 def wobble(rng, a, b, n_per_unit=2.0, amp=0.12):
@@ -196,6 +197,8 @@ class Biome:
     strip_h: float = 0.85  # their height, units
     strip_lift: float = 0.1  # their centre above the surface, in their heights (the walking line is the surface)
     clump_p: float = 0.12  # how often a floor gets a clump on top of its strip
+    fill_depth: tuple = None  # (lit, gone): the fill darkens from `lit` units inside the rock to none at `gone`
+    fill_no_walls: tuple = ()  # fill pieces (objects) never drawn just behind a wall's face
 
 
 # Pieces that looked wrong in the renders: round rosette clusters (they read as odd clumps on
@@ -239,6 +242,8 @@ def clover_biome():
         fill=k.pick(r"^(Aspid__000[01]_c_(mid|inner).*|clover___0007_ground)$", 3.0, 9.0, dark=False, hmax=9.0),
         plants=k.pick(r"simple_grass|^clover___0007_ground$|grass_02|grove_pod_main", 0.8, 3.5, dark=False, hmax=3.5),
         ledges=k.pick(r"^(Plat Sprite|clover_gate_grey_000)$", 3.0, 8.0, dark=False),
+        fill_depth=(1.2, 2.6),  # as Verdania's own rock: pods along its faces, its depths dark
+        fill_no_walls=("clover___0007_ground",),
     )
 
 
@@ -333,7 +338,7 @@ class Canvas:
         ImageDraw.Draw(self.img).polygon([self.px(x, y) for x, y in pts], fill=fill)
 
     def paste(self, piece, x, y, width, height, angle=0.0, flip=False, anchor=(0.5, 0.5), tint=1.0, keep=None,
-              max_cut=None, sway=None):
+              max_cut=None, sway=None, dry=False, hide=None):
         """Draw a piece scaled to width x height units, rotated (degrees, ccw) about its anchor,
         with the anchor (fractions from the bottom-left of the piece) at world (x, y).
         keep(x0, y0, w, h) -> bool array: the pixels of that canvas rectangle it may cover. With
@@ -342,7 +347,10 @@ class Canvas:
         sway: the kit piece, when the game sways it (its "sway" and "pivot"); while the canvas
         collects `swaying` (start_swaying), the piece goes there as it would be drawn, with the
         height of its origin (what it bends from), instead of into the image; so does a still
-        piece drawn over one of them ("sway" None), to stay in front of it."""
+        piece drawn over one of them ("sway" None), to stay in front of it.
+        dry: everything but the drawing (it returns whether it would have been drawn).
+        hide(x0, y0, w, h) -> bool array: pixels left out after the cut is judged (so whether the
+        piece is drawn doesn't change)."""
         w, h = max(1, round(width * self.ppu)), max(1, round(height * self.ppu))
         img = piece.resize((w, h), Image.LANCZOS)
         if flip:
@@ -378,6 +386,12 @@ class Canvas:
                     return False
             a[..., 3] = np.where(mask, a[..., 3], 0)
             crop = Image.fromarray(a, "RGBA")
+        if hide is not None:
+            a = np.asarray(crop).copy()
+            a[..., 3] = np.where(hide(x0 + sx, y0 + sy, crop.width, crop.height), 0, a[..., 3])
+            crop = Image.fromarray(a, "RGBA")
+        if dry:
+            return True
         if self.swaying is not None:
             moves = sway is not None and "sway" in sway
             covered = np.asarray(crop)[..., 3] > 8
@@ -391,6 +405,25 @@ class Canvas:
                 return True
         self.img.alpha_composite(crop, (x0 + sx, y0 + sy))
         return True
+
+
+def outline_distance(pts, x, y, normal=False):
+    """How far (x, y) is from a polygon's outline (and, with `normal`, the vertical part of the
+    nearest edge's normal: 1 or -1 for a floor or a ceiling, 0 for a wall)."""
+    a = np.asarray(pts, float)
+    b = np.roll(a, -1, 0)
+    d = b - a
+    t = np.clip(((x - a[:, 0]) * d[:, 0] + (y - a[:, 1]) * d[:, 1]) / np.maximum((d ** 2).sum(1), 1e-9), 0, 1)
+    dist = np.hypot(a[:, 0] + t * d[:, 0] - x, a[:, 1] + t * d[:, 1] - y)
+    i = int(np.argmin(dist))
+    if not normal:
+        return float(dist[i])
+    return float(dist[i]), float(d[i, 0] / max(np.hypot(*d[i]), 1e-9))
+
+
+def smoothstep_(t):
+    t = min(1.0, max(0.0, t))
+    return t * t * (3 - 2 * t)
 
 
 def edge_samples(pts, spacing, rng):
@@ -441,7 +474,19 @@ def dress(rocks, biome_at, back, front, graded, seed, clear=(), underlay=None, n
     sides of islands and thin rocks get nothing turned sideways."""
     for rock in rocks:
         if rock.draw and not rock.solid:
-            back.polygon(rock.points, (4, 8, 6, 225))  # a cave's back: the backdrop barely shows
+            # A cave's back: the backdrop barely shows, its open edges fading softly.
+            mask = Image.new("L", back.img.size, 0)
+            ImageDraw.Draw(mask).polygon([back.px(x, y) for x, y in rock.points], fill=225)
+            if rock.soft:
+                mask = mask.filter(ImageFilter.GaussianBlur(rock.soft * back.ppu))
+            cave = Image.new("RGBA", back.img.size, (4, 8, 6, 0))
+            cave.putalpha(mask)
+            back.img.alpha_composite(cave)
+    caves = Image.new("1", back.img.size, 0)  # the dark backs of caves and alcoves
+    for rock in rocks:
+        if rock.draw and not rock.solid:
+            ImageDraw.Draw(caves).polygon([back.px(x, y) for x, y in rock.points], fill=1)
+    caves = np.array(caves)
     rocks = [r for r in rocks if r.draw and r.solid]
     fill_black = (0, 0, 0, 255)
     for rock in rocks:
@@ -452,6 +497,80 @@ def dress(rocks, biome_at, back, front, graded, seed, clear=(), underlay=None, n
     for rock in rocks:
         ImageDraw.Draw(solid).polygon([back.px(x, y) for x, y in rock.points], fill=1)
     solid = np.array(solid)
+
+    # How deep each point is inside the rock, counting every rock (a face buried in another rock
+    # isn't a face): a distance map at 8 cells a unit, out to 3 units.
+    cell = back.ppu / 8.0
+    coarse = solid[::max(1, round(cell)), ::max(1, round(cell))]
+    depth = np.where(coarse, 24.0, 0.0)
+    for _ in range(24):
+        # (past the world's sides and bottom the rock goes on: they aren't open air; the band of
+        # rock along its top is dressed as the ceiling it is, as if seen from both sides)
+        n4 = np.minimum.reduce([np.pad(depth, ((1, 0), (0, 0)), constant_values=0)[:-1],
+                                np.pad(depth, ((0, 1), (0, 0)), constant_values=24)[1:],
+                                np.pad(depth, ((0, 0), (1, 0)), constant_values=24)[:, :-1],
+                                np.pad(depth, ((0, 0), (0, 1)), constant_values=24)[:, 1:]])
+        depth = np.where(coarse, np.minimum(depth, n4 + 1.0), 0.0)
+
+    def depth_at(x, y):
+        """Units from (x, y) to the nearest open air."""
+        px, py = back.px(x, y)
+        r = min(max(int(py / max(1, round(cell))), 0), depth.shape[0] - 1)
+        c = min(max(int(px / max(1, round(cell))), 0), depth.shape[1] - 1)
+        return depth[r, c] / 8.0
+
+    def behind_wall(x, y):
+        """Whether (x, y) lies just behind a wall's face (open air within a unit and a half to
+        its side, nearer than any above or below)."""
+        def reach(dx, dy):
+            for k in range(1, 16):
+                if not inside_solid(x + dx * k * 0.1, y + dy * k * 0.1):
+                    return k * 0.1
+            return 9.0
+        side = min(reach(1, 0), reach(-1, 0))
+        return side <= 1.5 and side < min(reach(0, 1), reach(0, -1))
+
+    def inside_solid(x, y):
+        px, py = back.px(x, y)
+        r, c = int(py), int(px)
+        return 0 <= r < solid.shape[0] and 0 <= c < solid.shape[1] and bool(solid[r, c])
+
+    def into_rock_above(p):
+        """For a floor's pieces: their pixels inside rock above the floor, where it meets a wall,
+        would read as the floor going on into the wall."""
+        top = back.px(0, p[1] + 0.3)[1]
+        edge = round(0.6 * back.ppu)  # (the band of rock along the world's top is no wall)
+
+        def hide(x0, y0, w, h):
+            r = np.arange(y0, y0 + h)[:, None]
+            rows = (r < top) & (r >= edge)
+            return solid[y0:y0 + h, x0:x0 + w] & rows
+        return hide
+
+    def in_cave(p, n):
+        """A wall facing into a cave or an alcove: it stays dark, as the cave's back does (the
+        game's alcoves have no growth on their inner walls)."""
+        x, y = back.px(*(np.asarray(p) + n * 0.6))
+        r, c = int(y), int(x)
+        return 0 <= r < caves.shape[0] and 0 <= c < caves.shape[1] and bool(caves[r, c])
+
+    def buried(p, n):
+        """A floor lying inside another rock (the air above it is rock): it gets no dressing,
+        or its grass and moss show inside that rock, as a path going on into the wall. (Its
+        pieces are still chosen, so the rest of the rock comes out as before. Ceilings and walls
+        inside a rock keep theirs: there they read as the rock's texture, not as a way.)"""
+        if n[1] <= 0.6:
+            return False
+        x, y = back.px(*(np.asarray(p) + n * 0.3))
+        r, c = int(y), int(x)
+        # Along the world's top a rock is a band, not a wall: its faces show (the rock under the
+        # side screens' top is about a unit deep).
+        top = round(1.0 * back.ppu)
+        if r < top:
+            return False
+        # (past the world's sides and bottom, the rock at its edge goes on)
+        r, c = min(r, solid.shape[0] - 1), min(max(c, 0), solid.shape[1] - 1)
+        return bool(solid[r, c])
 
     # The way through each hole, from under the floor to Hornet's height above it, with edges
     # that wander a little so cut pieces don't line up.
@@ -518,7 +637,7 @@ def dress(rocks, biome_at, back, front, graded, seed, clear=(), underlay=None, n
             w, h = s["width"] * k, s["height"] * k
             angle = math.degrees(math.atan2(n[1], n[0])) - 90
             back.paste(bio.kit.image(s), p[0] - n[0] * h * 0.35, p[1] - n[1] * h * 0.35, w, h, angle, rng.random() < 0.5,
-                       keep=free(this_side(p, n)), max_cut=0.2)
+                       keep=free(this_side(p, n)), max_cut=0.2, dry=buried(p, n))
         # 2. Masses covering the inside of thick rock (islands stay dark under their edges).
         inner = None if "island" in rock.tags else biome(((min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2))
         inner = inner or (biome((min(xs), max(ys))) if rock.under else None)
@@ -533,9 +652,20 @@ def dress(rocks, biome_at, back, front, graded, seed, clear=(), underlay=None, n
                     continue
                 f = choose(rng, bio.fill)
                 k = rng.uniform(*bio.fill_k)
+                angle, flip = rng.uniform(-1, 1) * bio.fill_angle, rng.random() < 0.5
+                tint = bio.fill_tint
+                if bio.fill_depth is not None:
+                    # Deep inside, the rock is dark, as the game's own rock is: the masses fade
+                    # out with their depth below its faces (the draws above are made all the same,
+                    # so the rest of the rock's dressing comes out as before).
+                    lit, gone = bio.fill_depth
+                    tint *= 1 - smoothstep_((depth_at(x, y) - lit) / (gone - lit))
+                    if tint < 0.02:
+                        continue
+                    if f["object"] in bio.fill_no_walls and behind_wall(x, y):
+                        continue  # leaves and sprouts on a wall's face read as a way going into it
                 img = graded(bio.kit, f, x, y)
-                back.paste(img, x, y, f["width"] * k, f["height"] * k, rng.uniform(-1, 1) * bio.fill_angle,
-                           rng.random() < 0.5, tint=bio.fill_tint, keep=free(in_rock))
+                back.paste(img, x, y, f["width"] * k, f["height"] * k, angle, flip, tint=tint, keep=free(in_rock))
         # 3. Edges, by the way the surface faces.
         bio = biome(((min(xs) + max(xs)) / 2, max(ys) + 1.0))
         if "ledge" in rock.tags and bio is not None and bio.ledges:
@@ -556,6 +686,7 @@ def dress(rocks, biome_at, back, front, graded, seed, clear=(), underlay=None, n
             bio = biome(out, n)
             if bio is None:
                 continue
+            hidden = buried(p, n)
             angle = math.degrees(math.atan2(n[1], n[0])) - 90
             if n[1] > 0.6 and (bio.strips or bio.floor):  # a floor: a strip along it, now and then a clump
                 if bio.strips and along >= next_strip:
@@ -570,7 +701,8 @@ def dress(rocks, biome_at, back, front, graded, seed, clear=(), underlay=None, n
                         w, h = c["width"] * k, c["height"] * k
                         cx = min(max(q[0], min(xs) + w * 0.4), max(xs) - w * 0.4) if max(xs) - min(xs) > w * 0.8 else q[0]
                         if back.paste(graded(bio.kit, c, *out), cx, q[1] + h * lift, w, h, angle * 0.6, rng.random() < 0.5,
-                                      keep=free(this_side(q, n)), max_cut=0.12 if scale > 0.6 else 0.25):
+                                      keep=free(this_side(q, n)), max_cut=0.12 if scale > 0.6 else 0.25, dry=hidden,
+                                      hide=into_rock_above(q)):
                             used["strip"] = c["name"]
                             next_strip = along - float(np.linalg.norm(p - q)) + w * rng.uniform(0.55, 0.7)
                             break
@@ -579,7 +711,7 @@ def dress(rocks, biome_at, back, front, graded, seed, clear=(), underlay=None, n
                     k = rng.uniform(*bio.floor_k) * (0.75 if bio.strips else 1.0)
                     w, h = c["width"] * k, c["height"] * k
                     if back.paste(graded(bio.kit, c, *out), p[0], p[1] + h * 0.08, w, h, angle * 0.5, rng.random() < 0.5,
-                                  keep=free(this_side(p, n)), max_cut=0.12):
+                                  keep=free(this_side(p, n)), max_cut=0.12, dry=hidden, hide=into_rock_above(p)):
                         used["floor"] = c["name"]
             elif n[1] < -0.6 and bio.ceiling:  # a ceiling: now and then some hanging moss
                 if along < next_ceiling or rng.random() > bio.ceiling_p:
@@ -590,7 +722,7 @@ def dress(rocks, biome_at, back, front, graded, seed, clear=(), underlay=None, n
                 if p[0] - w * 0.45 < min(xs) or p[0] + w * 0.45 > max(xs):
                     continue  # it would hang out past the rock, like a ledge that isn't there
                 if back.paste(graded(bio.kit, c, *out), p[0], p[1] + 0.25, w, h, 0, rng.random() < 0.5, anchor=(0.5, 1.0),
-                              keep=free(this_side(p, n)), max_cut=0.15, sway=c):
+                              keep=free(this_side(p, n)), max_cut=0.15, sway=c, dry=hidden):
                     used["ceiling"] = c["name"]
                     next_ceiling = along + w * rng.uniform(0.8, 1.1)
             elif bio.wall and not thin:  # a wall: pieces turned to face out
@@ -602,7 +734,7 @@ def dress(rocks, biome_at, back, front, graded, seed, clear=(), underlay=None, n
                 else:
                     inset = 0.3
                 if back.paste(graded(bio.kit, c, *out), p[0] - n[0] * inset, p[1] - n[1] * inset, w, h, angle,
-                              rng.random() < 0.5, keep=free(this_side(p, n)), max_cut=0.12):
+                              rng.random() < 0.5, keep=free(this_side(p, n)), max_cut=0.12, dry=hidden or in_cave(p, n)):
                     used["wall"] = c["name"]
         # 4. Plants in front of Hornet's feet, on floors.
         for (p, n) in edge_samples(pts, 2.4, rng):
@@ -616,10 +748,11 @@ def dress(rocks, biome_at, back, front, graded, seed, clear=(), underlay=None, n
                 k = rng.uniform(0.35, 0.6)
                 w, h = c["width"] * k, c["height"] * k
                 front.paste(graded(bio.kit, c, *(p + n * 1.2)), p[0] + rng.uniform(-0.4, 0.4), p[1] - 0.15, w, h,
-                            rng.uniform(-6, 6), rng.random() < 0.5, anchor=(0.5, 0.0), keep=free(), max_cut=0.1, sway=c)
+                            rng.uniform(-6, 6), rng.random() < 0.5, anchor=(0.5, 0.0), keep=free(), max_cut=0.1, sway=c,
+                            dry=buried(p, n))
             elif n[1] > 0.7 and bio.floor and bio.front_bits and rng.random() < 0.15:
                 c = choose(rng, bio.floor)
                 k = rng.uniform(0.18, 0.28)
                 w, h = c["width"] * k, c["height"] * k
                 front.paste(graded(bio.kit, c, *(p + n * 1.2)), p[0], p[1] - h * 0.2, w, h, 0, rng.random() < 0.5,
-                            keep=free(this_side(p, n)), max_cut=0.1)
+                            keep=free(this_side(p, n)), max_cut=0.1, dry=buried(p, n))

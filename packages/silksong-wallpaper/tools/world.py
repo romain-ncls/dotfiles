@@ -80,6 +80,8 @@ R0, R1 = 85.02, 132.64
 GROUND = 1.5  # the lowest flat ground; it rolls and climbs elsewhere
 PIT = 7.0  # the floor of the Bellway station's pit, in its room (bellway_city)
 CITADEL_FLOOR = 3.7  # the station's floor at both its ends, where the ground on either side meets it
+CLIFF_TOP = 9.8  # the shrine's ground, over the bench's niche
+LOOKOUT = 19.4  # the ledge high on the right wall
 TREE = 11.5  # the walkway at the great tree's foot, from bridge to bridge across the laptop
 TOP = 17.5  # the floor of Hornet's house
 CEILING = 26.1  # underside of the rock along the top of the side monitors
@@ -242,7 +244,8 @@ def layout():
     rocks.append(T.box(R("wall left"), L0 - 1.5, 0.0, L0 + 0.9, 9.6))
     rocks.append(T.box(R("wall left high"), L0 - 1.5, 13.4, L0 + 0.9, H + 1.0, walk_top=False))
     rocks.append(T.box(R("step"), L0 - 1.5, 0.5, 3.6, 9.6))
-    rocks.append(T.box(R("wall right high"), R1 - 0.9, 12.8, R1 + 1.5, H + 1.0, walk_top=False))
+    rocks.append(T.blob(R("wall right high"), [(131.3, H + 1.0), (R1 + 1.5, H + 1.0), (R1 + 1.5, LOOKOUT - 0.6),
+                                                 (131.3, LOOKOUT - 0.4)], rounds=1, amp=0.08))
     rocks.append(T.box(R("ceiling left"), L0 - 1.5, CEILING, L1 + 0.8, H + 1.0, walk_top=False))
     rocks.append(T.blob(R("hanging mass left"), [(31.0, CEILING + 0.3), (34.5, 24.2), (38.5, 23.4), (42.0, 24.0), (45.5, CEILING + 0.3)]))
     rocks.append(T.box(R("ceiling right"), R0 - 0.8, CEILING, R1 + 1.5, H + 1.0, walk_top=False))
@@ -266,11 +269,14 @@ def layout():
     # ledge high on the wall; rings to throw her needle to instead of more islands.
     rocks.append(T.island(R("island right"), 103.0, 112.0, 9.6, depth=2.4))
     rocks.append(T.blob(R("boulder"), [(115.2, 0.3), (115.6, 2.5), (116.1, 3.5), (117.1, 3.85), (118.1, 3.6), (118.6, 2.7),
-                              (118.4, 1.4), (117.8, 0.3)], rounds=2))  # a boulder, undercut by the pool
+                              (118.4, 1.4), (117.8, 0.3)], rounds=2, tags={"in_water"}))  # a stone standing in the pool
     rocks.append(T.Rock(T.chaikin(CLIFF, 1)))
-    rocks.append(T.Rock(T.chaikin(NICHE, 1), solid=False, dress=False))
-    rocks.append(T.blob(R("lookout"), [(129.4, 18.8), (R1 + 1.5, 18.8), (R1 + 1.5, 16.6), (131.6, 17.0), (130.2, 17.8)],
-                        rounds=1))
+    rocks.append(T.Rock(T.chaikin(NICHE, 2), solid=False, dress=False, soft=0.35))
+    rocks.append(T.Rock(T.chaikin(DOORWAY, 2), solid=False, dress=False, soft=0.25))
+    # The lookout, and under it the entrance to what lies beyond: its underside curves down into
+    # the wall like a lintel.
+    rocks.append(T.blob(R("lookout"), [(128.8, LOOKOUT), (R1 + 1.5, LOOKOUT), (R1 + 1.5, 15.4), (132.0, 15.7),
+                                        (130.8, 16.7), (129.7, 17.8), (129.0, 18.7)], rounds=1))
     return rocks
 
 
@@ -299,18 +305,22 @@ def room_ground():
     return rocks
 
 
-# The cliff on the right, low enough for the shrine on top, with a niche at the water's level
-# behind the waterfall: a bench, out of the spray.
-CLIFF = [(120.6, -1.0), (120.8, 3.0), (120.5, 3.9), (125.8, 3.9), (126.4, 4.8), (126.2, 7.0), (123.6, 7.6),
-         (120.6, 7.6), (120.8, 8.3), (121.2, 9.0), (R1 + 1.2, 9.0), (R1 + 1.5, 9.0), (R1 + 1.5, -1.0)]
-NICHE = [(120.3, 3.9), (125.9, 3.9), (126.5, 4.8), (126.3, 7.1), (123.6, 7.7), (120.3, 7.7)]  # its dark back
+# The cliff on the right, low enough for the shrine on top, with an arched niche at the water's
+# level behind the waterfall: a bench, out of the spray. Its dark back fades out towards the open
+# side; the doorway behind the shrine (an opening for scenes beyond the screen) has one too.
+CLIFF = [(120.6, -1.0), (120.8, 3.0), (120.5, 3.9), (125.8, 3.9), (126.5, 4.9), (126.6, 7.0), (125.7, 8.1),
+         (123.9, 8.6), (122.0, 8.5), (120.6, 8.4), (120.8, 9.2), (121.2, CLIFF_TOP), (R1 + 1.2, CLIFF_TOP),
+         (R1 + 1.5, CLIFF_TOP), (R1 + 1.5, -1.0)]
+NICHE = [(120.9, 3.8), (125.9, 3.8), (126.7, 4.9), (126.8, 7.1), (125.8, 8.3), (123.9, 8.8), (120.9, 8.6)]
+DOORWAY = [(130.0, CLIFF_TOP - 0.2), (R1 + 1.5, CLIFF_TOP - 0.2), (R1 + 1.5, 16.2), (131.6, 16.5), (130.5, 15.8),
+           (129.9, 14.2), (129.8, 11.4)]
 
 # Moves the rock alone doesn't give her: needle throws to rings (Clawline), and the pod plant
 # on the island, which throws her across the lake when she strikes down on it.
 MOVES = [
     {"kind": "harpoon", "ring": (93.2, 10.2), "from": (95.4, 3.5), "to": (90.4, TREE)},  # rings atop tall poles
-    {"kind": "harpoon", "ring": (128.0, 15.9), "from": (126.8, 9.0), "to": (131.0, 18.8)},
-    {"kind": "bounce", "pod": (110.2, 11.4), "from": (108.4, 9.6), "to": (122.8, 9.0)},
+    {"kind": "harpoon", "ring": (127.0, 16.4), "from": (126.2, CLIFF_TOP), "to": (130.6, LOOKOUT)},
+    {"kind": "bounce", "pod": (110.2, 11.4), "from": (108.4, 9.6), "to": (122.8, CLIFF_TOP)},
 ]
 
 # Hand-placed pieces (anchors are fractions of each piece from its bottom-left): the pod plant on
@@ -323,7 +333,11 @@ DECOR = [
     {"kit": "clover_02c", "piece": "Clover Bounce Pod Activator", "x": 110.2, "y": 10.15, "w": 1.15, "anchor": (0.5, 0.0)},
     *({"kit": "ring", "piece": "ring_backing_basic", "x": m["ring"][0], "y": m["ring"][1], "w": 1.25, "anchor": (0.5, 0.5)}
       for m in MOVES if m["kind"] == "harpoon"),
-    {"kit": "ring", "piece": "Slab_tall_ring_pole_0001_1", "x": 128.0, "y": 8.85, "w": 0.5, "anchor": (0.5, 0.0)},
+    {"kit": "ring", "piece": "Slab_tall_ring_pole_0001_1", "x": 127.0, "y": CLIFF_TOP - 0.15, "w": 0.5, "anchor": (0.5, 0.0)},
+    # The shrine's statue stands in a bed of clover, as in its room: its plinth sunk in leaves.
+    {"kit": "clover_02c", "piece": "Aspid__0007_1@6.8", "x": 123.9, "y": CLIFF_TOP - 0.45, "w": 5.4, "anchor": (0.5, 0.0), "layer": "front"},
+    {"kit": "clover_02c", "piece": "Aspid_break_bushes_0003_1", "x": 121.9, "y": CLIFF_TOP - 0.3, "w": 2.0, "anchor": (0.5, 0.0), "layer": "front"},
+    {"kit": "clover_02c", "piece": "clover___0007_ground@2.4", "x": 126.1, "y": CLIFF_TOP - 0.1, "w": 1.9, "anchor": (0.5, 0.0)},
     {"kit": "ring", "piece": "Slab_tall_ring_pole_0001_1", "x": 93.2, "y": 2.75, "w": 0.55, "anchor": (0.5, 0.0)},
 ]
 
@@ -361,6 +375,8 @@ AIR = [
     {"kind": "haze", "layer": "back", "piece": ("clover_02c", "white_haze"), "at": (120.0, 5.5), "size": (7.0, 6.0), "gain": 0.6},
     {"kind": "haze", "layer": "back", "piece": ("clover_02c", "white_haze"), "at": (27.5, 5.0), "size": (10.0, 8.0), "gain": 0.45},
     {"kind": "haze", "layer": "back", "piece": ("clover_02c", "white_haze"), "at": (71.0, 14.5), "size": (9.0, 6.0), "gain": 0.4},
+    # The shrine's glow, as its statue has in its room.
+    {"kind": "haze", "layer": "back", "piece": ("clover_02c", "white_haze"), "at": (123.8, 13.0), "size": (7.5, 8.0), "gain": 0.5},
 ]
 SHAFT_ANGLE = -10.1  # degrees: the game's light beams lean so, light falling from the upper right
 # The beams' dust (Bellhart's) is emitted along their depth axis, which a flat world can't show:
@@ -411,7 +427,7 @@ CRITTERS = [
                                 (114.5, 5.6)])),
     {"id": "lilypad0", "species": "lilypad_fly", "layer": "mid", "scale": 1.0, "perches": [(95.6, 3.52, True), (117.1, 3.64, False)]},
     {"id": "lilypad1", "species": "lilypad_fly", "layer": "mid", "scale": 1.0, "perches": [(104.2, 9.66, True), (111.0, 9.66, False)]},
-    {"id": "lilypad2", "species": "lilypad_fly", "layer": "mid", "scale": 1.0, "perches": [(121.8, 8.91, False), (93.0, 3.27, True)]},
+    {"id": "lilypad2", "species": "lilypad_fly", "layer": "mid", "scale": 1.0, "perches": [(121.8, CLIFF_TOP - 0.09, False), (93.0, 3.27, True)]},
 ]
 SPECIES_CLIP = {"moss_fly": "Moss Fly Fly", "dragonfly": "Dragonfly Idle", "lilypad_fly": "Lilypad Fly Idle 01"}
 
@@ -540,7 +556,7 @@ PROPS = [
     {"kit": "mosstown_01", "piece": "Bone_house_pieces_squat", "x": 11.2, "near": 2.0, "sink": 0.2},
     {"kit": "mosstown_01", "piece": "Bone_house_breakable_point@1.55", "x": 13.0, "near": 2.0, "sink": 0.2},
     {"kit": "mosstown_01", "piece": "Bone_house_pieces_0007_3_thin@2.88", "x": 16.2, "near": 2.6, "sink": 0.5},
-    {"kit": "clover_02c", "piece": "Sprite Whole", "x": 123.8, "near": 9.0, "sink": 0.3},
+    {"kit": "clover_02c", "piece": "Sprite Whole", "x": 123.8, "near": CLIFF_TOP, "sink": 0.3},
     {"kit": "bellway_city", "piece": "RestBench", "x": 123.3, "near": 3.9, "sink": 0.05},
 ]
 
@@ -556,9 +572,9 @@ POIS = [
     {"id": "clock", "zone": "great_tree", "x": 64.0, "near": 12.4, "activity": "lookup"},
     {"id": "lake", "zone": "verdania", "x": 97.4, "near": 3.6, "activity": "needolin_sit", "face": 1},
     {"id": "island", "zone": "verdania", "x": 105.5, "near": 9.6, "activity": "lookup"},
-    {"id": "shrine", "zone": "verdania", "x": 126.0, "near": 9.0, "activity": "kneel", "face": -1},
+    {"id": "shrine", "zone": "verdania", "x": 125.6, "near": CLIFF_TOP, "activity": "kneel", "face": -1},
     {"id": "waterfall bench", "zone": "verdania", "x": 123.3, "near": 3.9, "activity": "bench", "face": -1, "seat": 0.3},
-    {"id": "lookout", "zone": "verdania", "x": 131.4, "near": 18.8, "activity": "lookup"},
+    {"id": "lookout", "zone": "verdania", "x": 130.8, "near": LOOKOUT, "activity": "lookup"},
 ]
 
 
@@ -1243,7 +1259,8 @@ def compose():
     rock_px = Image.new("1", (W, Hpx), 0)
     from PIL import ImageDraw
     for r in rocks:
-        ImageDraw.Draw(rock_px).polygon([(x * PPU, (WORLD[1] - y) * PPU) for x, y in r.points], fill=1)
+        if "in_water" not in r.tags:  # a stone standing in the lake: the water covers its foot
+            ImageDraw.Draw(rock_px).polygon([(x * PPU, (WORLD[1] - y) * PPU) for x, y in r.points], fill=1)
     water = draw_water(layers, np.array(rock_px), grades[WATERFALL["zone"]])
 
     clock = bake_clock(layers, canvases, metas, grades)
