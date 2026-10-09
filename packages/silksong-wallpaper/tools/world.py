@@ -1118,6 +1118,11 @@ def compose():
     zones_out.append({"id": "home", "room": HOUSE, "left": hx0, "bottom": hy0, "width": hx1 - hx0,
                       "height": hy1 - hy0, "floor": TOP, "light": bake_light("home", house_g),
                       "grade": hero_grade("home", house_g)})
+    # Her glow everywhere as faint as in her house (the softest the game gives her): one light for
+    # the whole world, in each zone's colours.
+    strength = next(z["light"]["strength"] for z in zones_out if z["id"] == HERO_LIGHT_FROM)
+    for z in zones_out:
+        z["light"]["strength"] = strength
     bake_hornet()
 
     # 3. The rock, dressed for the zone each face looks into (or as its own biome says), in the
@@ -1806,6 +1811,7 @@ def bake_clock(layers, canvases, metas, grades):
 
 
 HERO_LIGHT_EASE = 1.7  # the glow's falloff, eased (1: the game's own)
+HERO_LIGHT_FROM = "home"  # the zone whose room's glow strength she has everywhere
 
 
 def bake_light(zone_id, g):
