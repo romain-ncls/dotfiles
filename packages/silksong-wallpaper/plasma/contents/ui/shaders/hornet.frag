@@ -2,6 +2,7 @@
 // draws her: Sprites/Default-ColorFlash with IS_HERO (40% of the room's ambient light, then
 // _HeroDesaturation), then the camera's ColorCorrectionCurves and saturation. The creatures drawn
 // from sheets come through here too, with their own tint and a neutral ambient (0.5: unlit).
+// Between two zones she's coloured as both, mixed by `blend` (WorldScene, World.zoneWeights).
 // Compiled with qsb (see README); the .qsb sits next to this file.
 #version 440
 
@@ -16,16 +17,30 @@ layout(std140, binding = 0) uniform buf {
     float heroSaturation;
     float saturation;
     vec4 tint;            // the sprite's own colour (tk2dSprite colour), 1 for Hornet
+    vec4 ambient2;        // the other zone's
+    float heroSaturation2;
+    float saturation2;
+    float blend;          // how much of the other zone (0: none)
 };
 
 layout(binding = 1) uniform sampler2D source;  // her sheet, premultiplied
 layout(binding = 2) uniform sampler2D lut;     // 256x1: the camera curves per channel
+layout(binding = 3) uniform sampler2D lut2;    // the other zone's
 
 const vec3 LUMA = vec3(0.22, 0.707, 0.071);  // Unity's Luminance() in gamma space
 
-vec3 curves(vec3 c) {
+vec3 curves(sampler2D table, vec3 c) {
     vec3 u = clamp(c, 0.0, 1.0) * (255.0 / 256.0) + 0.5 / 256.0;
-    return vec3(texture(lut, vec2(u.r, 0.5)).r, texture(lut, vec2(u.g, 0.5)).g, texture(lut, vec2(u.b, 0.5)).b);
+    return vec3(texture(table, vec2(u.r, 0.5)).r, texture(table, vec2(u.g, 0.5)).g, texture(table, vec2(u.b, 0.5)).b);
+}
+
+vec3 graded(vec3 c, vec3 amb, float heroSat, sampler2D table, float sat) {
+    c = c + (c * amb * 2.0 - c) * 0.4;
+    float l = clamp(dot(c, LUMA), 0.0, 1.0);
+    c = clamp(l + (c - l) * heroSat, 0.0, 1.0);
+    c = curves(table, c);
+    l = dot(c, LUMA);
+    return clamp(l + (c - l) * sat, 0.0, 1.0);
 }
 
 void main() {
@@ -35,11 +50,9 @@ void main() {
         return;
     }
     vec3 c = p.rgb / p.a * tint.rgb;
-    c = c + (c * ambient.rgb * 2.0 - c) * 0.4;
-    float l = clamp(dot(c, LUMA), 0.0, 1.0);
-    c = clamp(l + (c - l) * heroSaturation, 0.0, 1.0);
-    c = curves(c);
-    l = dot(c, LUMA);
-    c = clamp(l + (c - l) * saturation, 0.0, 1.0);
-    fragColor = vec4(c * p.a, p.a) * qt_Opacity;
+    vec3 a = graded(c, ambient.rgb, heroSaturation, lut, saturation);
+    if (blend > 0.001) {
+        a = mix(a, graded(c, ambient2.rgb, heroSaturation2, lut2, saturation2), blend);
+    }
+    fragColor = vec4(a * p.a, p.a) * qt_Opacity;
 }

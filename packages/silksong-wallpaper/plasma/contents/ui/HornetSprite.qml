@@ -10,6 +10,9 @@ Item {
     required property Image texture // that clip's sheet, loaded
     required property var grade // the zone's colours (World.qml zones[].grade)
     required property Image lut // the zone's camera curves, loaded
+    property var grade2: null // another zone's colours, mixed in by `blend` (between two zones)
+    property Image lut2: null
+    property real blend: 0
     property int frame: 0
     property bool mirrored: false
     property real pixelScale: 1 // screen pixels per sheet pixel
@@ -51,6 +54,12 @@ Item {
             readonly property real heroSaturation: sprite.grade.heroSaturation
             readonly property real saturation: sprite.grade.saturation
             readonly property color tint: sprite.tint
+            readonly property var other: sprite.grade2 ?? sprite.grade
+            readonly property vector4d ambient2: Qt.vector4d(other.ambient[0], other.ambient[1], other.ambient[2], 1)
+            readonly property real heroSaturation2: other.heroSaturation
+            readonly property real saturation2: other.saturation
+            readonly property real blend: sprite.grade2 && sprite.lut2 ? sprite.blend : 0
+            readonly property Image lut2: sprite.lut2 ?? sprite.lut ?? nothing
 
             fragmentShader: Qt.resolvedUrl("shaders/hornet.frag.qsb")
         }
