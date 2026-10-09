@@ -36,7 +36,12 @@ Item {
     readonly property real pxPerUnit: pxPerMm * unitMm
 
     readonly property var hornet: clips && world ? Life.hornetAt(world, clips, time) : null
-    readonly property var hornetZone: hornet ? World.zoneAt(world, hornet.x, hornet.y) : null
+    // The zones she's in, by share: her colours and her light blend between them (the game lerps
+    // its scene colours, SceneColorManager, rather than switching them).
+    readonly property var hornetZones: hornet ? World.zoneWeights(world, hornet.x, hornet.y, 2.0) : []
+    readonly property var hornetZone: hornetZones.length ? hornetZones[0].zone : null
+    readonly property var hornetZone2: hornetZones.length > 1 ? hornetZones[1].zone : null
+    readonly property real hornetBlend: hornetZones.length > 1 ? hornetZones[1].weight / (hornetZones[0].weight + hornetZones[1].weight) : 0
     readonly property bool hornetHere: hornet !== null
         && hornet.x * unitMm > me.x - 120 && hornet.x * unitMm < me.x + me.w + 120
     readonly property var daylight: Daylight.lightingAt(new Date(time * 1000), latitude, longitude)
@@ -275,11 +280,12 @@ Item {
     }
 
     // The light Hornet carries, in the colours of the zone she's in. It lights the
-    // backdrop behind her, never the rock: at night it grows stronger under the veil.
+    // backdrop behind her, never the rock: at night it grows a little stronger under the veil.
     component HeroLight: Image {
-        readonly property var info: root.hornetZone?.light ?? null
+        required property var modelData // { zone, weight }
+        readonly property var info: modelData.zone.light ?? null
         visible: root.hornetHere && info !== null
-        opacity: info ? Math.min(1, info.strength * (1 + root.daylight.lights * 0.6)) : 0
+        opacity: info ? modelData.weight * Math.min(0.7, info.strength * (1 + root.daylight.lights * 0.2)) : 0
         source: info ? root.worldDir + "/" + info.file + root.build : ""
         x: info ? root.toX((root.hornet.x + info.left) * root.unitMm) : 0
         y: info ? root.toY((root.hornet.y + info.bottom + info.height) * root.unitMm) : 0
@@ -292,7 +298,11 @@ Item {
         tiles: root.world?.layers.back ?? []
     }
 
-    HeroLight {}
+    Repeater {
+        model: root.hornetZones
+
+        HeroLight {}
+    }
 
     Air {
         group: "back"
@@ -582,6 +592,9 @@ Item {
         texture: root.sheets["Harpoon Needle"] ?? null
         grade: root.hornetZone?.grade ?? { ambient: [0.5, 0.5, 0.5], heroSaturation: 1, saturation: 1 }
         lut: root.hornetZone ? root.luts[root.hornetZone.id] ?? null : null
+        grade2: root.hornetZone2?.grade ?? null
+        lut2: root.hornetZone2 ? root.luts[root.hornetZone2.id] ?? null : null
+        blend: root.hornetBlend
         frame: sheet.frames - 1
         mirrored: true // drawn pointing left
         pixelScale: root.pxPerUnit / sheet.pixelsPerUnit
@@ -602,6 +615,9 @@ Item {
         texture: root.sheets[clip] ?? null
         grade: root.hornetZone?.grade ?? { ambient: [0.5, 0.5, 0.5], heroSaturation: 1, saturation: 1 }
         lut: root.hornetZone ? root.luts[root.hornetZone.id] ?? null : null
+        grade2: root.hornetZone2?.grade ?? null
+        lut2: root.hornetZone2 ? root.luts[root.hornetZone2.id] ?? null : null
+        blend: root.hornetBlend
         frame: root.hornet?.frame ?? 0
         mirrored: root.hornet?.facingRight ?? false
         pixelScale: root.pxPerUnit / sheet.pixelsPerUnit * (root.hornet?.scale ?? 1)

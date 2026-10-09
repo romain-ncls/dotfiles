@@ -131,6 +131,30 @@ function zoneAt(world, x, y) {
     return found ?? nearest;
 }
 
+// How much each zone holds a point, for what blends between zones (Hornet's colours and her
+// light): each zone's own share rises over `feather` units on each side of its edge, and later
+// zones cover earlier ones (as they're drawn), so crossing from one zone to the next is a
+// gradual change, as the game's SceneColorManager lerps its colours inside a scene. Sorted, the
+// largest first; the shares add up to 1.
+function zoneWeights(world, x, y, feather) {
+    const smooth = t => {
+        const u = Math.min(1, Math.max(0, t));
+        return u * u * (3 - 2 * u);
+    };
+    const out = [];
+    let left = 1;
+    for (let i = world.zones.length - 1; i >= 0; i--) {
+        const z = world.zones[i];
+        const inside = Math.min(x - z.left, z.left + z.width - x, y - z.bottom, z.bottom + z.height - y);
+        const cover = smooth((inside + feather) / (2 * feather));
+        out.push({ zone: z, weight: cover * left });
+        left *= 1 - cover;
+    }
+    const total = out.reduce((a, o) => a + o.weight, 0) || 1;
+    return out.filter(o => o.weight > 0.002).map(o => ({ zone: o.zone, weight: o.weight / total }))
+        .sort((a, b) => b.weight - a.weight);
+}
+
 // Until navigation lands: Hornet paces Mosshome's floor.
 function worldRoutine(clips, world) {
     const home = world.zones.find(z => z.id === "mosshome") ?? world.zones[0];

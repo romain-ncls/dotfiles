@@ -1805,6 +1805,9 @@ def bake_clock(layers, canvases, metas, grades):
     return {"x": round(cx, 3), "y": round(cy, 3), "hands": hands, "gears": gears}
 
 
+HERO_LIGHT_EASE = 1.7  # the glow's falloff, eased (1: the game's own)
+
+
 def bake_light(zone_id, g):
     """Hornet's light for a zone (HeroLight, screen-blended: white at alpha = its brightness),
     stored at full strength with the zone's strength beside it; the wallpaper raises it at night."""
@@ -1817,7 +1820,9 @@ def bake_light(zone_id, g):
     peak = float(strength.max())
     img = np.zeros(tex.shape, np.float32)
     img[..., :3] = grade.apply(np.ones(3))
-    img[..., 3] = strength / max(peak, 1e-6)
+    # The game's glow falls off almost linearly to nothing 7 units out: over our dark backdrops
+    # and under the night veil its rim reads as a disc's edge. Eased, it fades out without one.
+    img[..., 3] = (strength / max(peak, 1e-6)) ** HERO_LIGHT_EASE
     name = f"light_{zone_id}.png"
     Image.fromarray((img.clip(0, 1) * 255).round().astype(np.uint8), "RGBA").save(OUT / name, optimize=True)
     x0, y0, x1, y1 = light["box"]
