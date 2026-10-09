@@ -18,7 +18,7 @@ const os = require("os");
 const root = path.join(__dirname, "..");
 const data = path.join(os.homedir(), ".local/share/silksong-wallpaper");
 const src = fs.readFileSync(path.join(root, "plasma/contents/ui/life.js"), "utf8").replace(".pragma library", "");
-const Life = new Function(src + "\nreturn { planDay, planBeast, dayStart, pose };")();
+const Life = new Function(src + "\nreturn { planDay, planBeast, dayStart, pose, crittersAt, daySegments, cacheOf: () => cache };")();
 const grab = (file, prop) => {
     const t = fs.readFileSync(file, "utf8");
     const i = t.indexOf("(", t.indexOf(prop));
@@ -80,6 +80,46 @@ for (let d = 0; d < days; d++) {
     }
     console.log(`day ${key}: ${segs.length} segments; Bell Beast: ${beast.length} segments, ${sings} songs, `
         + `Hornet visits it ${visits} times`);
+}
+// The small life: on the first day, lilypad flights and the songs it hears; every creature
+// sampled at 30 fps around each song and flight (where it changes what it does) and through a
+// quiet hour, for jumps in position (a teleport) or poses without a clip.
+{
+    const when = new Date();
+    const start = Life.dayStart(when).getTime() / 1000;
+    Life.crittersAt(world, clips, start + 6 * 3600);
+    const plan = Life.cacheOf().critters;
+    const flights = Object.values(plan.flights).reduce((n, f) => n + f.length, 0);
+    console.log(`small life: ${(world.critters || []).length} creatures, ${plan.songs.length} songs heard, ${flights} lilypad flights`);
+    const windows = [[start + 10 * 3600, start + 11 * 3600]];
+    for (const s of plan.songs) {
+        windows.push([s[0] - 2, s[0] + 4], [s[1] - 2, s[1] + 4]);
+    }
+    for (const f of Object.values(plan.flights).flat()) {
+        windows.push([f.t0 - 1, f.t1 + 1]);
+    }
+    let jumps = 0;
+    for (const [a, b] of windows) {
+        let prev = null;
+        for (let t = a; t < b; t += 1 / 30) {
+            const now = Life.crittersAt(world, clips, t);
+            if (now.length !== (world.critters || []).length || now.some(p => !isFinite(p.x) || !isFinite(p.y))) {
+                jumps++;
+                console.log(`small life: a creature without a pose at ${t}`);
+            }
+            if (prev) {
+                now.forEach((p, i) => {
+                    const d = Math.hypot(p.x - prev[i].x, p.y - prev[i].y);
+                    if (d > 0.7) { // a dragonfly's dart: at most 3.6 units in 0.3 s, 0.6 in a frame
+                        jumps++;
+                        console.log(`small life: ${p.id} jumps ${d.toFixed(2)} at ${new Date(t * 1000).toTimeString().slice(0, 8)}`);
+                    }
+                });
+            }
+            prev = now;
+        }
+    }
+    teleports += jumps;
 }
 for (const [k, v] of Object.entries(fastest)) {
     console.log(`fastest ${k}: ${v.toFixed(1)} units/s`);

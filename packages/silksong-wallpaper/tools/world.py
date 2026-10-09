@@ -321,6 +321,118 @@ DECOR = [
 ]
 
 
+# The air, from the game's own atmosphere pieces placed against our world (in the colours of the
+# zone each stands in), moving in WorldScene: light shafts falling behind the rock, slanted as the
+# game slants them, that follow the daylight and carry drifting dust; mist at the foot of each
+# backdrop; haze floating in front of everything, as the rooms hang it; mist lying on the lake;
+# soft glows. `gain` scales the piece's own alpha; shafts end above what they fall on.
+BEAM_PIECE = ("tut_02", "white_palace_light_beam")
+HAZE_PIECE = ("clover_02c", "haze2")
+FOG_PIECE = ("tut_02", "temp fog")
+AIR = [
+    # Left: two shafts from behind the mass hanging from the ceiling (clear of Hornet's house).
+    {"kind": "shaft", "piece": BEAM_PIECE, "top": (35.0, CEILING), "length": 24.0, "width": 3.4, "gain": 1.7},
+    {"kind": "shaft", "piece": BEAM_PIECE, "top": (45.2, CEILING), "length": 23.0, "width": 2.2, "gain": 1.5},
+    # The laptop: two on the great tree, ending on the walkway (the station below is roofed).
+    {"kind": "shaft", "piece": BEAM_PIECE, "top": (56.6, C_TOP + 0.2), "length": 10.2, "width": 2.4, "gain": 1.4},
+    {"kind": "shaft", "piece": BEAM_PIECE, "top": (80.2, C_TOP + 0.2), "length": 10.2, "width": 1.9, "gain": 1.3},
+    # Right: one onto the lake, one onto the shrine.
+    {"kind": "shaft", "piece": BEAM_PIECE, "top": (106.5, CEILING), "length": 23.0, "width": 3.6, "gain": 1.6},
+    {"kind": "shaft", "piece": BEAM_PIECE, "top": (129.0, CEILING), "length": 17.0, "width": 2.4, "gain": 1.5},
+    # Mist at the foot of the backdrops, behind the rock.
+    {"kind": "mist", "layer": "back", "piece": FOG_PIECE, "x": (3.0, 48.5), "y": 1.3, "height": 4.5, "gain": 1.0},
+    {"kind": "mist", "layer": "back", "piece": FOG_PIECE, "x": (48.5, 85.0), "y": TREE - 0.4, "height": 3.0, "gain": 0.9},
+    {"kind": "mist", "layer": "back", "piece": ("clover_02c", "temp fog"), "x": (85.0, R1 + 1.0), "y": 2.0, "height": 4.5, "gain": 1.2},
+    # Mist lying on the lake, in front.
+    {"kind": "mist", "layer": "front", "piece": HAZE_PIECE, "x": (99.3, 118.6), "y": LAKE["level"] - 0.5, "height": 1.7, "gain": 1.6},
+    # Haze floating in front of everything, as Verdania's room hangs it.
+    {"kind": "haze", "layer": "front", "piece": HAZE_PIECE, "at": (13.0, 7.5), "size": (13.0, 3.0), "gain": 1.0},
+    {"kind": "haze", "layer": "front", "piece": HAZE_PIECE, "at": (37.5, 18.5), "size": (11.5, 2.7), "gain": 1.0},
+    {"kind": "haze", "layer": "front", "piece": HAZE_PIECE, "at": (94.5, 14.5), "size": (14.0, 3.4), "gain": 1.0},
+    {"kind": "haze", "layer": "front", "piece": HAZE_PIECE, "at": (114.0, 19.0), "size": (12.0, 3.0), "gain": 0.9},
+    # Soft glows: where the waterfall lands, in the grotto's open air, over the tree's foot.
+    {"kind": "haze", "layer": "back", "piece": ("clover_02c", "white_haze"), "at": (120.0, 5.5), "size": (7.0, 6.0), "gain": 0.6},
+    {"kind": "haze", "layer": "back", "piece": ("clover_02c", "white_haze"), "at": (27.5, 5.0), "size": (10.0, 8.0), "gain": 0.45},
+    {"kind": "haze", "layer": "back", "piece": ("clover_02c", "white_haze"), "at": (71.0, 14.5), "size": (9.0, 6.0), "gain": 0.4},
+]
+SHAFT_ANGLE = -10.1  # degrees: the game's light beams lean so, light falling from the upper right
+# The beams' dust (Bellhart's) is emitted along their depth axis, which a flat world can't show:
+# it drifts slowly about instead (units/s: x min, max; y min, max).
+BEAM_DUST = ("belltown", "light_beam_particles 3")
+DUST_DRIFT = [-0.12, 0.12, -0.14, 0.08]
+
+# Particle systems from other rooms (tools/kit.py particles ROOM), placed in our world, each as
+# its room's camera sees it at its own depth: in a box (x0, y0, x1, y1) or along an edge (x0, x1,
+# y); `count` particles alive; behind the rock, or in front of everything ("layer": "front").
+# Motes and dust are glitter: our side screens show the world at 40 px a unit where the game
+# shows 65, so they're drawn larger ("grow") to read on screen as they do in the game.
+MOTES = [
+    # Left: the grotto's motes (the next room's, tut_03) far back, near, and big and blurred in
+    # front; its amber fungus spores; drips from the moss under the house, the mass hanging from
+    # the ceiling and the low island.
+    {"kit": "tut_03", "system": "far BG", "box": (3.6, 2.0, 25.0, 15.0), "count": 64, "grow": 1.8},
+    {"kit": "tut_03", "system": "far BG", "box": (25.0, 2.0, 47.5, 15.0), "count": 64, "grow": 1.8},
+    {"kit": "tut_03", "system": "far BG", "box": (27.0, 15.5, 47.5, 23.0), "count": 40, "grow": 1.8},
+    {"kit": "tut_03", "system": "immediate_BG", "box": (3.6, 2.0, 47.5, 14.0), "count": 48, "grow": 1.6},
+    {"kit": "tut_03", "system": "fung_immediate_BG", "box": (22.0, 2.5, 46.0, 12.0), "count": 16, "grow": 1.4, "layer": "front"},
+    {"kit": "tut_03", "system": "FG", "box": (0.0, 0.0, 47.6, H), "count": 12, "grow": 1.3, "layer": "front"},
+    {"kit": "tut_03", "system": "Fungus_drips", "edge": (2.0, 20.0, 15.4), "count": 2},
+    {"kit": "tut_03", "system": "Fungus_drips", "edge": (33.0, 44.0, 23.6), "count": 2},
+    {"kit": "tut_03", "system": "Fungus_drips", "edge": (24.0, 27.0, 7.4), "count": 1},
+    # The laptop: Mosshome's low smoke drifting along the walkway at the tree's foot; dust
+    # falling through two cracks in the arcade into the station, now and then a pebble.
+    {"kit": "mosstown_02", "system": "low_smoke_Particle", "edge": (50.0, 84.0, TREE + 0.3), "count": 10, "layer": "front"},
+    {"kit": "bellway_city", "system": "debris_fall_no_collision", "edge": (57.6, 58.6, 8.4), "count": 10},
+    {"kit": "bellway_city", "system": "debris_fall_no_collision", "edge": (74.2, 75.0, 8.4), "count": 8},
+    {"kit": "bellway_city", "system": "Particle System", "edge": (57.6, 58.6, 8.4), "count": 1},
+]
+
+
+# The small life of our rooms (life.js crittersAt; their clips: extract.py). Moss flies roam the
+# grotto's air behind the rock, as the grotto's do (dimmed by the game's own tint, at their
+# depth); dragonflies hover over the meadow and the lake, darting up, down, left or right, and
+# hold still while Hornet plays her needolin nearby; lilypad flies sit on the shores, the island
+# and the cliff, sing along to her needolin, and fly to their next perch when she comes close.
+# home (x, y), range (half width, half height); perches: (x, ground, facing right).
+CRITTERS = [
+    *({"id": f"moss{i}", "species": "moss_fly", "home": home, "range": (1.0, 1.0), "layer": "back", "scale": 0.7,
+       "tint": (0.54, 0.63, 0.54)}
+      for i, home in enumerate([(12.0, 7.0), (17.0, 11.0), (22.0, 13.0), (28.0, 5.5), (30.0, 10.5), (38.0, 7.5),
+                                (42.0, 11.0), (45.0, 16.0)])),
+    *({"id": f"dragonfly{i}", "species": "dragonfly", "home": home, "range": (1.8, 0.8), "layer": "mid", "scale": 1.0}
+      for i, home in enumerate([(7.0, 4.2), (12.0, 5.0), (16.5, 4.0), (102.0, 4.4), (106.5, 5.2), (110.5, 4.0),
+                                (114.5, 5.6)])),
+    {"id": "lilypad0", "species": "lilypad_fly", "layer": "mid", "scale": 1.0, "perches": [(95.6, 3.52, True), (117.1, 3.64, False)]},
+    {"id": "lilypad1", "species": "lilypad_fly", "layer": "mid", "scale": 1.0, "perches": [(104.2, 9.66, True), (111.0, 9.66, False)]},
+    {"id": "lilypad2", "species": "lilypad_fly", "layer": "mid", "scale": 1.0, "perches": [(121.8, 8.91, False), (93.0, 3.27, True)]},
+]
+SPECIES_CLIP = {"moss_fly": "Moss Fly Fly", "dragonfly": "Dragonfly Idle", "lilypad_fly": "Lilypad Fly Idle 01"}
+
+
+def export_critters(zones_out):
+    """CRITTERS as WorldScene draws them: with the zone each lives in, and for the ones that
+    stand, how far below their pivot their feet are (from their extracted sheet)."""
+    manifest = json.loads((DATA / "Sprites.qml").read_text().split("(", 1)[1].rsplit(")", 1)[0])
+    feet = {}
+    for species, clip in SPECIES_CLIP.items():
+        info = manifest.get(clip)
+        if info is None:
+            continue
+        a = np.asarray(Image.open(DATA / info["file"]).convert("RGBA"))[:info["cellHeight"], :info["cellWidth"], 3]
+        rows = np.nonzero(a.max(1) > 40)[0]
+        feet[species] = round(float((rows.max() - info["anchorY"]) / info["pixelsPerUnit"]), 3) if len(rows) else 0.0
+    out = []
+    for c in CRITTERS:
+        if c["species"] not in feet:
+            continue
+        x, y = c.get("home") or c["perches"][0][:2]
+        zone = next((z["id"] for z in zones_out if z["left"] <= x <= z["left"] + z["width"] and z["bottom"] <= y <= z["bottom"] + z["height"]
+                     and z["id"] != "home"), None)
+        out.append({**{k: (list(v) if isinstance(v, tuple) else v) for k, v in c.items()},
+                    "perches": [list(p) for p in c.get("perches", [])], "feet": feet[c["species"]], "zone": zone})
+    return out
+
+
 # The Citadel's ceiling: an arcade carrying the walkway at the tree's foot, arches between
 # pillars, dressed with the Citadel's gilded trims.
 ARCADE = {"from": 42.5, "to": 89.3, "arches": 6, "half_pillar": 0.65, "foot": 8.5, "crown": 9.9}
@@ -589,8 +701,8 @@ def render_zone(zone):
         "at": [round(v, 3) for v in at],
         "grade": grade_json(grade),
         "animated": pieces,
-        "particles": [e for i, (go_id, t) in enumerate(particle_systems(scene, zone))
-                      if (e := emitter(scene, go_id, t, zone, cam, at, grade, out, i)) is not None],
+        "particles": [e for i, (go_id, t) in enumerate(particle_systems(scene, zone.particles))
+                      if (e := emitter(scene, go_id, t, zone, cam, at, grade, out, f"particle_{i}.png")) is not None],
     }
     (out / "zone.json").write_text(json.dumps(meta))
     print(f"{zone.id}: floor {room_floor:.2f} in the room, {len(items)} sprites, {len(lights)} lights", file=sys.stderr)
@@ -651,9 +763,9 @@ def animate(scene, zone, moving, cam, blur_z, at, graded, out):
     return pieces
 
 
-def particle_systems(scene, zone):
-    """The room's particle systems the zone keeps (zone.particles), active and looping."""
-    rx = [re.compile(r) for r in zone.particles]
+def particle_systems(scene, patterns):
+    """The room's particle systems named by `patterns` (regexes), active and looping."""
+    rx = [re.compile(r) for r in patterns]
     for o in scene.objects if rx else ():
         if o.type.name != "ParticleSystem":
             continue
@@ -664,73 +776,61 @@ def particle_systems(scene, zone):
             yield go_id, t
 
 
-def emitter(scene, go_id, t, zone, cam, at, grade, out, index):
-    """One of the room's particle systems as shaders/particles.frag draws it, where the zone's
-    camera shows it (smaller and slower with depth): its shape (a circle or a box), rate,
-    lifetimes and sizes, drift, gravity and spin (each random between two constants, as these
-    are), the alpha keys of its colour over lifetime, a sheet played over each life, and its
-    texture in the zone's colours."""
+def emitter(scene, go_id, t, zone, cam, at, grade, out, file):
+    """One of the room's particle systems (room.particle_template) where the zone's camera shows
+    it, smaller and slower with its depth, its texture in the zone's colours (out/file)."""
     import game
+    import room
 
-    init, shape, emission = t["InitialModule"], t["ShapeModule"], t["EmissionModule"]
-    if shape["type"] not in (5, 10) or zone.flip or zone.cuts:
+    made = room.particle_template(scene, go_id, t)
+    if made is None or zone.flip or zone.cuts:
         return None
-
-    def pair(c):
-        """A MinMaxCurve kept constant, or random between two constants."""
-        return sorted((c["minScalar"], c["scalar"])) if c["minMaxState"] == 3 else [c["scalar"]] * 2
-
-    def module(name):
-        m = t.get(name) or {}
-        return m if m.get("enabled") else None
-
-    m = scene.world(scene.go_transform[go_id])
-    ex, ey, ez = (float(v) for v in m[:3, 3])
-    s = game.CAM_Z / (game.CAM_Z + ez)
+    tpl, image = made
+    (ex, ey), ez = tpl["at"], tpl["z"]
     px, py = cam.project(ex, ey, ez, ex, ey)
-    cx, cy = at[0] + px / PPU, at[1] + zone.height - py / PPU
-    half = shape["radius"]["value"] if shape["type"] == 10 else 0.5
-    ax = m[:2, 0] * shape["m_Scale"]["x"] * half * s
-    ay = m[:2, 1] * shape["m_Scale"]["y"] * half * s
-    life, size = pair(init["startLifetime"]), [v * s for v in pair(init["startSize"])]
-    velocity = [0.0, 0.0, 0.0, 0.0]
-    if (vel := module("VelocityModule")) is not None:
-        velocity = [v * s for v in pair(vel["x"]) + pair(vel["y"])]
-    spin = pair(rot["curve"]) if (rot := module("RotationModule")) is not None else [0.0, 0.0]
-    gravity = 9.81 * sum(pair(init["gravityModifier"])) / 2 * s
-    keys = [(0.0, 1.0), (1.0, 1.0)]
-    if (col := module("ColorModule")) is not None and col["gradient"]["minMaxState"] == 1:
-        g = col["gradient"]["maxGradient"]
-        keys = [(g[f"atime{i}"] / 65535, g[f"key{i}"]["a"]) for i in range(g["m_NumAlphaKeys"])]
-    keys = (keys + [(1.0, keys[-1][1])] * 8)[:8]
-    start = init["startColor"]
-    alpha = start["maxColor"]["a"] if start["minMaxState"] == 0 else (start["minColor"]["a"] + start["maxColor"]["a"]) / 2
-    sheet = [1, 1, 1.0]
-    if (uv := module("UVModule")) is not None:
-        sheet = [uv["tilesX"], uv["tilesY"], uv["cycles"]]
-    rate = sum(pair(emission["rateOverTime"])) / 2
-    slots = min(64, init["maxNumParticles"] or 64, round(rate * sum(life) / 2))
-    go = scene.gameobjects[go_id]
-    renderer = next((c.read() for c in go.m_Components if c.read().object_reader.type.name == "ParticleSystemRenderer"), None)
-    tex, additive = None, False
-    for ref in (renderer.m_Materials[:1] if renderer is not None else []):
-        mat = ref.read()
-        additive = "Additive" in mat.m_Shader.read().m_ParsedForm.m_Name
-        tex = next((v.m_Texture.read() for k, v in mat.m_SavedProperties.m_TexEnvs if k == "_MainTex" and v.m_Texture.path_id), None)
-    if tex is None or slots < 1:
+    e = place_particles(tpl, at[0] + px / PPU, at[1] + zone.height - py / PPU, game.CAM_Z / (game.CAM_Z + ez))
+    if e is None:
         return None
-    a = np.asarray(tex.image.convert("RGBA")).astype(np.float32) / 255
-    a[..., :3] = grade.apply(a[..., :3])
-    file = f"particle_{index}.png"
-    Image.fromarray((a.clip(0, 1) * 255).round().astype(np.uint8), "RGBA").save(out / file)
-    reach = max(abs(v) for v in velocity) * life[1] + 0.5 * abs(gravity) * life[1] ** 2 + size[1]
+    particle_texture(image, tpl["lit"], grade).save(out / file)
+    return {**e, "texture": file}
+
+
+def place_particles(tpl, x, y, s, count=None, axes=None, shape=None):
+    """A particle template placed at (x, y), as seen at a depth that scales it by s (lengths and
+    speeds), with `count` particles alive (default: as many as the game keeps), and optionally
+    another emitting shape (axes: its half axes x (xy), y (zw) in world units)."""
+    e = dict(tpl)
+    for k in ("at", "z", "rate", "count", "lit", "name"):
+        e.pop(k, None)
+    e["name"] = tpl["name"]
+    e["x"], e["y"] = round(x, 3), round(y, 3)
+    e["axes"] = axes if axes is not None else [round(v * s, 4) for v in tpl["axes"]]
+    e["shape"] = shape or tpl["shape"]
+    for k in ("size", "speed", "velocity", "force"):
+        e[k] = [round(v * s, 4) for v in tpl[k]]
+    e["gravity"] = round(tpl["gravity"] * s, 4)
+    e["slots"] = int(count if count is not None else tpl["count"])
+    if e["slots"] < 1:
+        return None
+    life = tpl["life"][1]
+    grow = max(k[1] for k in tpl["sizeKeys"]) * tpl["sizeRange"][1]
+    reach = ((max(abs(v) for v in e["velocity"]) + max(abs(v) for v in e["speed"])) * life
+             + 0.5 * (max(abs(v) for v in e["force"]) + abs(e["gravity"])) * life ** 2 + e["size"][1] * grow)
+    ax = np.array(e["axes"][:2]); ay = np.array(e["axes"][2:])
     ext = np.abs(ax) + np.abs(ay) + reach
-    return {"name": go.m_Name, "x": round(cx, 3), "y": round(cy, 3), "shape": "circle" if shape["type"] == 10 else "box",
-            "thickness": shape.get("radiusThickness", 1.0), "axes": [round(float(v), 4) for v in (*ax, *ay)],
-            "life": life, "size": [round(v, 4) for v in size], "velocity": [round(v, 4) for v in velocity],
-            "spin": spin, "rotation": pair(init["startRotation"]), "gravity": round(gravity, 4),
-            "alpha": alpha, "keys": keys, "sheet": sheet, "slots": slots, "texture": file, "additive": additive,
-            "area": [round(float(v), 3) for v in (cx - ext[0], cy - ext[1], 2 * ext[0], 2 * ext[1])]}
+    e["area"] = [round(float(v), 3) for v in (x - ext[0], y - ext[1], 2 * ext[0], 2 * ext[1])]
+    return e
+
+
+def particle_texture(image, lit, grade):
+    """A particle's texture as it's drawn in a zone: lit by its ambient light if its material is
+    (Sprites/Lit), in its colour grade (None: as it is)."""
+    a = np.asarray(image.convert("RGBA")).astype(np.float32) / 255
+    if grade is not None:
+        if lit:
+            a[..., :3] *= np.asarray(grade.ambient_rgb()) * 2
+        a[..., :3] = grade.apply(a[..., :3].clip(0, 1))
+    return Image.fromarray((a.clip(0, 1) * 255).round().astype(np.uint8), "RGBA")
 
 
 def grade_json(grade):
@@ -1141,6 +1241,9 @@ def compose():
     tiles = {name: save_tiles(img, name) for name, img in layers.items()}
     sway = export_sway(swaying)
     particles = export_particles(metas)
+    air, shafts = build_air(graded, kits)
+    particles += place_motes(MOTES + [{"kit": BEAM_DUST[0], "system": BEAM_DUST[1], "shaft": sh} for sh in shafts],
+                             lambda x, y: grades[grade_at(x, y)])
     animated = []
     for zone in ZONES:
         if metas[zone.id].get("animated"):
@@ -1182,6 +1285,8 @@ def compose():
         "sway": sway,
         "particles": particles,
         "animated": animated,
+        "air": air,
+        "critters": export_critters(zones_out),
         # The Bell Beast, where it stands in its room (its animations: life.js planBeast).
         "beast": ({"x": metas["bell_beast"]["anchors"]["bell_beast"][0],
                    "y": metas["bell_beast"]["anchors"]["bell_beast"][1], "zone": "bell_beast"}
@@ -1367,6 +1472,120 @@ def export_particles(metas):
             out.append({**p, "texture": file, "zone": zone.id,
                         "area": [round(v, 3) for v in (x0, y0, x1 - x0, y1 - y0)]})
     return out
+
+
+def place_motes(placements, grade_at):
+    """MOTES (and the shafts' dust) as emitters: each kit template at its place, its texture in
+    the colours of the zone it's in (motes_*.png)."""
+    import game
+
+    for old in OUT.glob("motes_*.png"):
+        old.unlink()
+    templates, out = {}, []
+    for j, m in enumerate(placements):
+        if m["kit"] not in templates:
+            templates[m["kit"]] = {t["name"]: t for t in json.loads((terrain.KITS / m["kit"] / "particles.json").read_text())}
+        tpl = templates[m["kit"]][m["system"]]
+        s = game.CAM_Z / (game.CAM_Z + tpl["z"])
+        if "shaft" in m:
+            sh = m["shaft"]
+            e = place_particles(tpl, sh["x"], sh["y"], s, sh["count"], sh["axes"], "box")
+            m = {**m, "grow": 1.8}
+            e["velocity"] = [round(v * s, 4) for v in DUST_DRIFT]
+        elif "edge" in m:
+            x0, x1, y = m["edge"]
+            e = place_particles(tpl, (x0 + x1) / 2, y, s, m["count"], [(x1 - x0) / 2, 0.0, 0.0, 0.0], "edge")
+        else:
+            x0, y0, x1, y1 = m["box"]
+            e = place_particles(tpl, (x0 + x1) / 2, (y0 + y1) / 2, s, m["count"], [(x1 - x0) / 2, 0.0, 0.0, (y1 - y0) / 2], "box")
+        e["size"] = [round(v * m.get("grow", 1.0), 4) for v in e["size"]]
+        file = f"motes_{j:02d}.png"
+        particle_texture(Image.open(terrain.KITS / m["kit"] / tpl["texture"]), tpl["lit"], grade_at(e["x"], e["y"])).save(OUT / file)
+        out.append({**e, "texture": file, "layer": m.get("layer", "back")})
+    return out
+
+
+def build_air(graded, kits):
+    """AIR as images (air_*.png) and what WorldScene does with them: each item's rectangle, layer,
+    and how it moves (a slow drift sideways, a breathing opacity, shafts also with the daylight);
+    the periods divide an hour, as the scene's clock wraps every hour. Returns them, and where
+    each shaft's dust drifts (centre and half axes)."""
+    from PIL import ImageFilter
+
+    rng = np.random.default_rng(21)
+    periods = [p for p in range(40, 241) if 3600 % p == 0]
+    for old in OUT.glob("air_*.png"):
+        old.unlink()
+    items, shafts = [], []
+
+    def save(img, i):
+        file = f"air_{i:02d}.png"
+        img.save(OUT / file, optimize=True)
+        return file
+
+    def piece(spec):
+        kit = kits.setdefault(spec[0], terrain.Kit(spec[0]))
+        return kit, find_piece(kit, spec[1])
+
+    def gained(img, gain):
+        a = np.asarray(img).astype(np.float32)
+        a[..., 3] = np.clip(a[..., 3] * gain, 0, 255)
+        return Image.fromarray(a.round().astype(np.uint8), "RGBA")
+
+    for i, spec in enumerate(AIR):
+        kit, pc = piece(spec["piece"])
+        motion = {"phase": round(float(rng.uniform(0, 2 * math.pi)), 3),
+                  "breathe": [round(float(rng.uniform(0.1, 0.2)), 3), int(rng.choice(periods[:12]))]}
+        if spec["kind"] == "shaft":
+            (tx, ty), L, Wd = spec["top"], spec["length"], spec["width"]
+            a = math.radians(SHAFT_ANGLE)
+            down = np.array([math.sin(a), -math.cos(a)])
+            cx, cy = np.array([tx, ty]) + down * L / 2
+            # The game's beam is a soft round blob stretched 20-40 times: only its even middle
+            # shows, the length of the shaft, fading out towards what it falls on.
+            full = max(60.0, 3 * L)
+            img = graded(kit, pc, cx, cy).resize((max(1, round(Wd * PPU)), round(full * PPU)), Image.LANCZOS)
+            r0 = round((full - L) / 2 * PPU)
+            a = np.asarray(img.crop((0, r0, img.width, r0 + round(L * PPU)))).astype(np.float32)
+            rows = (np.arange(a.shape[0]) + 0.5) / PPU
+            a[..., 3] *= (smoothstep(rows / 0.6) * smoothstep((L - rows) / (0.35 * L)))[:, None]
+            img = gained(Image.fromarray(a.round().astype(np.uint8), "RGBA"), spec["gain"])
+            img = img.rotate(SHAFT_ANGLE, resample=Image.BICUBIC, expand=True)
+            w, h = img.width / PPU, img.height / PPU
+            items.append({"kind": "shaft", "layer": "back", "file": save(img, i), "x": round(cx - w / 2, 3), "y": round(cy - h / 2, 3),
+                          "w": round(w, 3), "h": round(h, 3), "drift": [0.0, 60], **motion})
+            along, across = down * L * 0.4, np.array([-down[1], down[0]]) * Wd * 0.3
+            shafts.append({"x": float(cx), "y": float(cy), "axes": [round(float(v), 4) for v in (*across, *along)],
+                           "count": max(6, min(40, round(L * Wd * 0.45)))})
+        elif spec["kind"] == "mist":
+            x0, x1 = spec["x"]
+            band = Image.new("RGBA", (round((x1 - x0) * PPU), round(spec["height"] * 1.6 * PPU)), (0, 0, 0, 0))
+            x = x0 - spec["height"]
+            while x < x1:
+                k = spec["height"] / pc["height"] * rng.uniform(0.85, 1.2)
+                w, h = pc["width"] * k, pc["height"] * k
+                img = graded(kit, pc, x + w / 2, spec["y"] + h / 2).resize((round(w * PPU), round(h * PPU)), Image.LANCZOS)
+                if rng.random() < 0.5:
+                    img = img.transpose(Image.FLIP_LEFT_RIGHT)
+                px, py = round((x - x0) * PPU), band.height - img.height - round(rng.uniform(0, 0.15) * spec["height"] * PPU)
+                if px + img.width > 0 and px < band.width:
+                    band.alpha_composite(img, (max(px, 0), max(py, 0)), (max(-px, 0), max(-py, 0)))
+                x += w * rng.uniform(0.35, 0.5)
+            a = np.asarray(band).astype(np.float32)
+            cols = (np.arange(band.width) + 0.5) / PPU
+            fade = smoothstep(cols / 3.0) * smoothstep((x1 - x0 - cols) / 3.0)
+            a[..., 3] *= fade[None, :] * spec["gain"]
+            band = Image.fromarray(a.clip(0, 255).round().astype(np.uint8), "RGBA")
+            w, h = band.width / PPU, band.height / PPU
+            items.append({"kind": "mist", "layer": spec["layer"], "file": save(band, i), "x": x0, "y": round(spec["y"] - 0.1 * spec["height"], 3),
+                          "w": round(w, 3), "h": round(h, 3),
+                          "drift": [round(float(rng.uniform(0.8, 1.6)), 3), int(rng.choice(periods[-10:]))], **motion})
+        else:
+            (cx, cy), (w, h) = spec["at"], spec["size"]
+            img = gained(graded(kit, pc, cx, cy).resize((round(w * PPU), round(h * PPU)), Image.LANCZOS), spec["gain"])
+            items.append({"kind": "haze", "layer": spec["layer"], "file": save(img, i), "x": round(cx - w / 2, 3), "y": round(cy - h / 2, 3),
+                          "w": w, "h": h, "drift": [round(float(rng.uniform(0.6, 1.4)), 3), int(rng.choice(periods[-12:]))], **motion})
+    return items, shafts
 
 
 def save_tiles(img, prefix):

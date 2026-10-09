@@ -10,10 +10,11 @@ write everything to `~/.local/share/silksong-wallpaper` (caches in `~/.cache/sil
 
 ```sh
 cap="systemd-run --user --scope -p MemoryMax=6G -p MemorySwapMax=0"
-tools/extract.py                    # Hornet's animations, from the Steam install
+tools/extract.py                    # Hornet's animations (and the Bell Beast's, the small creatures'), from the Steam install
 for room in tut_02 clover_02c bellway_city belltown mosstown_01; do $cap tools/kit.py harvest $room; done
 $cap tools/kit.py atlas ring           # the Clawline rings and poles
 $cap tools/kit.py atlas cog            # Cogwork Core parts: the clock's marks, hands and gears
+for room in tut_03 bellway_city mosstown_02 belltown; do $cap tools/kit.py particles $room; done  # motes, drips, smoke, dust
 $cap tools/kit.py harvest belltown_room_spare --save BelltownFurnishingDesk \
     BelltownFurnishingFairyLights BelltownFurnishingSpa BelltownFurnishingGramaphone
 $cap tools/world.py                 # the aquarium world
@@ -37,11 +38,18 @@ under a memory cap as above. `world.py` renders its zones one per process for th
   Bellhart house's pieces and walled in Bellhart's timber; a lake and waterfall. Plants and
   vines on the game's grass shaders are kept apart to sway (`sway.png`), the station's floor
   bells to jingle (their shake frames), and the rooms' own ambient particles (Verdania's
-  fireflies) are exported as emitters. Navigation (walk, drop,
+  fireflies) are exported as emitters. The air (`AIR`) is the game's atmosphere pieces placed
+  against our world: light shafts that follow the daylight, mist at the foot of the backdrops
+  and on the lake, haze in front; other rooms' particle systems (`MOTES`) add motes, spores,
+  drips, low smoke and falling dust, and dust drifting in the shafts. The small life of our
+  rooms (`CRITTERS`): the grotto's moss flies behind the rock, dragonflies over the meadow and
+  the lake that hold still while Hornet plays her needolin, and Verdania's lilypad flies, which
+  sing along to it and fly to their next perch when she comes close (`life.js crittersAt`). Navigation (walk, drop,
   jump, climb) comes from the same rock, so nothing she stands on is hidden.
   `world.py --layout IMAGE` draws just the rock and her ways, quickly.
 - `kit.py`: harvests a room's sprites, at their in-game size, as pieces to dress with, with
-  how the game's grass shaders sway them and how grass bends as Hornet walks into it.
+  how the game's grass shaders sway them and how grass bends as Hornet walks into it; and a
+  room's particle systems (`kit.py particles ROOM`) as templates the world places.
 - `terrain.py`: rock shapes and the dressing (silhouettes, moss masses, edge pieces by the
   way a surface faces, plants in front).
 - `nav.py`: surfaces and links sized with Hornet's real movement.
@@ -65,8 +73,8 @@ the QML itself need plasmashell restarted (`systemctl --user restart plasma-plas
 the lock screen picks them up at the next lock. Hornet's sheets are shared by every zone and
 coloured for the zone she's in by `shaders/hornet.frag`; the waterfall and the lake move in
 `shaders/waterfall.frag` and `lake.frag`; plants sway in `sway.vert` (the game's grass
-formula, read from its shaders; grass bends as Hornet walks through it) and the fireflies fly
-in `particle.vert` (Unity's particle system, one grid per emitter). After editing a shader, compile it, e.g.
+formula, read from its shaders; grass bends as Hornet walks through it) and every particle
+system runs in `particle.vert` (Unity's particle system, one grid per emitter). After editing a shader, compile it, e.g.
 `qsb --glsl "100 es,120,150,300 es,330" --hlsl 50 --msl 12 -o lake.frag.qsb lake.frag`
 (qsb is in qt6.qtshadertools). Only the screen she's on (or about to reach) loads her sheets,
 and only those of the clips she plays in the next 40 seconds.

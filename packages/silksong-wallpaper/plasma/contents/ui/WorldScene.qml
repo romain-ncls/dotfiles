@@ -55,7 +55,8 @@ Item {
     // daylight along).
     readonly property bool showsClock: clock !== null
         && clock.x * unitMm > me.x - 30 && clock.x * unitMm < me.x + me.w + 30
-    readonly property bool showsAmbient: (swayHere.length > 0 || showsParticles) && GraphicsInfo.api !== GraphicsInfo.Software
+    readonly property bool showsAmbient: (swayHere.length > 0 || showsParticles || airHere.length > 0 || crittersHere.length > 0)
+        && GraphicsInfo.api !== GraphicsInfo.Software
     function tick() {
         const now = Date.now() / 1000;
         time = now;
@@ -159,6 +160,32 @@ Item {
     readonly property bool showsParticles: (world?.particles ?? []).some(p => (p.area[0] + p.area[2]) * unitMm > me.x
         && p.area[0] * unitMm < me.x + me.w)
     property real ambientTime: time % 3600
+
+    // The air (tools/world.py AIR): light shafts that follow the daylight, mist and haze drifting
+    // slowly sideways, all of it breathing; drawn behind the rock (back) or in front of everything
+    // under the veil (front).
+    readonly property var airHere: (world?.air ?? []).filter(a => (a.x + a.w + 2) * unitMm > me.x && (a.x - 2) * unitMm < me.x + me.w)
+    readonly property real sun: Math.max(0.12, 1 - daylight.lights) // shafts fade at night, to a glimmer
+    component Air: Repeater {
+        id: air
+        required property string group
+        model: root.airHere.filter(a => a.layer === air.group)
+
+        Image {
+            required property var modelData
+            readonly property var a: modelData
+            readonly property real t: root.ambientTime
+            readonly property real wave: Math.sin(2 * Math.PI * t / a.breathe[1] + a.phase)
+            x: root.toX((a.x + a.drift[0] * Math.sin(2 * Math.PI * t / a.drift[1] + a.phase * 1.7)) * root.unitMm)
+            y: root.toY((a.y + a.h) * root.unitMm)
+            width: a.w * root.pxPerUnit
+            height: a.h * root.pxPerUnit
+            source: root.worldDir + "/" + a.file + root.build
+            opacity: (1 + a.breathe[0] * wave) / (1 + a.breathe[0]) * (a.kind === "shaft" ? root.sun : 1)
+            smooth: true
+            asynchronous: true
+        }
+    }
 
     // An AnimationCurve's value at t: keys [time, value, in slope, out slope], Hermite between them.
     function curveAt(keys, t) {
@@ -267,11 +294,19 @@ Item {
 
     HeroLight {}
 
-    // The rooms' own ambient particles (Verdania's fireflies), behind the rock: one item per
-    // emitter, its particles' quads on a grid that shaders/particle.vert moves along their lives.
-    Repeater {
-        model: root.world?.particles?.filter(p => (p.area[0] + p.area[2]) * root.unitMm > root.me.x
-            && p.area[0] * root.unitMm < root.me.x + root.me.w) ?? []
+    Air {
+        group: "back"
+    }
+
+    // Particle systems from the game (tools/world.py place_particles): the rooms' own (Verdania's
+    // fireflies), motes, drips, smoke and falling dust placed in the world, the dust in the light
+    // shafts. One item per emitter, its particles' quads on a grid that shaders/particle.vert
+    // moves along their lives; behind the rock (back) or in front of everything (front).
+    component Emitters: Repeater {
+        id: emitters
+        required property string group
+        model: root.world?.particles?.filter(p => (p.layer ?? "back") === emitters.group
+            && (p.area[0] + p.area[2]) * root.unitMm > root.me.x && p.area[0] * root.unitMm < root.me.x + root.me.w) ?? []
 
         ShaderEffect {
             id: emitter
@@ -281,12 +316,24 @@ Item {
             readonly property real slots: p.slots
             readonly property real pxPerUnit: root.pxPerUnit
             readonly property vector4d area: Qt.vector4d(p.area[0], p.area[1], p.area[2], p.area[3])
-            readonly property vector4d centre: Qt.vector4d(p.x, p.y, p.shape === "box" ? 1 : 0, p.thickness)
+            readonly property vector4d centre: Qt.vector4d(p.x, p.y, ({ circle: 0, box: 1, edge: 2 })[p.shape], p.thickness)
             readonly property vector4d axes: Qt.vector4d(p.axes[0], p.axes[1], p.axes[2], p.axes[3])
+            readonly property vector4d shapeMore: Qt.vector4d(p.arc * Math.PI / 180, p.up[0], p.up[1], 0)
             readonly property vector4d lifeSize: Qt.vector4d(p.life[0], p.life[1], p.size[0], p.size[1])
+            readonly property vector4d sizeMore: Qt.vector4d(p.sizeRange[0], p.sizeRange[1], 0, 0)
+            readonly property vector4d sizeT: Qt.vector4d(p.sizeKeys[0][0], p.sizeKeys[1][0], p.sizeKeys[2][0], p.sizeKeys[3][0])
+            readonly property vector4d sizeV: Qt.vector4d(p.sizeKeys[0][1], p.sizeKeys[1][1], p.sizeKeys[2][1], p.sizeKeys[3][1])
+            readonly property vector4d speed: Qt.vector4d(p.speed[0], p.speed[1], 0, 0)
             readonly property vector4d velocity: Qt.vector4d(p.velocity[0], p.velocity[1], p.velocity[2], p.velocity[3])
+            readonly property vector4d force: Qt.vector4d(p.force[0], p.force[1], p.force[2], p.force[3])
             readonly property vector4d spin: Qt.vector4d(p.spin[0], p.spin[1], p.rotation[0], p.rotation[1])
             readonly property vector4d misc: Qt.vector4d(p.alpha, p.gravity, p.additive ? 1 : 0, 0)
+            readonly property vector4d tint: Qt.vector4d(p.colour[0], p.colour[1], p.colour[2], 1)
+            readonly property vector4d colourT: Qt.vector4d(p.colourKeys[0][0], p.colourKeys[1][0], p.colourKeys[2][0], p.colourKeys[3][0])
+            readonly property vector4d colour0: Qt.vector4d(p.colourKeys[0][1], p.colourKeys[0][2], p.colourKeys[0][3], 1)
+            readonly property vector4d colour1: Qt.vector4d(p.colourKeys[1][1], p.colourKeys[1][2], p.colourKeys[1][3], 1)
+            readonly property vector4d colour2: Qt.vector4d(p.colourKeys[2][1], p.colourKeys[2][2], p.colourKeys[2][3], 1)
+            readonly property vector4d colour3: Qt.vector4d(p.colourKeys[3][1], p.colourKeys[3][2], p.colourKeys[3][3], 1)
             readonly property vector4d sheet: Qt.vector4d(p.sheet[0], p.sheet[1], p.sheet[2], 0)
             readonly property vector4d keyT0: Qt.vector4d(p.keys[0][0], p.keys[1][0], p.keys[2][0], p.keys[3][0])
             readonly property vector4d keyT1: Qt.vector4d(p.keys[4][0], p.keys[5][0], p.keys[6][0], p.keys[7][0])
@@ -312,6 +359,14 @@ Item {
                 smooth: true
             }
         }
+    }
+
+    Emitters {
+        group: "back"
+    }
+
+    Critters {
+        group: "back"
     }
 
     // The clock's gears, turning with the time: behind the great tree's frame (under the mid
@@ -386,6 +441,8 @@ Item {
     readonly property int lookahead: Math.floor(time / 5)
     readonly property var clipsAhead: (hornetNear ? Life.clipsAhead(world, clips, lookahead * 5, 45) : [])
         .concat(showsBeast ? Life.beastClipsAhead(world, clips, lookahead * 5, 45) : [])
+        .concat(clips ? Life.critterClips(clips, crittersHere) : [])
+        .filter((n, i, all) => all.indexOf(n) === i)
     readonly property real sheetScale: Math.min(1, pxPerUnit / 64)
     property var sheets: ({})
     property var luts: ({})
@@ -434,6 +491,39 @@ Item {
         }
     }
 
+    // The small life (tools/world.py CRITTERS, life.js crittersAt): moss flies behind the rock,
+    // dragonflies and lilypad flies in Hornet's plane, coloured by the zone they live in (unlit, as
+    // the game draws them, in their own tint).
+    readonly property var crittersHere: (world?.critters ?? []).filter(c => (c.perches.length ? c.perches.map(p => p[0]) : [c.home[0]])
+        .some(x => (x + 6) * unitMm > me.x && (x - 6) * unitMm < me.x + me.w))
+    readonly property var critterPoses: crittersHere.length && clips ? Life.crittersAt(world, clips, time, crittersHere) : []
+    component Critters: Repeater {
+        id: critters
+        required property string group
+        model: root.crittersHere.filter(c => c.layer === critters.group)
+
+        HornetSprite {
+            required property var modelData
+            required property int index
+            readonly property var pose: root.critterPoses.find(q => q.id === modelData.id) ?? null
+            readonly property var zone: root.world.zones.find(z => z.id === modelData.zone) ?? null
+            readonly property string clip: pose?.clip ?? ""
+
+            visible: pose !== null && root.sheets[clip] !== undefined && zone !== null && root.luts[zone.id] !== undefined
+            sheet: root.clips && root.clips[clip] ? root.clips[clip]
+                : { sequence: [0], frames: 1, columns: 1, cellWidth: 1, cellHeight: 1, anchorX: 0, anchorY: 0, pixelsPerUnit: 64 }
+            texture: root.sheets[clip] ?? null
+            grade: ({ ambient: [0.5, 0.5, 0.5], heroSaturation: 1, saturation: zone ? zone.grade.saturation : 1 })
+            lut: zone ? root.luts[zone.id] ?? null : null
+            tint: modelData.tint ? Qt.rgba(modelData.tint[0], modelData.tint[1], modelData.tint[2], 1) : "white"
+            frame: pose?.frame ?? 0
+            mirrored: pose?.facingRight ?? false
+            pixelScale: root.pxPerUnit / sheet.pixelsPerUnit * modelData.scale
+            x: pose ? root.toX(pose.x * root.unitMm) : 0
+            y: pose ? root.toY(pose.y * root.unitMm) : 0
+        }
+    }
+
     // The Bell Beast in its station: behind Hornet, its lower body in the trench behind the
     // station's floor (the front layer). Coloured like a character of its zone.
     readonly property var beast: world?.beast ?? null
@@ -458,6 +548,10 @@ Item {
         pixelScale: root.pxPerUnit / sheet.pixelsPerUnit
         x: root.beast ? Math.round(root.toX(root.beast.x * root.unitMm)) : 0
         y: root.beast ? Math.round(root.toY(root.beast.y * root.unitMm)) : 0
+    }
+
+    Critters {
+        group: "mid"
     }
 
     // Her silk thread, when she has thrown her needle: from her hand to the needle or ring.
@@ -609,6 +703,14 @@ Item {
         readonly property vector4d maskRect: Qt.vector4d(area.maskRect[0], area.maskRect[1], area.maskRect[2], area.maskRect[3])
         readonly property Image mask: waterMask
         fragmentShader: Qt.resolvedUrl("shaders/splash.frag.qsb")
+    }
+
+    Emitters {
+        group: "front"
+    }
+
+    Air {
+        group: "front"
     }
 
     // Time of day: a veil over everything, then the light sources shining through it.

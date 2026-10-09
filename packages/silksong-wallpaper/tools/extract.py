@@ -61,8 +61,14 @@ LIBRARIES = [
         "Idle Left", "Idle Right", "Turn Left", "Turn Right", "Sleep", "Wake", "Shake",
         "Sing", "Sing End", "Sing Right", "Sing End Right",
     ]),
+    # The small life of our rooms: the grotto's moss flies and dragonflies, Verdania's lilypad
+    # flies (their clips are prefixed "Moss Fly ", "Dragonfly ", "Lilypad Fly ").
+    ("Tiny Moss Fly Anim", ["tk2danimations_assets_areatutorial.bundle"], True, ["Fly"]),
+    ("Tiny Dragonfly Anim", ["tk2danimations_assets_areaclover.bundle"], True, ["Idle"]),
+    ("Lilypad Fly Anim", ["tk2danimations_assets_areaclover.bundle"], True, ["Idle 01", "Idle 02", "Idle 03", "Sing", "Fly"]),
 ]
-PREFIX = {"Bone Beast NPC Anim": "Bell Beast "}
+PREFIX = {"Bone Beast NPC Anim": "Bell Beast ", "Tiny Moss Fly Anim": "Moss Fly ", "Tiny Dragonfly Anim": "Dragonfly ",
+          "Lilypad Fly Anim": "Lilypad Fly "}
 # Transparent border around each cell: keeps smooth scaling from bleeding a neighbour in, and
 # leaves room for the bloom halo bake.py adds around Hornet (about 10 sheet pixels of sigma).
 PADDING = 28
