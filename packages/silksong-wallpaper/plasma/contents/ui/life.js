@@ -500,6 +500,42 @@ function localSeconds(day0, hours) {
     return day0 + hours * 3600;
 }
 
+// The game's idle look (HeroAnimationController): standing still, she plays "Idle Rest" once
+// after 4-10 s, then again every 10-15 s; turning doesn't count, looking up starts it over.
+function withIdleRests(segs, clips, r) {
+    if (!clips["Idle Rest"]) {
+        return segs;
+    }
+    const rest = clipLength(clips, "Idle Rest");
+    const out = [];
+    let left = null; // standing time before the next rest; null while she isn't standing
+    for (const seg of segs) {
+        const standing = seg.kind === "clip" && (seg.clip === "Idle" || seg.clip === TURN);
+        if (!standing) {
+            left = seg.kind === "clip" && /^Look(ing)?Up/.test(seg.clip) ? between(r, 10, 15) : null;
+            out.push(seg);
+            continue;
+        }
+        if (left === null) {
+            left = between(r, 4, 10);
+        }
+        if (seg.clip !== "Idle") {
+            out.push(seg);
+            continue;
+        }
+        let t = seg.t0;
+        while (seg.t1 - t > left + rest) {
+            out.push(Object.assign({}, seg, { t0: t, t1: t + left }));
+            out.push(Object.assign({}, seg, { clip: "Idle Rest", t0: t + left, t1: t + left + rest }));
+            t += left + rest;
+            left = between(r, 10, 15);
+        }
+        left -= seg.t1 - t;
+        out.push(Object.assign({}, seg, { t0: t }));
+    }
+    return out;
+}
+
 // The whole day from 04:00 (local) to 04:00 the next day.
 function planDay(world, clips, day0, dateKey) {
     const p = new Planner(world, clips, dateKey);
@@ -645,7 +681,7 @@ function planDay(world, clips, day0, dateKey) {
     p.goTo(bed.surface, bed.x);
     p.face(!bed.mirror);
     p.sleep(bed, nextWake, r() < 0.6);
-    return { segments: p.segments, log: p.log, wake: wake, bedtime: bedtime };
+    return { segments: withIdleRests(p.segments, clips, rng(dateKey * 13 + 5)), log: p.log, wake: wake, bedtime: bedtime };
 }
 
 // The day's plans (Hornet's and the Bell Beast's), made once per day and per world build.

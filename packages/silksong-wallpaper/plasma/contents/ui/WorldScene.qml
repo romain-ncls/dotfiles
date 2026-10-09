@@ -49,10 +49,10 @@ Item {
     }
 
     // One clock per screen, so each change is drawn once: at full frame rate while Hornet is on
-    // this screen; otherwise as often as what it shows needs, the water 30 times a second, swaying
-    // plants and particles 15 (the game snaps its grass to 12 or 15 frames a second), the Bell
-    // Beast's 12 fps animations 12, the clock's gears 10, else 4 (to notice her coming and move the
-    // daylight along).
+    // this screen; otherwise as often as what it shows needs, the water 30 times a second, the Bell
+    // Beast exactly 12, its animations' rate (at 15 its frames would last one tick, then two: it
+    // would look hurried), swaying plants and particles 15 (the game snaps its grass to 12 or 15
+    // frames a second), the clock's gears 10, else 4 (to notice her coming and move the daylight).
     readonly property bool showsClock: clock !== null
         && clock.x * unitMm > me.x - 30 && clock.x * unitMm < me.x + me.w + 30
     readonly property bool showsAmbient: (swayHere.length > 0 || showsParticles || airHere.length > 0 || crittersHere.length > 0)
@@ -67,7 +67,7 @@ Item {
         onTriggered: root.tick()
     }
     Timer {
-        interval: root.showsWater ? 33 : root.showsAmbient ? 66 : root.showsBeast ? 83 : root.showsClock ? 100 : 250
+        interval: root.showsWater ? 33 : root.showsBeast ? 83 : root.showsAmbient ? 66 : root.showsClock ? 100 : 250
         repeat: true
         running: root.live && !root.hornetHere
         onTriggered: root.tick()

@@ -42,6 +42,7 @@ LIBRARIES = [
         "NeedolinSit Start", "NeedolinSit Play", "NeedolinSit End",
         "Needolin Start", "Needolin Play", "Needolin End",
         "LookUp", "LookingUp", "LookUpEnd", "Map Open", "Map Idle", "Map Away",
+        "Idle Rest",  # what she does now and then when she has stood still a while
         "Abyss Kneel", "Abyss Kneel Idle", "Abyss Kneel to Stand",
         "Double Jump Effect", "Double Jump Wings 2",
         "Sit Map Open", "Sit Map Close", "Sit Lean",
