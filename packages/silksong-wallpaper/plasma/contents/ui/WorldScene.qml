@@ -613,9 +613,19 @@ Item {
     }
 
     // The station's floor bells, drawn apart from the layer in front of them: they jingle (their
-    // shake frames, as the game's BasicSpriteAnimator plays them) while Hornet walks among them,
-    // and around the Bell Beast while it sings, shakes, gets up or lies down.
+    // shake frames, as the game's BasicSpriteAnimator plays them) while Hornet moves among them,
+    // not while she stands still, and around the Bell Beast while it sings, shakes, gets up or
+    // lies down; once stirred they finish their shake (its QueueStop) before they fall still.
     readonly property var stirring: beastPose && /Sing|Shake|Wake/.test(beastPose.clip) ? beast.x : null
+    property real hornetMovedAt: -1e9
+    property var hornetWas: null
+    onHornetChanged: {
+        if (hornet && hornetWas && Math.hypot(hornet.x - hornetWas[0], hornet.y - hornetWas[1]) > 0.005) {
+            hornetMovedAt = time;
+        }
+        hornetWas = hornet ? [hornet.x, hornet.y] : null;
+    }
+    readonly property bool hornetMoving: time - hornetMovedAt < 0.15
     Repeater {
         model: root.world?.animated?.filter(a => (a.x + a.w) * root.unitMm > root.me.x && a.x * root.unitMm < root.me.x + root.me.w) ?? []
 
@@ -624,10 +634,27 @@ Item {
             required property var modelData
             readonly property var a: modelData
             readonly property real feet: root.hornetHere ? root.hornet.y - root.world.heroFeet : -1e6
-            readonly property bool stirred: (root.hornetHere && root.hornet.x > a.x && root.hornet.x < a.x + a.w
+            readonly property bool stirred: (root.hornetHere && root.hornetMoving && root.hornet.x > a.x && root.hornet.x < a.x + a.w
                     && feet > a.y - 1.0 && feet < a.y + a.h + 0.4)
                 || (root.stirring !== null && Math.abs(a.x + a.w / 2 - root.stirring) < 4.5)
-            readonly property int frame: stirred ? 1 + Math.floor(root.time * a.fps) % a.frames : 0
+            readonly property real cycle: a.frames / a.fps
+            property real startedAt: -1e9
+            property real endsAt: -1e9 // the end of the shake it's in: whole cycles from its start
+            readonly property bool jingling: root.time < endsAt
+            readonly property int frame: jingling ? 1 + Math.floor((root.time - startedAt) * a.fps) % a.frames : 0
+
+            Connections {
+                target: root
+                function onTimeChanged() {
+                    if (!piece.stirred) {
+                        return;
+                    }
+                    if (root.time >= piece.endsAt) {
+                        piece.startedAt = root.time;
+                    }
+                    piece.endsAt = piece.startedAt + Math.ceil((root.time - piece.startedAt + 1e-3) / piece.cycle) * piece.cycle;
+                }
+            }
             readonly property real scale: root.pxPerUnit / root.world.pixelsPerUnit
 
             x: root.toX(a.x * root.unitMm)
