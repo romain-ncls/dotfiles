@@ -177,6 +177,9 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   KWallet or the repo. Port 3389; there is no firewall to open. Keys in
   `home/.kde/home.tsv`; the certificate (self-signed, per machine) and the user
   unit come from `run_onchange_after_45-krdp.sh`.
+- **Linux-account login turned off again** (11 Oct 2026): `SystemUserEnabled`
+  is back at its default (off) and no longer in `home.tsv`. Any RDP user is
+  added by hand in System Settings → Remote Desktop.
 - **Broken with FreeRDP 3.32 in krdp 6.7.5** (4 Oct 2026): FreeRDP now turns on
   extended security, so clients that offer NLA get it, and NLA looks for the
   user in KRDP's own (empty) user list: "Could not find user in SAM database",
