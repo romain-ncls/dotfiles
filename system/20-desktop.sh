@@ -24,6 +24,10 @@ AddPackage bluez
 AddPackage bluez-utils                     # bluetoothctl
 AddPackage --foreign logi-wheel             # pkg/logi-wheel: per-app SmartShift/scroll force (local, not AUR)
 
+# phone link (no firewall, so ports 1714-1764 need nothing)
+AddPackage kdeconnect
+AddPackage sshfs                           # KDE Connect: browse the phone's files
+
 # fonts
 AddPackage noto-fonts
 AddPackage noto-fonts-cjk
