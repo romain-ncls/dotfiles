@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -145,11 +146,12 @@ func (m *Mouse) Apply(p Profile) error {
 	return err
 }
 
-// sensitivityToThreshold maps Options+ sensitivity (1-100, higher = free-spins
+// sensitivityToThreshold maps Options+ sensitivity (0-100, higher = free-spins
 // sooner) to the device's auto-disengage threshold (higher = needs a faster
-// flick). Fitted on one point: Options+ 88 wrote 10 on an MX Anywhere 3S.
+// flick): 50 + round(-0.46 * s), the formula in logioptionsplus_agent.exe
+// (devio_feature_xsmartshift; 0 -> 50, 50 -> 27, 88 -> 10, 100 -> 4).
 func sensitivityToThreshold(s int) byte {
-	return byte(min(0xFE, max(1, int(1+float64(100-s)*0.75+0.5))))
+	return byte(50 + math.Round(float64(min(100, max(0, s)))*-46/100))
 }
 
 // findMice opens the hidraw nodes of Logitech devices that speak HID++ and

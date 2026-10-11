@@ -123,8 +123,12 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   live in one folder and uninstall together. `scripts/local-pkgs` stores a
   hash of the folder in the package, so editing the config is enough to make
   `just apply-system` rebuild it; no version bumps.
-- **Options+ sensitivity is mapped to the device threshold by a guess**
-  (`sensitivity_to_threshold`), calibrated against what Options+ wrote to the mouse.
+- **Options+ sensitivity uses Options+'s own formula**: threshold =
+  50 + round(-0.46 × sensitivity), read from the disassembly of
+  `logioptionsplus_agent.exe` (`devio_feature_xsmartshift`); it matches the 10
+  that Options+ wrote for 88. Solaar and logiops only expose the raw threshold.
+- **New hidraw nodes are watched with inotify on `/dev`**: switching the mouse
+  back to this PC recreates its node, and polling made the profile arrive late.
 
 ## mpv
 

@@ -20,9 +20,11 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unsafe"
 
 	"github.com/BurntSushi/toml"
 	"github.com/godbus/dbus/v5"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -172,8 +174,41 @@ func runDaemon() {
 	if err := loadKWinScript(conn); err != nil {
 		log.Fatalf("loading the KWin script: %v", err)
 	}
-	for range time.Tick(3 * time.Second) { // mouse switched back to this PC
-		d.rescan()
+	go func() {
+		for range time.Tick(30 * time.Second) { // in case an inotify event was missed
+			d.rescan()
+		}
+	}()
+	watchDev(d.rescan)
+}
+
+// watchDev calls rescan as soon as a hidraw node appears in /dev or gets its
+// access rights (udev's uaccess ACL lands just after the node is created), so
+// a mouse switched back to this PC gets its profile right away.
+func watchDev(rescan func()) {
+	fd, err := unix.InotifyInit1(unix.IN_CLOEXEC)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if _, err := unix.InotifyAddWatch(fd, "/dev", unix.IN_CREATE|unix.IN_ATTRIB); err != nil {
+		log.Fatal(err)
+	}
+	buf := make([]byte, 4096)
+	for {
+		n, err := unix.Read(fd, buf)
+		if err != nil {
+			log.Fatal(err)
+		}
+		hidraw := false
+		for off := 0; off+unix.SizeofInotifyEvent <= n; {
+			ev := (*unix.InotifyEvent)(unsafe.Pointer(&buf[off]))
+			name := strings.TrimRight(string(buf[off+unix.SizeofInotifyEvent:off+unix.SizeofInotifyEvent+int(ev.Len)]), "\x00")
+			hidraw = hidraw || strings.HasPrefix(name, "hidraw")
+			off += unix.SizeofInotifyEvent + int(ev.Len)
+		}
+		if hidraw {
+			rescan()
+		}
 	}
 }
 
