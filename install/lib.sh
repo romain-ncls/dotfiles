@@ -14,7 +14,7 @@ set -euo pipefail
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 SYS=$REPO/system
 T=/mnt
-SUBVOLS=(@ @home @snapshots @var_log @var_cache @var_tmp)
+SUBVOLS=(@ @home @snapshots @var_log @var_cache @var_tmp @var_lib_docker)
 BTRFS_OPTS=noatime,compress=zstd:3,ssd,discard=async
 
 say()  { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
@@ -48,11 +48,12 @@ make_subvolumes() { # ROOT_DEV
 
 mount_tree() { # ROOT_DEV ESP_DEV SWAP_DEV — @snapshots is mounted later, after snapper
 	mount -o "$BTRFS_OPTS,subvol=@" "$1" "$T"
-	mkdir -p "$T"/{home,.snapshots,var/log,var/cache,var/tmp,boot}
+	mkdir -p "$T"/{home,.snapshots,var/log,var/cache,var/tmp,var/lib/docker,boot}
 	mount -o "$BTRFS_OPTS,subvol=@home" "$1" "$T/home"
 	mount -o "$BTRFS_OPTS,subvol=@var_log" "$1" "$T/var/log"
 	mount -o "$BTRFS_OPTS,subvol=@var_cache" "$1" "$T/var/cache"
 	mount -o "$BTRFS_OPTS,subvol=@var_tmp" "$1" "$T/var/tmp"
+	mount -o "$BTRFS_OPTS,subvol=@var_lib_docker" "$1" "$T/var/lib/docker"
 	mount -o fmask=0077,dmask=0077 "$2" "$T/boot"
 	swapon "$3"
 	ok "mounted under $T"
@@ -109,7 +110,7 @@ base_setup() {
 	say "Locale, clock, users"
 	in_target locale-gen
 	in_target hwclock --systohc   # RTC in UTC; Windows syncs itself over NTP (docs/manual-steps.md)
-	in_target useradd -m -G wheel -s /usr/bin/fish "$USERNAME"
+	in_target useradd -m -G wheel,docker -s /usr/bin/fish "$USERNAME"
 	echo "Password for $USERNAME:"
 	until in_target passwd "$USERNAME"; do :; done
 	echo "Password for root:"

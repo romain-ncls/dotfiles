@@ -185,6 +185,18 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   negotiation* to **TLS**; the phone's Windows App cannot, so it waits for the
   fix (or a separate RDP user in System Settings → Remote Desktop).
 
+## Docker
+
+- **docker + docker-compose + docker-buildx from the Arch repos**, not Docker
+  Desktop. Rootful daemon; the user is in the `docker` group (`useradd` in
+  `install/lib.sh`), which is root-equivalent, accepted on a single-user desktop.
+- **Socket-activated** (`docker.socket` only): no daemon at boot until something
+  uses it. Containers with a restart policy therefore come back only once the
+  socket is first hit; enable `docker.service` too if that ever matters.
+- **`/var/lib/docker` is its own subvolume, `@var_lib_docker`**, like
+  `@var_log`/`@var_cache`: images and volumes stay out of snapper's root
+  snapshots, and a rollback does not roll containers back.
+
 ## Not in the repo yet
 
 - **VS Code** settings and extensions stay in VS Code Settings Sync for now,
