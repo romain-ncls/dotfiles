@@ -21,6 +21,7 @@ CreateLink /etc/systemd/system/systemd-suspend-then-hibernate.service.wants/nvid
 host /etc/hostname
 host /etc/hosts
 host /etc/fstab                            # btrfs subvolumes, shared ESP, swap, C: (ntfs)
+host /etc/NetworkManager/conf.d/wake-on-lan.conf  # WoL armed; does not wake yet, see docs/decisions.md
 host /etc/kernel/cmdline                   # root + resume UUIDs, nvidia_drm.modeset=1
 # MODULES=(btrfs hid_logitech_dj hid_logitech_hidpp): no NVIDIA here, see docs/decisions.md
 host /etc/mkinitcpio.conf
