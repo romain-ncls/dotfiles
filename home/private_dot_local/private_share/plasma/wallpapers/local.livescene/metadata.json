@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "Plasma/Wallpaper",
+    "KPlugin": {
+        "Authors": [{ "Name": "Romain Nicolas" }],
+        "Description": "Plays a live scene: a folder with a Scene.qml (layers + shader) driven by time",
+        "Icon": "preferences-desktop-wallpaper",
+        "Id": "local.livescene",
+        "License": "MIT",
+        "Name": "Live Scene",
+        "Version": "1.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}
