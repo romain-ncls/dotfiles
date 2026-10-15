@@ -17,6 +17,7 @@ layout(std140, binding = 0) uniform buf {
     vec4 maskRect;   // the mask's left, bottom, width, height, in units from the item's bottom-left
     vec4 shallow;
     vec4 light;
+    vec4 qt_SubRect_mask;  // set by Qt: where the image lies in its texture (an atlas, if small)
 };
 
 layout(binding = 1) uniform sampler2D mask;
@@ -49,30 +50,42 @@ float segment(vec2 p, vec2 a, vec2 b) {
 
 void main() {
     vec2 p = vec2(qt_TexCoord0.x * extent.x, (1.0 - qt_TexCoord0.y) * extent.y);  // units, y up
-    vec2 muv = vec2((p.x - maskRect.x) / maskRect.z, 1.0 - (p.y - maskRect.y) / maskRect.w);
-    vec4 m = texture(mask, muv);
+    // Past its edges, the mask's edge: it may lie in an atlas, among other images.
+    vec2 muv = clamp(vec2((p.x - maskRect.x) / maskRect.z, 1.0 - (p.y - maskRect.y) / maskRect.w), 0.0, 1.0);
+    vec4 m = texture(mask, qt_SubRect_mask.xy + muv * qt_SubRect_mask.zw);
     float x = p.x - impact;
     float y = p.y - level;  // above the surface (+)
 
     // Droplets: each thrown from where the water lands, up and outwards, falling back; seeded,
-    // so each one comes back on its own rhythm.
+    // so each one comes back on its own rhythm. One draws nothing further than 0.25 above, below
+    // or beside where it is (its streak, 0.018 s of its path, is at most 0.154 high and 0.072
+    // wide, its radius under 0.073), so nothing higher than 1.7 above the surface (thrown up at
+    // 8.3 at most, from 0.05, pulled down at 22) or lower than 0.28 under it (back in the lake at
+    // 0.05 under): pixels further away skip it. These bounds hold for the numbers below.
     float drops = 0.0;
-    for (int i = 0; i < 64; i++) {
-        float n = float(i);
-        float life = 0.5 + 0.75 * hash(n + 0.1);
-        float t = fract(time / life + hash(n + 0.2)) * life;
-        float side = hash(n + 0.3) < 0.5 ? -1.0 : 1.0;
-        vec2 v0 = vec2(side * (0.4 + 3.6 * hash(n + 0.4)), 2.8 + 5.5 * hash(n + 0.5));
-        vec2 at = vec2((hash(n + 0.6) - 0.5) * fallWidth * 0.8, 0.05);
-        float g = 22.0;
-        vec2 pos = at + v0 * t - vec2(0.0, 0.5 * g * t * t);
-        vec2 vel = v0 - vec2(0.0, g * t);
-        if (pos.y < -0.05) {
-            continue;  // back in the lake
+    if (y > -0.3 && y < 1.75) {
+        for (int i = 0; i < 64; i++) {
+            float n = float(i);
+            float life = 0.5 + 0.75 * hash(n + 0.1);
+            float t = fract(time / life + hash(n + 0.2)) * life;
+            float vy = 2.8 + 5.5 * hash(n + 0.5);
+            float g = 22.0;
+            float py = 0.05 + vy * t - 0.5 * g * t * t;
+            if (py < -0.05 || abs(y - py) > 0.25) {
+                continue;  // back in the lake, or too far above or below
+            }
+            float side = hash(n + 0.3) < 0.5 ? -1.0 : 1.0;
+            vec2 v0 = vec2(side * (0.4 + 3.6 * hash(n + 0.4)), vy);
+            vec2 at = vec2((hash(n + 0.6) - 0.5) * fallWidth * 0.8, 0.05);
+            vec2 pos = at + v0 * t - vec2(0.0, 0.5 * g * t * t);
+            vec2 vel = v0 - vec2(0.0, g * t);
+            if (abs(x - pos.x) > 0.25) {
+                continue;  // too far to the side
+            }
+            float r = 0.028 + 0.045 * hash(n + 0.7);
+            float d = segment(vec2(x, y), pos, pos - vel * 0.018);  // a short streak along its path
+            drops += (1.0 - smoothstep(r * 0.35, r, d)) * (1.0 - t / life * 0.5);
         }
-        float r = 0.028 + 0.045 * hash(n + 0.7);
-        float d = segment(vec2(x, y), pos, pos - vel * 0.018);  // a short streak along its path
-        drops += (1.0 - smoothstep(r * 0.35, r, d)) * (1.0 - t / life * 0.5);
     }
 
     // The bulge of foam where it lands: churning, boiling up and outwards.

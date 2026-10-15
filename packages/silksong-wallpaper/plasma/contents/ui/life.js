@@ -9,6 +9,14 @@
  * world.nav (tools/nav.py) has the surfaces she stands on, the links between
  * them (walk, drop, jump, jump2, climb, harpoon, bounce) and the places she
  * spends time.
+ *
+ * The screens ask for her (and the Bell Beast, the small life) on every frame,
+ * so what runs that often has no for-of loop or array destructuring: in the
+ * QML engine each step allocates an iterator result, which was most of what
+ * the creatures cost and kept its garbage collector busy. And nothing here
+ * uses WeakMap, WeakSet or WeakRef, which crashed that garbage collector
+ * (Qt 6.11): what's remembered between calls lives in plain properties of each
+ * screen's world and clips or of the day's plan, or in this file's own caches.
  */
 .pragma library
 
@@ -71,6 +79,38 @@ function frameAt(clip, t) {
     default:
         return i % n;
     }
+}
+
+// The cell of its sheet a clip played by `seg` shows in its frame k (from the segment's start).
+function cellOf(clip, seg, k) {
+    let f = frameAt(clip, (k + 0.5) / clip.fps);
+    if (seg.reverse) {
+        f = clip.frames - 1 - f;
+    }
+    return clip.sequence[Math.min(f, clip.frames - 1)];
+}
+
+// The next time after t that the clip played by `seg` shows another cell of its sheet, or `end`
+// if it doesn't before then: frames that repeat a cell (most of her sitting idles), a clip played
+// to its end and a held frame change nothing on screen.
+function nextCellChange(clips, seg, t, end) {
+    const clip = clips[seg.clip];
+    if (!clip || seg.frame === -1 || clip.wrapMode === 6) {
+        return end;
+    }
+    const i = Math.floor((t - seg.t0) * clip.fps + 1e-6);
+    const now = cellOf(clip, seg, i);
+    // Within two rounds of the clip, unless it has stopped (or shows one cell throughout).
+    for (let k = i + 1; k <= i + 2 * clip.frames + 2; k++) {
+        const at = seg.t0 + k / clip.fps;
+        if (at >= end) {
+            return end;
+        }
+        if (cellOf(clip, seg, k) !== now) {
+            return at;
+        }
+    }
+    return end;
 }
 
 // ------------------------------------------------------------------ jumping
@@ -142,66 +182,129 @@ function height(s, x, step) {
     return s.y[i] + (s.y[j] - s.y[i]) * (f - i);
 }
 
-// Cheapest route from (surface a, x) to (surface b, x): a list of link objects, in order.
-function route(nav, a, xa, b, xb) {
-    if (a === b) {
-        return [];
+// Routes depend only on the map, so they're kept per world build, across days: the cheapest
+// ways from each place she sets off from (a few dozen) to every link end, found once, which any
+// goal is then a walk from.
+let routes = { key: "", starts: new Map() };
+
+function routesFor(world) {
+    const nav = world.nav;
+    const key = (world.build || 0) + ":" + nav.surfaces.length + ":" + nav.links.length;
+    if (routes.key !== key) {
+        // Nodes: 0 where she sets off, then each link's two ends (1 + 2k where it leaves, 2 + 2k
+        // where it lands); walking along a surface joins those on it.
+        const xs = [0];
+        const ss = [-1];
+        nav.links.forEach(l => {
+            ss.push(l.from, l.to);
+            xs.push(l.x0, l.x1);
+        });
+        const onSurface = nav.surfaces.map(() => []);
+        for (let i = 1; i < ss.length; i++) {
+            onSurface[ss[i]].push(i);
+        }
+        routes = { key: key, starts: new Map(), nav: nav, xs: xs, ss: ss, onSurface: onSurface };
     }
-    // Nodes: the start, the goal, and every link end. Walking along a surface joins them.
-    const nodes = [{ s: a, x: xa }, { s: b, x: xb }];
-    const fromNode = [];
-    const toNode = [];
-    for (const l of nav.links) {
-        fromNode.push(nodes.length);
-        nodes.push({ s: l.from, x: l.x0 });
-        toNode.push(nodes.length);
-        nodes.push({ s: l.to, x: l.x1 });
+    return routes;
+}
+
+// Dijkstra from (surface a, x) to every link end: { dist, prev, order }, order being the nodes as
+// they were settled, the cheapest first (the lower index on a tie).
+function routesFrom(R, a, xa) {
+    const byX = R.starts.get(a) || new Map();
+    R.starts.set(a, byX);
+    let from = byX.get(xa);
+    if (from) {
+        return from;
     }
-    const dist = nodes.map(() => Infinity);
-    const prev = nodes.map(() => null); // [node, link index or -1 for a walk]
-    const done = nodes.map(() => false);
+    const n = R.xs.length;
+    const xs = R.xs.slice();
+    const ss = R.ss.slice();
+    xs[0] = xa;
+    ss[0] = a;
+    const dist = new Array(n).fill(Infinity);
+    const prev = new Array(n).fill(null); // [node, link index or -1 for a walk]
+    const done = new Array(n).fill(false);
+    const links = R.nav.links;
     dist[0] = 0;
+    const order = [];
     for (;;) {
         let u = -1;
-        for (let i = 0; i < nodes.length; i++) {
+        for (let i = 0; i < n; i++) {
             if (!done[i] && dist[i] < Infinity && (u < 0 || dist[i] < dist[u])) {
                 u = i;
             }
         }
-        if (u < 0 || u === 1) {
+        if (u < 0) {
             break;
         }
         done[u] = true;
-        for (let v = 0; v < nodes.length; v++) {
-            if (!done[v] && nodes[v].s === nodes[u].s) {
-                const d = dist[u] + Math.abs(nodes[v].x - nodes[u].x) / RUN_SPEED;
+        order.push(u);
+        const same = R.onSurface[ss[u]];
+        for (let j = 0; j < same.length; j++) {
+            const v = same[j];
+            if (!done[v]) {
+                const d = dist[u] + Math.abs(xs[v] - xs[u]) / RUN_SPEED;
                 if (d < dist[v]) {
                     dist[v] = d;
                     prev[v] = [u, -1];
                 }
             }
         }
-        for (let k = 0; k < nav.links.length; k++) {
-            if (fromNode[k] === u) {
-                const v = toNode[k];
-                const d = dist[u] + nav.links[k].time + 0.3;
-                if (d < dist[v]) {
-                    dist[v] = d;
-                    prev[v] = [u, k];
+        if (u % 2 === 1) { // where link k leaves from
+            const k = (u - 1) / 2;
+            const v = u + 1;
+            const d = dist[u] + links[k].time + 0.3;
+            if (d < dist[v]) {
+                dist[v] = d;
+                prev[v] = [u, k];
+            }
+        }
+    }
+    from = { dist: dist, prev: prev, order: order, xs: xs, ss: ss, paths: R.nav.surfaces.map(() => new Map()) };
+    byX.set(xa, from);
+    return from;
+}
+
+// Cheapest route from (surface a, x) to (surface b, x): a list of link objects, in order (null
+// when there's none), with `trip`, the time it takes (links, then the walk to x), alongside.
+function routeTrip(R, a, xa, b, xb) {
+    const from = routesFrom(R, a, xa);
+    let found = from.paths[b].get(xb);
+    if (found) {
+        return found;
+    }
+    let path = [];
+    if (a !== b) {
+        // The last stretch is a walk from whichever node on its surface gets her there soonest
+        // (the first settled, on a tie).
+        let best = Infinity;
+        let last = -1;
+        for (let i = 0; i < from.order.length; i++) {
+            const u = from.order[i];
+            if (from.ss[u] === b) {
+                const d = from.dist[u] + Math.abs(xb - from.xs[u]) / RUN_SPEED;
+                if (d < best) {
+                    best = d;
+                    last = u;
+                }
+            }
+        }
+        if (last < 0) {
+            path = null;
+        } else {
+            for (let v = last; from.prev[v]; v = from.prev[v][0]) {
+                if (from.prev[v][1] >= 0) {
+                    path.unshift(R.nav.links[from.prev[v][1]]);
                 }
             }
         }
     }
-    if (dist[1] === Infinity) {
-        return null;
-    }
-    const used = [];
-    for (let v = 1; prev[v]; v = prev[v][0]) {
-        if (prev[v][1] >= 0) {
-            used.unshift(nav.links[prev[v][1]]);
-        }
-    }
-    return used;
+    const trip = path === null ? 999 : path.reduce((sum, l) => sum + l.time, 0)
+        + Math.abs((path.length ? path[path.length - 1].x1 : xa) - xb) / RUN_SPEED;
+    found = { path: path, trip: trip };
+    from.paths[b].set(xb, found);
+    return found;
 }
 
 // ------------------------------------------------------------------ building the day
@@ -214,7 +317,7 @@ function Planner(world, clips, seed) {
     this.r = rng(seed);
     this.segments = [];
     this.log = []; // what she did where: { id, t0, t1 }
-    this.routes = {};
+    this.routes = routesFor(world);
     this.t = 0;
     this.surface = 0;
     this.x = 0;
@@ -222,11 +325,12 @@ function Planner(world, clips, seed) {
 }
 
 Planner.prototype.route = function (surface, x) {
-    const key = this.surface + ":" + this.x.toFixed(2) + ">" + surface + ":" + x.toFixed(2);
-    if (!(key in this.routes)) {
-        this.routes[key] = route(this.nav, this.surface, this.x, surface, x);
-    }
-    return this.routes[key];
+    return routeTrip(this.routes, this.surface, this.x, surface, x).path;
+};
+
+// How long getting there takes, links and walks (999 s when there's no way).
+Planner.prototype.trip = function (surface, x) {
+    return routeTrip(this.routes, this.surface, this.x, surface, x).trip;
 };
 
 Planner.prototype.push = function (seg, duration) {
@@ -482,11 +586,14 @@ Planner.prototype.activity = function (poi) {
     }
 };
 
-// Bed: lie down, maybe read the map a while, sleep until `until`, sit up.
-Planner.prototype.sleep = function (poi, until, readMap) {
+// Bed: lie down (unless she's lying there already), maybe read the map a while, sleep until
+// `until`, sit up.
+Planner.prototype.sleep = function (poi, until, readMap, lying0) {
     const at = { pivot: poi.pivot, scale: poi.scale || 1, mirror: !!poi.mirror };
     const lying = { pivot: poi.pivot, scale: poi.scale || 1, mirror: !!poi.mirror, frame: -1 };
-    this.hold("Hornet Lay Down", undefined, at);
+    if (!lying0) {
+        this.hold("Hornet Lay Down", undefined, at);
+    }
     if (readMap) {
         this.hold("Hornet Lay Map Open", undefined, at);
         this.hold("Hornet Lay Map Open", between(this.r, 120, 600), lying);
@@ -509,10 +616,12 @@ function withIdleRests(segs, clips, r) {
     const rest = clipLength(clips, "Idle Rest");
     const out = [];
     let left = null; // standing time before the next rest; null while she isn't standing
-    for (const seg of segs) {
+    for (let i = 0; i < segs.length; i++) {
+        const seg = segs[i];
         const standing = seg.kind === "clip" && (seg.clip === "Idle" || seg.clip === TURN);
         if (!standing) {
-            left = seg.kind === "clip" && /^Look(ing)?Up/.test(seg.clip) ? between(r, 10, 15) : null;
+            left = seg.kind === "clip" && (seg.clip.startsWith("LookUp") || seg.clip.startsWith("LookingUp"))
+                ? between(r, 10, 15) : null;
             out.push(seg);
             continue;
         }
@@ -530,7 +639,9 @@ function withIdleRests(segs, clips, r) {
             t += left + rest;
             left = between(r, 10, 15);
         }
-        left -= seg.t1 - t;
+        // A rest due too late in this stretch to be played out is due as soon as she stands
+        // again, not earlier: that would start it before her next stretch does, out of order.
+        left = Math.max(0, left - (seg.t1 - t));
         out.push(Object.assign({}, seg, { t0: t }));
     }
     return out;
@@ -550,7 +661,7 @@ function planDay(world, clips, day0, dateKey) {
     p.surface = bed.surface;
     p.x = bed.x;
     p.facingRight = !bed.mirror;
-    p.sleep(bed, wake, false);
+    p.sleep(bed, wake, false, true); // asleep since last night: the day starts with her lying there
 
     // Spots she can wander to: along every surface she can reach, away from its ends.
     const spots = [];
@@ -591,10 +702,7 @@ function planDay(world, clips, day0, dateKey) {
         const weights = options.map(q => {
             let w = 0.2 + needs[meets[q.activity]];
             // Close places are a little more tempting, but she likes to roam.
-            const path = p.route(q.surface, q.x);
-            const trip = path === null ? 999 : path.reduce((sum, l) => sum + l.time, 0)
-                + Math.abs((path.length ? path[path.length - 1].x1 : p.x) - q.x) / RUN_SPEED;
-            w /= 1 + trip / 150;
+            w /= 1 + p.trip(q.surface, q.x) / 150;
             if (q.activity === "desk" && hour >= 9 && hour <= 17) {
                 w += 0.1; // work hours at the desk
             }
@@ -684,8 +792,25 @@ function planDay(world, clips, day0, dateKey) {
     return { segments: withIdleRests(p.segments, clips, rng(dateKey * 13 + 5)), log: p.log, wake: wake, bedtime: bedtime };
 }
 
-// The day's plans (Hornet's and the Bell Beast's), made once per day and per world build.
-let cache = { key: "", segments: [], beast: [], critters: { songs: [], flights: {} } };
+// The day's plans (Hornet's and the Bell Beast's), made once per day, world build and clips.
+let cache = { key: "", segments: [], beast: [], critters: { songs: [], flights: {} }, from: 0, until: 0 };
+
+// The screens showing the world (WorldScene.qml), counted so that the plans and routes kept for
+// them go with the last one: plasmashell lives for days, and lets go the scenes of a desktop
+// that stays hidden, or of a wallpaper no longer chosen.
+let scenes = 0;
+
+function join() {
+    scenes++;
+}
+
+function leave() {
+    scenes--;
+    if (scenes === 0) {
+        routes = { key: "", starts: new Map() };
+        cache = { key: "", segments: [], beast: [], critters: { songs: [], flights: {} }, from: 0, until: 0 };
+    }
+}
 
 // ------------------------------------------------------------------ the Bell Beast
 
@@ -795,6 +920,19 @@ function beastAt(world, clips, t) {
     return { clip: seg.clip, frame: frame };
 }
 
+// When what beastAt() shows next changes after t (seconds since the epoch). Its day is back to
+// back, the last of it running on to the next 04:00, where the next day's takes over.
+function beastNext(world, clips, t) {
+    if (!world || !world.nav || !clips || !clips["Bell Beast Sleep"]) {
+        return Infinity;
+    }
+    daySegments(world, clips, t);
+    const segs = cache.beast;
+    const i = segmentIndex(segs, t);
+    const until = cache.until / 1000;
+    return nextCellChange(clips, segs[i], t, i + 1 < segs.length ? Math.min(segs[i].t1, until) : until);
+}
+
 // The Bell Beast's clips from t to t + horizon seconds.
 function beastClipsAhead(world, clips, t, horizon) {
     if (!world || !world.nav || !clips || !clips["Bell Beast Sleep"]) {
@@ -832,75 +970,158 @@ function idNumber(id) {
     return n;
 }
 
+// Whether she's within reach of a lilypad fly's perch at t, on a segment she moves along: where
+// pose() puts her (the same arithmetic, without the rest of the pose).
+function startles(world, seg, t, perch) {
+    const local = t - seg.t0;
+    const s = Math.min(1, Math.max(0, local / Math.max(1e-6, seg.t1 - seg.t0)));
+    const x = lerp(seg.x0, seg.x1, s);
+    let y;
+    switch (seg.kind) {
+    case "walk":
+        y = height(world.nav.surfaces[seg.surface], x, world.nav.step) + world.heroFeet;
+        break;
+    case "line":
+        y = lerp(seg.y0, seg.y1, s);
+        break;
+    case "fall":
+        y = Math.max(seg.y1, seg.y0 - fallDistance(local));
+        break;
+    default: // jump
+        y = jumpY(seg.plan, seg.y0, local);
+    }
+    const feet = y - world.heroFeet;
+    return Math.abs(x - perch[0]) < STARTLE && Math.abs(feet - perch[1]) < 1.6;
+}
+
+// The first entry of a perch's list (move indices, in order) at or after move `pos` that ends at
+// or after `free`: both rise along the list.
+function firstFrom(list, moves, pos, free, k) {
+    let hi = list.length;
+    while (k < hi) {
+        const mid = (k + hi) >> 1;
+        if (list[mid] >= pos && moves[list[mid]].t1 >= free) {
+            hi = mid;
+        } else {
+            k = mid + 1;
+        }
+    }
+    return k;
+}
+
 // From Hornet's day: her songs ([t0, t1, x, y]) and, for each lilypad fly, its flights
 // ({ t0, t1, from, to } perch indices) as she comes close to the perch it's on.
 function planCritters(world, clips, segs) {
     const songs = [];
-    for (const seg of segs) {
-        if (seg.kind === "clip" && /Needolin(Sit)? Play/.test(seg.clip)) {
-            songs.push([seg.t0, seg.t1, seg.x, seg.y]);
+    // Where she moves (walks, lines, falls, jumps), in order, and for each perch of each lilypad
+    // fly, those of her moves that pass near enough to it to matter (by their ends' x).
+    const flies = (world.critters || []).filter(c => c.species === "lilypad_fly" && c.perches.length >= 2);
+    const near = flies.map(c => c.perches.map(() => []));
+    const moves = [];
+    segs.forEach(seg => {
+        if (seg.kind === "clip") {
+            if (seg.clip.indexOf("Needolin Play") >= 0 || seg.clip.indexOf("NeedolinSit Play") >= 0) {
+                songs.push([seg.t0, seg.t1, seg.x, seg.y]);
+            }
+            return;
         }
-    }
+        if (!(seg.kind === "walk" || seg.kind === "line" || seg.kind === "fall" || seg.kind === "jump")) {
+            return;
+        }
+        const i = moves.length;
+        moves.push(seg);
+        for (let f = 0; f < flies.length; f++) {
+            const perches = flies[f].perches;
+            for (let p = 0; p < perches.length; p++) {
+                if (!(seg.x0 !== undefined && Math.min(seg.x0, seg.x1) - STARTLE > perches[p][0]
+                    || seg.x0 !== undefined && Math.max(seg.x0, seg.x1) + STARTLE < perches[p][0])) {
+                    near[f][p].push(i);
+                }
+            }
+        }
+    });
     const flights = {};
-    for (const c of world.critters || []) {
-        if (c.species !== "lilypad_fly" || c.perches.length < 2) {
-            continue;
-        }
+    flies.forEach((c, f) => {
         const out = [];
         let at = 0;
         let free = -Infinity;
-        for (const seg of segs) {
-            if (seg.t1 < free || !(seg.kind === "walk" || seg.kind === "line" || seg.kind === "fall" || seg.kind === "jump")) {
-                continue;
+        let pos = 0; // the next of her moves to look at
+        const next = c.perches.map(() => 0); // where each perch's list was left
+        for (;;) {
+            // Her next move near the perch it's on, once it minds her again.
+            const list = near[f][at];
+            const k = firstFrom(list, moves, pos, free, next[at]);
+            if (k >= list.length) {
+                break;
             }
+            next[at] = k + 1;
+            const seg = moves[list[k]];
+            pos = list[k] + 1;
             const perch = c.perches[at];
-            if (seg.x0 !== undefined && Math.min(seg.x0, seg.x1) - STARTLE > perch[0]
-                || seg.x0 !== undefined && Math.max(seg.x0, seg.x1) + STARTLE < perch[0]) {
-                continue;
-            }
             // Where she is along the segment, every 0.2 s, until she comes close.
             for (let t = Math.max(seg.t0, free); t < seg.t1; t += 0.2) {
-                const h = pose(world, clips, seg, t);
-                const feet = h.y - world.heroFeet;
-                if (Math.abs(h.x - perch[0]) < STARTLE && Math.abs(feet - perch[1]) < 1.6) {
-                    const next = (at + 1) % c.perches.length;
-                    const to = c.perches[next];
-                    const d = Math.hypot(to[0] - perch[0], to[1] - perch[1]);
+                if (startles(world, seg, t, perch)) {
+                    const to = (at + 1) % c.perches.length;
+                    const d = Math.hypot(c.perches[to][0] - perch[0], c.perches[to][1] - perch[1]);
                     const dur = 0.4 + d / FLIGHT_SPEED;
-                    out.push({ t0: t, t1: t + dur, from: at, to: next });
-                    at = next;
+                    out.push({ t0: t, t1: t + dur, from: at, to: to });
+                    at = to;
                     free = t + dur + 90; // it settles a while before it minds her again
                     break;
                 }
             }
         }
         flights[c.id] = out;
-    }
+    });
     return { songs: songs, flights: flights };
 }
 
 // The song she's playing at t within reach of (x, y), or null.
 function songAt(plan, t, x, y) {
-    for (const s of plan.songs) {
-        if (s[0] <= t && t < s[1] && Math.abs(s[2] - x) < SONG_REACH && Math.abs(s[3] - y) < SONG_REACH) {
-            return s;
-        }
+    // The songs are in order and never overlap (she plays one at a time): only the last one
+    // started by t can be playing.
+    const i = lastStarted(plan.songs, t) - 1;
+    const s = plan.songs[i];
+    if (s && s[0] <= t && t < s[1] && Math.abs(s[2] - x) < SONG_REACH && Math.abs(s[3] - y) < SONG_REACH) {
+        return s;
     }
     return null;
 }
 
-// The time a dragonfly has spent flying by t: its clock stops while she plays near it.
-function dragonflyTime(plan, t, c) {
-    let held = 0;
-    for (const s of plan.songs) {
-        if (s[0] >= t) {
-            break;
-        }
-        if (Math.abs(s[2] - c.home[0]) < SONG_REACH && Math.abs(s[3] - c.home[1]) < SONG_REACH) {
-            held += Math.min(t, s[1]) - s[0];
+// How many of these songs ([t0, ...], in order) started before t (strictly, or at t too).
+function lastStarted(songs, t, strict) {
+    let lo = 0;
+    let hi = songs.length;
+    while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (strict ? songs[mid][0] < t : songs[mid][0] <= t) {
+            lo = mid + 1;
+        } else {
+            hi = mid;
         }
     }
-    return t - held;
+    return lo;
+}
+
+// The time a dragonfly has spent flying by t: its clock stops while she plays near it.
+function dragonflyTime(plan, t, c) {
+    // The songs it hears, and how long all those before each one lasted, added up in their order
+    // (so each sum is the running total's, to the last bit): found once per day and creature.
+    plan.heard = plan.heard || {};
+    let heard = plan.heard[c.id];
+    if (!heard) {
+        const songs = plan.songs.filter(s => Math.abs(s[2] - c.home[0]) < SONG_REACH && Math.abs(s[3] - c.home[1]) < SONG_REACH);
+        const before = [0];
+        songs.forEach(s => before.push(before[before.length - 1] + (s[1] - s[0])));
+        heard = plan.heard[c.id] = { songs: songs, before: before };
+    }
+    // The songs before t: all over but the last, which may still be playing.
+    const n = lastStarted(heard.songs, t, true);
+    if (n === 0) {
+        return t;
+    }
+    const s = heard.songs[n - 1];
+    return t - (heard.before[n - 1] + (Math.min(t, s[1]) - s[0]));
 }
 
 function catmull(p0, p1, p2, p3, u) {
@@ -909,59 +1130,98 @@ function catmull(p0, p1, p2, p3, u) {
 }
 
 function critterPose(world, clips, plan, c, t) {
-    const n = idNumber(c.id);
+    // What doesn't change with time (its number, period, phase), and the points it flies through
+    // until the next one, kept per day and creature: found again only when they change.
+    plan.memo = plan.memo || {};
+    let m = plan.memo[c.id];
+    if (!m) {
+        m = plan.memo[c.id] = { n: idNumber(c.id), k: NaN };
+    }
+    const n = m.n;
     const tw = t % 3600; // for frames: an hourly wrap in a clip is never seen (positions use t itself)
     const out = { id: c.id, layer: c.layer, zone: c.zone, scale: c.scale, tint: c.tint || null, clip: "", frame: 0,
                   x: 0, y: 0, facingRight: false };
     if (c.species === "moss_fly") {
         // The game's TinyMossFly: a new point within its range every 0.75-1 s, flown to and
         // through smoothly, facing the way it goes.
-        const period = 0.75 + 0.25 * hashOf(n, 1, 0);
+        if (m.period === undefined) {
+            m.period = 0.75 + 0.25 * hashOf(n, 1, 0);
+            m.phase = hashOf(n, 4, 4);
+        }
+        const period = m.period;
         const k = Math.floor(t / period);
         const u = t / period - k;
-        const point = (j, axis) => {
-            const a = hashOf(n, j, 2) * 2 * Math.PI, r = Math.sqrt(hashOf(n, j, 3));
-            return c.home[axis] + c.range[axis] * r * (axis ? Math.sin(a) : Math.cos(a));
-        };
-        const xs = [k - 1, k, k + 1, k + 2].map(j => point(j, 0));
+        if (m.k !== k) {
+            const point = (j, axis) => {
+                const a = hashOf(n, j, 2) * 2 * Math.PI, r = Math.sqrt(hashOf(n, j, 3));
+                return c.home[axis] + c.range[axis] * r * (axis ? Math.sin(a) : Math.cos(a));
+            };
+            m.k = k;
+            m.xs = [k - 1, k, k + 1, k + 2].map(j => point(j, 0));
+            m.ys = [point(k - 1, 1), point(k, 1), point(k + 1, 1), point(k + 2, 1)];
+        }
+        const xs = m.xs, ys = m.ys;
         out.x = catmull(xs[0], xs[1], xs[2], xs[3], u);
-        out.y = catmull(point(k - 1, 1), point(k, 1), point(k + 1, 1), point(k + 2, 1), u);
+        out.y = catmull(ys[0], ys[1], ys[2], ys[3], u);
         out.facingRight = xs[2] > xs[1];
         out.clip = "Moss Fly Fly";
-        out.frame = frameAt(clips[out.clip], tw + hashOf(n, 4, 4));
+        out.frame = frameAt(clips[out.clip], tw + m.phase);
     } else if (c.species === "dragonfly") {
         // Hovering, then a dart up, down, left or right (its FSM's Up, Down, L and R), turning
         // the way it darts; all of it holding still while she plays near.
         const tau = dragonflyTime(plan, t, c);
-        const period = 1.3 + 0.7 * hashOf(n, 5, 0);
+        if (m.period === undefined) {
+            m.period = 1.3 + 0.7 * hashOf(n, 5, 0);
+            m.phase = hashOf(n, 9, 9);
+        }
+        const period = m.period;
         const k = Math.floor(tau / period);
         const u = tau - k * period;
-        const X = j => c.home[0] + c.range[0] * (2 * hashOf(n, j, 6) - 1);
-        const Y = j => c.home[1] + c.range[1] * (2 * hashOf(n, j, 7) - 1);
-        const at = j => [X(Math.floor((j + 1) / 2)), Y(Math.floor(j / 2))];
-        const start = period * (0.45 + 0.25 * hashOf(n, k, 8)); // the dart ends within the hop
-        const s = Math.min(1, Math.max(0, (u - start) / 0.3));
+        if (m.k !== k) {
+            const X = j => c.home[0] + c.range[0] * (2 * hashOf(n, j, 6) - 1);
+            const Y = j => c.home[1] + c.range[1] * (2 * hashOf(n, j, 7) - 1);
+            const at = j => [X(Math.floor((j + 1) / 2)), Y(Math.floor(j / 2))];
+            m.k = k;
+            m.start = period * (0.45 + 0.25 * hashOf(n, k, 8)); // the dart ends within the hop
+            m.a = at(k);
+            m.b = at(k + 1);
+            // Which way it faces, before its dart and after (only even hops turn it).
+            const before = Math.floor((k + 1) / 2);
+            m.faceBefore = X(before) > X(before - 1);
+            const after = Math.floor((k + 2) / 2);
+            m.faceAfter = X(after) > X(after - 1);
+        }
+        const s = Math.min(1, Math.max(0, (u - m.start) / 0.3));
         const e = s * s * (3 - 2 * s);
-        const a = at(k), b = at(k + 1);
+        const a = m.a, b = m.b;
         out.x = lerp(a[0], b[0], e);
         out.y = lerp(a[1], b[1], e);
-        const lastX = k % 2 === 0 && s > 0 ? Math.floor((k + 2) / 2) : Math.floor((k + 1) / 2);
-        out.facingRight = X(lastX) > X(lastX - 1);
+        out.facingRight = k % 2 === 0 && s > 0 ? m.faceAfter : m.faceBefore;
         out.clip = "Dragonfly Idle";
-        out.frame = frameAt(clips[out.clip], tw + hashOf(n, 9, 9));
+        out.frame = frameAt(clips[out.clip], tw + m.phase);
     } else if (c.species === "lilypad_fly") {
         const fl = (plan.flights[c.id] || []);
         let perch = 0;
         let flying = null;
-        for (const f of fl) {
-            if (f.t0 > t) {
-                break;
+        // Its flights are in order, apart (it settles 90 s after each): the last one begun by t
+        // is the one it's in, or the one that brought it to its perch.
+        let lo = 0;
+        let hi = fl.length;
+        while (lo < hi) {
+            const mid = (lo + hi) >> 1;
+            if (fl[mid].t0 > t) {
+                hi = mid;
+            } else {
+                lo = mid + 1;
             }
+        }
+        if (lo > 0) {
+            const f = fl[lo - 1];
             if (t < f.t1) {
                 flying = f;
-                break;
+            } else {
+                perch = f.to;
             }
-            perch = f.to;
         }
         if (flying) {
             // To the next perch in a low arc.
@@ -996,11 +1256,20 @@ function critterPose(world, clips, plan, c, t) {
 
 // The creatures (default: all of them) at time t, in the world's order.
 function crittersAt(world, clips, t, which) {
+    return critterPosesAt(world, clips, t, which || (world && world.critters)).filter(p => p !== null);
+}
+
+// The same, one entry per creature of `which`, in its order (null for one that can't be drawn).
+function critterPosesAt(world, clips, t, which) {
     if (!world || !world.nav || !world.critters || !clips) {
         return [];
     }
     daySegments(world, clips, t);
-    return (which || world.critters).map(c => critterPose(world, clips, cache.critters, c, t)).filter(p => p !== null);
+    const out = new Array(which.length);
+    for (let i = 0; i < which.length; i++) {
+        out[i] = critterPose(world, clips, cache.critters, which[i], t);
+    }
+    return out;
 }
 
 // The clips a set of creatures can play.
@@ -1121,16 +1390,48 @@ function dayStart(date) {
     return d;
 }
 
-// The day's segments, planned once per day (and per world build).
+// What the plans take from the clips, how many there are and how long they play: the day is
+// planned again for new ones (tools/extract.py run again), not for each screen's copy of the
+// same. Worked out once per copy and kept on it, where listing its clips doesn't find it.
+function clipsSignature(clips) {
+    if (clips.planSignature === undefined) {
+        const names = Object.keys(clips);
+        let length = 0;
+        for (let i = 0; i < names.length; i++) {
+            length += clipLength(clips, names[i]);
+        }
+        Object.defineProperty(clips, "planSignature", { value: names.length + ":" + length });
+    }
+    return clips.planSignature;
+}
+
+// The day's segments, planned once per day (and per world build and clips).
 function daySegments(world, clips, t) {
+    // Most calls are for the day planned last: t (in milliseconds, as new Date(t * 1000) holds
+    // it) between its 04:00 and the next, the same world build and clips. Only otherwise is the
+    // date worked out, which takes the QML engine longer than all the rest.
+    const ms = Math.trunc(t * 1000);
+    const signature = clipsSignature(clips);
+    if (ms >= cache.from && ms < cache.until && cache.build === (world.build || 0)
+        && cache.surfaces === world.nav.surfaces.length && cache.links === world.nav.links.length
+        && cache.clips === signature) {
+        return cache.segments;
+    }
     const start = dayStart(new Date(t * 1000));
     const dateKey = start.getFullYear() * 10000 + (start.getMonth() + 1) * 100 + start.getDate();
-    const key = dateKey + ":" + (world.build || 0) + ":" + world.nav.surfaces.length + ":" + world.nav.links.length;
+    const key = dateKey + ":" + (world.build || 0) + ":" + world.nav.surfaces.length + ":" + world.nav.links.length
+        + ":" + signature;
     if (cache.key !== key) {
         const plan = planDay(world, clips, start.getTime() / 1000, dateKey);
         cache = { key: key, segments: plan.segments, beast: planBeast(world, clips, start.getTime() / 1000, dateKey, plan),
                   critters: planCritters(world, clips, plan.segments) };
     }
+    cache.from = start.getTime();
+    cache.until = dayStart(new Date(start.getTime() + 30 * 3600 * 1000)).getTime(); // the next 04:00
+    cache.build = world.build || 0;
+    cache.surfaces = world.nav.surfaces.length;
+    cache.links = world.nav.links.length;
+    cache.clips = signature;
     return cache.segments;
 }
 
@@ -1148,13 +1449,47 @@ function segmentIndex(segs, t) {
     return lo;
 }
 
-// Hornet at time t (seconds since the epoch).
+// Whether two poses show her alike (with her needle out, a moment's flight, they never do).
+function samePose(a, b) {
+    return a.clip === b.clip && a.frame === b.frame && a.x === b.x && a.y === b.y && a.facingRight === b.facingRight
+        && a.scale === b.scale && a.angle === b.angle && a.needle === null && b.needle === null
+        && a.thread === null && b.thread === null;
+}
+
+// Hornet at time t (seconds since the epoch). While nothing in her pose changes (asleep, standing
+// on one frame) it's the same object as last time, kept on the world it was asked for (each screen
+// has its own copy), so that what's bound to it isn't worked out again for nothing.
 function hornetAt(world, clips, t) {
     if (!world || !world.nav || !clips) {
         return null;
     }
     const segs = daySegments(world, clips, t);
-    return pose(world, clips, segs[segmentIndex(segs, t)], t);
+    const p = pose(world, clips, segs[segmentIndex(segs, t)], t);
+    const last = world.lastPose;
+    if (last !== undefined && samePose(p, last)) {
+        return last;
+    }
+    world.lastPose = p;
+    return p;
+}
+
+// When what hornetAt() shows next changes after t (seconds since the epoch): t itself while she
+// moves (or her needle flies), else when her clip next shows another cell of its sheet, or the
+// end of her segment when it holds one (asleep, at the desk, a clip played to its end). A screen
+// she's on only needs drawing again then (or at its own effects' rate), instead of every frame.
+function hornetChangesAt(world, clips, t) {
+    if (!world || !world.nav || !clips) {
+        return Infinity;
+    }
+    const segs = daySegments(world, clips, t);
+    const seg = segs[segmentIndex(segs, t)];
+    // Her day is back to back, the last of it running past the next 04:00, where the next day's
+    // plan takes over.
+    const end = Math.min(seg.t1, cache.until / 1000);
+    if (seg.kind !== "clip" || seg.needle) {
+        return t;
+    }
+    return Math.max(t, nextCellChange(clips, seg, t, end));
 }
 
 // The clips she plays from t to t + horizon seconds, sorted: their sheets should be loaded

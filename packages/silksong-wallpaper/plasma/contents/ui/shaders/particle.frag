@@ -1,10 +1,8 @@
-// The particles' pixels (particle.vert places them and sets their frame, colour and fade); the
-// cells between two slots' quads are dropped.
+// The particles' pixels (particle.vert places them and sets their frame, colour and fade).
 #version 440
 
 layout(location = 0) in vec2 texCoord;
 layout(location = 1) in vec4 colour;
-layout(location = 2) in float column;
 layout(location = 0) out vec4 fragColor;
 
 layout(std140, binding = 0) uniform buf {
@@ -37,13 +35,12 @@ layout(std140, binding = 0) uniform buf {
     vec4 keyT1;
     vec4 keyA0;
     vec4 keyA1;
+    vec4 qt_SubRect_source;
 };
 
 layout(binding = 1) uniform sampler2D source;  // the system's texture, premultiplied
 
 void main() {
-    if (fract(column * 0.5) >= 0.5)
-        discard;
     vec4 t = texture(source, texCoord);
     vec4 c = vec4(t.rgb * colour.rgb, t.a) * colour.a;
     if (misc.z > 0.5)

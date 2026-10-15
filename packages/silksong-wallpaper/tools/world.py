@@ -26,8 +26,12 @@ The world lands in ~/.local/share/silksong-wallpaper/world:
   back_NN, mid_NN, front_NN, lights_NN.png   tiles: the backdrops (behind Hornet's light), the
                                               rock and near pieces (behind her), in front of her,
                                               and the light sources that shine through the night veil
-  zones/<zone>/hornet/*.png, light_<zone>.png  Hornet and her light in each zone's colours
+  hornet/*.png, light_*.png, lut_*.png        Hornet, and her light and her colours in each zone
+                                              (hornet.frag), one image for the zones alike
   World.qml                                   sizes, tiles, zones, navigation
+  *.qoi, Derived.qml                          QOI twins of the big images, read faster (derive.py)
+  views/, hornet@<density>/                   each screen's own view of the layers, and the sheets
+                                              at each screen's density (derive.py)
 
 Run it under a memory cap:
   systemd-run --user --scope -p MemoryMax=6G -p MemorySwapMax=0 tools/world.py
@@ -1096,8 +1100,8 @@ def compose():
                 paste_region(layers[name], img, meta["at"], zone.size, zone.region)
         zones_out.append({"id": zone.id, "room": zone.room, "left": zone.region[0], "bottom": zone.region[1],
                           "width": zone.region[2] - zone.region[0], "height": zone.region[3] - zone.region[1],
-                          "floor": zone.world[1], "light": bake_light(zone.id, meta["grade"]),
-                          "grade": hero_grade(zone.id, meta["grade"])})
+                          "floor": zone.world[1], "light": bake_light(meta["grade"]),
+                          "grade": hero_grade(meta["grade"])})
     # 2. Hornet's home: no backdrop shows inside, only her furniture.
     hx0, hy0, hx1, hy1 = HOME["region"]
     box = (round(hx0 * PPU), 0, round(hx1 * PPU), Hpx - round(hy0 * PPU))  # up to the top: no backdrop over it
@@ -1116,8 +1120,8 @@ def compose():
     grades["home"] = _Grade(house_g)
     spots = build_home(canvases, house, grades["home"])
     zones_out.append({"id": "home", "room": HOUSE, "left": hx0, "bottom": hy0, "width": hx1 - hx0,
-                      "height": hy1 - hy0, "floor": TOP, "light": bake_light("home", house_g),
-                      "grade": hero_grade("home", house_g)})
+                      "height": hy1 - hy0, "floor": TOP, "light": bake_light(house_g),
+                      "grade": hero_grade(house_g)})
     # Her glow everywhere as faint as in her house (the softest the game gives her): one light for
     # the whole world, in each zone's colours.
     strength = next(z["light"]["strength"] for z in zones_out if z["id"] == HERO_LIGHT_FROM)
@@ -1271,20 +1275,11 @@ def compose():
 
     clock = bake_clock(layers, canvases, metas, grades)
 
+    # The tiles and the air, made again below. Earlier builds named some motes and particle
+    # textures like them: those go with the other small images, once no World.qml names them.
     for old in OUT.glob("*_??.png"):
-        old.unlink()
-    # What earlier builds left: lights and curves of zones that are gone, per-zone Hornet sheets.
-    current = {z["light"]["file"] for z in zones_out} | {z["grade"]["lut"] for z in zones_out}
-    if clock:
-        current |= {p["file"] for p in clock["hands"] + clock["gears"]}
-    current |= {f"particle_{zid}_{p['texture']}" for zid, z in metas.items() for p in z.get("particles", [])}
-    current |= {f"animated_{zid}.png" for zid, z in metas.items() if z.get("animated")}
-    for old in [*OUT.glob("light_*.png"), *OUT.glob("lut_*.png"), *OUT.glob("clock_*.png"), *OUT.glob("particle_*.png"),
-                *OUT.glob("animated_*.png")]:
-        if old.name not in current:
+        if not old.name.startswith(("motes_", "particle_")):
             old.unlink()
-    if (OUT / "zones").is_dir():
-        shutil.rmtree(OUT / "zones")
     tiles = {name: save_tiles(img, name) for name, img in layers.items()}
     sway = export_sway(swaying)
     particles = export_particles(metas)
@@ -1296,6 +1291,22 @@ def compose():
         if metas[zone.id].get("animated"):
             shutil.copyfile(CACHE / zone.id / "animated.png", OUT / f"animated_{zone.id}.png")
             animated += [{**a, "sheet": f"animated_{zone.id}.png", "zone": zone.id} for a in metas[zone.id]["animated"]]
+    # What earlier builds left: lights, curves, clock parts and particle textures this one no
+    # longer has (its zones gone, or now one file for several), per-zone Hornet sheets. Those the
+    # World.qml still in place names stay until the next build: the wallpapers read it until this
+    # one replaces it, and a lock screen started on it keeps it to its end (it doesn't watch for a
+    # new one), reading Hornet's light for a zone only once she gets there.
+    current = {z["light"]["file"] for z in zones_out} | {z["grade"]["lut"] for z in zones_out}
+    if clock:
+        current |= {p["file"] for p in clock["hands"] + clock["gears"]}
+    current |= {p["texture"] for p in particles} | {a["sheet"] for a in animated}
+    previous = (OUT / "World.qml").read_text() if (OUT / "World.qml").exists() else ""
+    for old in [*OUT.glob("light_*.png"), *OUT.glob("lut_*.png"), *OUT.glob("clock_*.png"), *OUT.glob("particle_*.png"),
+                *OUT.glob("motes_*.png"), *OUT.glob("animated_*.png")]:
+        if old.name not in current and json.dumps(old.name) not in previous:
+            old.unlink()
+    if (OUT / "zones").is_dir():
+        shutil.rmtree(OUT / "zones")
     preview = layers["back"].copy()
     for name in ("mid", "front"):  # the swaying and animated pieces at rest
         for a in animated:
@@ -1339,10 +1350,15 @@ def compose():
                    "y": metas["bell_beast"]["anchors"]["bell_beast"][1], "zone": "bell_beast"}
                   if "bell_beast" in metas["bell_beast"].get("anchors", {}) else None),
     }
-    # Replaced in one step, so the running wallpapers' folder watch sees a new file and reloads.
+    # Replaced in one step, so the running wallpapers' folder watch sees a new file and reloads;
+    # once what the wallpaper reads in place of its images is made for it (derive.py: the QOI
+    # twins, the screens' views, the sheet sets), so that they find those too. Without them the
+    # wallpaper reads the tiles and the sheets themselves, as PNGs, more slowly.
     tmp = OUT / ".World.qml.tmp"
     tmp.write_text("// Generated by packages/silksong-wallpaper/tools/world.py\nimport QtQml\n\n"
                    f"QtObject {{\n    readonly property var world: ({json.dumps(data)})\n}}\n")
+    if subprocess.run([Path(__file__).with_name("derive.py"), tmp]).returncode:
+        print("derive.py failed: the wallpaper will read the PNGs", file=sys.stderr)
     os.replace(tmp, OUT / "World.qml")
     kinds = {}
     for link in nav_map["links"]:
@@ -1512,7 +1528,8 @@ def export_sway(swaying):
 
 def export_particles(metas):
     """The rooms' ambient particles the zones keep (render_zone's emitters): those that stand on
-    the zone's own screen, kept to it, their textures copied next to the world."""
+    the zone's own screen, kept to it, their textures next to the world (particle_*.png, one file
+    for those alike)."""
     out = []
     for zone in ZONES:
         for p in metas.get(zone.id, {}).get("particles", []):
@@ -1523,8 +1540,7 @@ def export_particles(metas):
             x1, y1 = min(p["area"][0] + p["area"][2], r[2]), min(p["area"][1] + p["area"][3], r[3])
             if x1 <= x0 or y1 <= y0:
                 continue
-            file = f"particle_{zone.id}_{p['texture']}"
-            shutil.copyfile(CACHE / zone.id / p["texture"], OUT / file)
+            file = save_unique(Image.open(CACHE / zone.id / p["texture"]), "particle")
             out.append({**p, "texture": file, "zone": zone.id,
                         "area": [round(v, 3) for v in (x0, y0, x1 - x0, y1 - y0)]})
     return out
@@ -1532,13 +1548,11 @@ def export_particles(metas):
 
 def place_motes(placements, grade_at):
     """MOTES (and the shafts' dust) as emitters: each kit template at its place, its texture in
-    the colours of the zone it's in (motes_*.png)."""
+    the colours of the zone it's in (motes_*.png, one file for those alike)."""
     import game
 
-    for old in OUT.glob("motes_*.png"):
-        old.unlink()
     templates, out = {}, []
-    for j, m in enumerate(placements):
+    for m in placements:
         if m["kit"] not in templates:
             templates[m["kit"]] = {t["name"]: t for t in json.loads((terrain.KITS / m["kit"] / "particles.json").read_text())}
         tpl = templates[m["kit"]][m["system"]]
@@ -1555,9 +1569,8 @@ def place_motes(placements, grade_at):
             x0, y0, x1, y1 = m["box"]
             e = place_particles(tpl, (x0 + x1) / 2, (y0 + y1) / 2, s, m["count"], [(x1 - x0) / 2, 0.0, 0.0, (y1 - y0) / 2], "box")
         e["size"] = [round(v * m.get("grow", 1.0), 4) for v in e["size"]]
-        file = f"motes_{j:02d}.png"
-        particle_texture(Image.open(terrain.KITS / m["kit"] / tpl["texture"]), tpl["lit"], grade_at(e["x"], e["y"])).save(OUT / file)
-        out.append({**e, "texture": file, "layer": m.get("layer", "back")})
+        texture = particle_texture(Image.open(terrain.KITS / m["kit"] / tpl["texture"]), tpl["lit"], grade_at(e["x"], e["y"]))
+        out.append({**e, "texture": save_unique(texture, "motes"), "layer": m.get("layer", "back")})
     return out
 
 
@@ -1651,9 +1664,21 @@ def save_tiles(img, prefix):
         if prefix != "back" and tile.getchannel("A").getbbox() is None:
             continue
         name = f"{prefix}_{i:02d}.png"
+        # The backdrops too stay RGBA, opaque as they are: Qt scales an RGB image down by other
+        # means, up to 8 levels off at some sizes, which would change a screen's backdrop.
         tile.save(OUT / name, optimize=True)
         tiles.append({"file": name, "x": x, "width": tile.width})
     return tiles
+
+
+def save_unique(img, stem):
+    """Saves a small image as stem_<its content's hash>.png and returns that name: images that
+    come out the same (a texture placed twice in the same colours, a light alike in two zones)
+    are one file, which the wallpaper reads and holds once."""
+    content = f"{img.mode} {img.size}".encode() + img.tobytes()
+    name = f"{stem}_{hashlib.sha1(content).hexdigest()[:10]}.png"
+    img.save(OUT / name, optimize=True)
+    return name
 
 
 def bake_hornet():
@@ -1682,18 +1707,19 @@ def bake_hornet():
         out_rgb = (lit * alpha + h_rgb * h_alpha * (1 - alpha)) / np.maximum(out_a, 1e-6)
         sheet = np.concatenate([out_rgb, out_a], -1)
         Image.fromarray((sheet.clip(0, 1) * 255).round().astype(np.uint8), "RGBA").save(out / png.name, optimize=True)
+    for old in {*out.glob("*.png")} - {out / png.name for png in src}:  # sheets of clips extract.py no longer makes
+        old.unlink()
     stamp.write_text(key)
     print(f"Hornet: {len(src)} sheets -> {out}", file=sys.stderr)
 
 
-def hero_grade(zone_id, g):
+def hero_grade(g):
     """What hornet.frag needs to colour Hornet as a zone's room would: its ambient light and
     hero saturation (Sprites/Default-ColorFlash with IS_HERO), its camera curves (a 256x1
     lookup image) and saturation."""
     grade = _Grade(g)
     lut = (np.asarray(grade.lut).reshape(1, -1, 3).clip(0, 1) * 255).round().astype(np.uint8)
-    name = f"lut_{zone_id}.png"
-    Image.fromarray(lut, "RGB").save(OUT / name)
+    name = save_unique(Image.fromarray(lut, "RGB"), "lut")
     return {"lut": name, "ambient": [round(float(v), 4) for v in grade.ambient_rgb()],
             "heroSaturation": round(float(grade.hero_saturation), 4), "saturation": round(float(grade.saturation), 4)}
 
@@ -1802,10 +1828,9 @@ def bake_clock(layers, canvases, metas, grades):
                       "pivot": [round((pad + hub / tail * (img.width - 2 * pad)) / img.width, 4), 0.5]})
 
     gears = []
-    for i, (name, dx, dy, d, turns, shade, dial) in enumerate(CLOCK["gears"]):
-        img = part(name, d, shade=shade)
-        img.save(OUT / f"clock_gear{i}.png")
-        gears.append({"file": f"clock_gear{i}.png", "x": round(cx + dx, 3), "y": round(cy + dy, 3), "size": d,
+    for name, dx, dy, d, turns, shade, dial in CLOCK["gears"]:
+        file = save_unique(part(name, d, shade=shade), "clock_gear")
+        gears.append({"file": file, "x": round(cx + dx, 3), "y": round(cy + dy, 3), "size": d,
                       "turns": turns, "dial": dial})
     return {"x": round(cx, 3), "y": round(cy, 3), "hands": hands, "gears": gears}
 
@@ -1814,7 +1839,7 @@ HERO_LIGHT_EASE = 1.7  # the glow's falloff, eased (1: the game's own)
 HERO_LIGHT_FROM = "home"  # the zone whose room's glow strength she has everywhere
 
 
-def bake_light(zone_id, g):
+def bake_light(g):
     """Hornet's light for a zone (HeroLight, screen-blended: white at alpha = its brightness),
     stored at full strength with the zone's strength beside it; the wallpaper raises it at night."""
     import game
@@ -1829,8 +1854,7 @@ def bake_light(zone_id, g):
     # The game's glow falls off almost linearly to nothing 7 units out: over our dark backdrops
     # and under the night veil its rim reads as a disc's edge. Eased, it fades out without one.
     img[..., 3] = (strength / max(peak, 1e-6)) ** HERO_LIGHT_EASE
-    name = f"light_{zone_id}.png"
-    Image.fromarray((img.clip(0, 1) * 255).round().astype(np.uint8), "RGBA").save(OUT / name, optimize=True)
+    name = save_unique(Image.fromarray((img.clip(0, 1) * 255).round().astype(np.uint8), "RGBA"), "light")
     x0, y0, x1, y1 = light["box"]
     sx, sy = light["scale"]
     ox, oy = light["offset"]
