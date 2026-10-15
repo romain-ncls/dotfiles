@@ -2,17 +2,17 @@
 // the way Unity runs it: particles born in the emitter's shape (a circle, a box or an edge),
 // leaving it at their start speed (out of a circle, up from an edge), drifting, pushed by a force
 // and by gravity, spinning, growing and fading, coloured over their life, their sheet played over
-// each life. One item per emitter: a grid of 2 * slots - 1 cells, a slot's quad in every other
-// one (the cells between are dropped by particle.frag). Each slot lives a whole number of times
-// an hour, so the clock's hourly wrap is seamless, and draws each life's randomness from the
-// slot and the life.
+// each life. One item per emitter: a grid of 4 * slots - 1 cells, four columns of corners per
+// slot (its quad's bottom left, its left edge, its right edge, its bottom right), so that only
+// the cell between its edges has an area: those joining it to its neighbours fold into lines,
+// of which the GPU draws nothing. Each slot lives a whole number of times an hour, so the clock's
+// hourly wrap is seamless, and draws each life's randomness from the slot and the life.
 #version 440
 
 layout(location = 0) in vec4 qt_Vertex;
 layout(location = 1) in vec2 qt_MultiTexCoord0;
 layout(location = 0) out vec2 texCoord;
 layout(location = 1) out vec4 colour;
-layout(location = 2) out float column;  // its column in the grid: a slot's cells have an even one
 
 layout(std140, binding = 0) uniform buf {
     mat4 qt_Matrix;
@@ -44,6 +44,7 @@ layout(std140, binding = 0) uniform buf {
     vec4 keyT1;
     vec4 keyA0;        // and alphas
     vec4 keyA1;
+    vec4 qt_SubRect_source;  // set by Qt: where the image lies in its texture (an atlas, if small)
 };
 
 out gl_PerVertex { vec4 gl_Position; };
@@ -92,9 +93,10 @@ vec3 hue(float u) {
 }
 
 void main() {
-    column = floor(qt_MultiTexCoord0.x * (2.0 * slots - 1.0) + 0.5);
-    float slot = floor(column * 0.5);
-    vec2 side = vec2(column - 2.0 * slot, qt_MultiTexCoord0.y);  // which corner of its quad
+    float column = floor(qt_MultiTexCoord0.x * (4.0 * slots - 1.0) + 0.5);
+    float slot = floor(column * 0.25);
+    float sub = column - 4.0 * slot;  // its bottom left (0), left edge, right edge, bottom right (3)
+    vec2 side = vec2(sub < 1.5 ? 0.0 : 1.0, sub < 0.5 || sub > 2.5 ? 1.0 : qt_MultiTexCoord0.y);  // which corner of its quad
     float fi = slot + 1.0;
     float lives = max(1.0, floor(3600.0 / mix(lifeSize.x, lifeSize.y, hash(fi * 17.31)) + 0.5));
     float life = 3600.0 / lives;
@@ -134,6 +136,6 @@ void main() {
     float frames = sheet.x * sheet.y;
     float k = mod(min(floor(u * frames * sheet.z), frames * sheet.z - 1.0), frames);
     vec2 cell = vec2(mod(k, sheet.x), floor(k / sheet.x));  // left to right, top to bottom
-    texCoord = (cell + side) / sheet.xy;
+    texCoord = qt_SubRect_source.xy + (cell + side) / sheet.xy * qt_SubRect_source.zw;
     colour = vec4(tint.rgb * hue(u), misc.x * fade(u));
 }

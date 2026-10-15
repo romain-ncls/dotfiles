@@ -29,6 +29,51 @@ function layout(screens, gapMm) {
     return { screens: rects, width: x - gapMm, height: height };
 }
 
+// Where one of a layer's tiles (tools/world.py) goes on a screen (me, its place in the layout,
+// and its size in pixels) and which of its texels it shows there, or null if none. WorldScene's
+// layers draw the tiles so, and tools/derive.qml cuts each screen's own view of them from the very
+// same texels (so after a change here, run tools/derive.py again: the views keep the places they
+// were made with). Each screen only loads the tiles it shows, and of each only the part it shows.
+function tilePlace(world, tile, rows, me, width, height) {
+    const pxPerMm = width / me.w;
+    const pxPerUnit = pxPerMm * world.unitMm;
+    const toX = xMm => (xMm - me.x) * pxPerMm;
+    const toY = yMm => height - (yMm - me.y) * pxPerMm;
+    const unitsX = tile.x / world.pixelsPerUnit;
+    const unitsW = tile.width / world.pixelsPerUnit;
+    if ((unitsX + unitsW) * world.unitMm <= me.x || unitsX * world.unitMm >= me.x + me.w) {
+        return null;
+    }
+    // Where the whole tile goes. Neighbouring tiles share their edge exactly: an overlap would
+    // draw a translucent column twice (a line through the lake), a gap would show the black behind.
+    const fx = Math.round(toX(unitsX * world.unitMm));
+    const fw = Math.round(toX((unitsX + unitsW) * world.unitMm)) - fx;
+    const fy = Math.floor(toY(world.height * world.unitMm));
+    const fh = Math.ceil(world.height * pxPerUnit);
+    // The texels Qt scales it to (fw wide, never wider than it is), the height rounded as Qt
+    // rounds it.
+    const srcH = Math.round(world.height * world.pixelsPerUnit);
+    const texW = Math.min(fw, tile.width);
+    const texH = fw < tile.width ? Math.round(srcH * (fw / tile.width)) : srcH;
+    const sx = fw / texW;
+    const sy = fh / texH;
+    // Of those, only the ones on the screen (one less tall than the world shows only part of it)
+    // and in the rows that have anything in them (rows, in the tile's pixels, where known), and
+    // one more on each side, which the smoothing reads. Qt cuts them out of the scaled image
+    // (clip): they're the very texels the whole tile would show there.
+    const top = rows ? rows[0] : 0;
+    const bottom = rows ? rows[1] : srcH;
+    const tx0 = Math.max(0, Math.floor(-fx / sx) - 1);
+    const tx1 = Math.min(texW, Math.ceil((width - fx) / sx) + 1);
+    const ty0 = Math.max(0, Math.floor(-fy / sy) - 1, Math.floor(top * texH / srcH) - 1);
+    const ty1 = Math.min(texH, Math.ceil((height - fy) / sy) + 1, Math.ceil(bottom * texH / srcH) + 1);
+    if (tx1 <= tx0 || ty1 <= ty0) {
+        return null;
+    }
+    return { fx: fx, fy: fy, fw: fw, sx: sx, sy: sy, clip: [tx0, ty0, tx1 - tx0, ty1 - ty0],
+             x: fx + tx0 * sx, y: fy + ty0 * sy, width: (tx1 - tx0) * sx, height: (ty1 - ty0) * sy };
+}
+
 // Frame index into a clip t seconds after it started, following tk2d's wrap modes.
 function frameAt(clip, t) {
     const n = clip.frames;
@@ -135,8 +180,21 @@ function zoneAt(world, x, y) {
 // light): each zone's own share rises over `feather` units on each side of its edge, and later
 // zones cover earlier ones (as they're drawn), so crossing from one zone to the next is a
 // gradual change, as the game's SceneColorManager lerps its colours inside a scene. Sorted, the
-// largest first; the shares add up to 1.
+// largest first; the shares add up to 1. The same array again for the same point, so that what's
+// bound to it isn't worked out again: the last answer is kept on the world it was asked for (each
+// screen has its own copy), not in a WeakMap, which crashed the QML engine's garbage collector
+// (Qt 6.11).
 function zoneWeights(world, x, y, feather) {
+    const m = world.lastZoneWeights;
+    if (m && m.zones === world.zones && m.x === x && m.y === y && m.feather === feather) {
+        return m.out;
+    }
+    const out = zoneWeightsOf(world, x, y, feather);
+    world.lastZoneWeights = { zones: world.zones, x: x, y: y, feather: feather, out: out };
+    return out;
+}
+
+function zoneWeightsOf(world, x, y, feather) {
     const smooth = t => {
         const u = Math.min(1, Math.max(0, t));
         return u * u * (3 - 2 * u);

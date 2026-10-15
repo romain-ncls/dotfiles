@@ -43,6 +43,7 @@ float droplets(vec2 p, float edge, float side, float speed, float seed) {
     if (h < 0.6) {
         return 0.0;
     }
+    // At most 0.26 out from the water, 0.026 in radius (below): main() skips pixels 0.3 out.
     float out_ = 0.04 + 0.22 * hash(vec2(row, seed + 1.0)) * (0.3 + 0.7 * clamp(p.y / extent.y, 0.0, 1.0));
     vec2 head = vec2(edge + side * out_, (row + 0.5) * cell + time * speed);
     float tail = speed / 30.0;
@@ -61,6 +62,9 @@ void main() {
     float w = right - left;
     float u = (p.x - left) / w;
     float dist = min(u, 1.0 - u) * w;  // to the nearer edge, units (negative outside)
+    if (dist < -0.3) {
+        discard;  // further out than any droplet falls
+    }
     float fade = smoothstep(0.0, 0.5, p.y) * (1.0 - smoothstep(extent.y - 0.2, extent.y, p.y));
 
     // Droplets beside the edges, more of them lower down.

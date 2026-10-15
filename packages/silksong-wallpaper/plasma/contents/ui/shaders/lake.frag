@@ -16,6 +16,7 @@ layout(std140, binding = 0) uniform buf {
     float impact;  // where the waterfall lands, units from the item's left
     vec4 shallow;
     vec4 light;
+    vec4 qt_SubRect_mask;  // set by Qt: where the image lies in its texture (an atlas, if small)
 };
 
 layout(binding = 1) uniform sampler2D mask;
@@ -37,11 +38,19 @@ float fbm(vec2 p) {
 
 void main() {
     vec2 p = vec2(qt_TexCoord0.x * extent.x, (1.0 - qt_TexCoord0.y) * extent.y);  // units, y up
-    vec4 m = texture(mask, qt_TexCoord0);
+    vec4 m = texture(mask, qt_SubRect_mask.xy + qt_TexCoord0 * qt_SubRect_mask.zw);
+    if (m.r + m.g <= 0.0) {
+        discard;  // the rock: none of it shows there
+    }
     float near = exp(-pow((p.x - impact) / 1.3, 2.0));  // close to where the waterfall lands
     float wave = 0.03 * sin(p.x * 2.7 + time * 1.3) + 0.02 * sin(p.x * 6.1 - time * 1.9)
         + near * 0.05 * sin(p.x * 11.0 - time * 7.0);
     float d = p.y - level - wave;  // above (+) or below (-) the moving surface
+    // Higher up, none of it shows: the line, the rings and the foam below all end by 0.09 above
+    // the surface (the foam, 0.12 from 0.03 under it, is the highest).
+    if (d >= 0.09) {
+        discard;
+    }
 
     float line = 1.0 - smoothstep(0.018, 0.055, abs(d));
     float band = d < 0.0 ? exp(d / 0.22) * 0.3 : 0.0;

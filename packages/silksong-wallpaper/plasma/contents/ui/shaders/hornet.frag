@@ -21,6 +21,11 @@ layout(std140, binding = 0) uniform buf {
     float heroSaturation2;
     float saturation2;
     float blend;          // how much of the other zone (0: none)
+    // Set by Qt: where each table lies in its texture (small images share an atlas). Not for the
+    // sheet, which Qt then gives a texture of its own: its place in the atlas changes from run to
+    // run, and un-premultiplying her outlines would turn that into a few levels of colour.
+    vec4 qt_SubRect_lut;
+    vec4 qt_SubRect_lut2;
 };
 
 layout(binding = 1) uniform sampler2D source;  // her sheet, premultiplied
@@ -29,16 +34,17 @@ layout(binding = 3) uniform sampler2D lut2;    // the other zone's
 
 const vec3 LUMA = vec3(0.22, 0.707, 0.071);  // Unity's Luminance() in gamma space
 
-vec3 curves(sampler2D table, vec3 c) {
-    vec3 u = clamp(c, 0.0, 1.0) * (255.0 / 256.0) + 0.5 / 256.0;
-    return vec3(texture(table, vec2(u.r, 0.5)).r, texture(table, vec2(u.g, 0.5)).g, texture(table, vec2(u.b, 0.5)).b);
+vec3 curves(sampler2D table, vec4 rect, vec3 c) {
+    vec3 u = rect.x + (clamp(c, 0.0, 1.0) * (255.0 / 256.0) + 0.5 / 256.0) * rect.z;
+    float v = rect.y + 0.5 * rect.w;
+    return vec3(texture(table, vec2(u.r, v)).r, texture(table, vec2(u.g, v)).g, texture(table, vec2(u.b, v)).b);
 }
 
-vec3 graded(vec3 c, vec3 amb, float heroSat, sampler2D table, float sat) {
+vec3 graded(vec3 c, vec3 amb, float heroSat, sampler2D table, vec4 rect, float sat) {
     c = c + (c * amb * 2.0 - c) * 0.4;
     float l = clamp(dot(c, LUMA), 0.0, 1.0);
     c = clamp(l + (c - l) * heroSat, 0.0, 1.0);
-    c = curves(table, c);
+    c = curves(table, rect, c);
     l = dot(c, LUMA);
     return clamp(l + (c - l) * sat, 0.0, 1.0);
 }
@@ -50,9 +56,9 @@ void main() {
         return;
     }
     vec3 c = p.rgb / p.a * tint.rgb;
-    vec3 a = graded(c, ambient.rgb, heroSaturation, lut, saturation);
+    vec3 a = graded(c, ambient.rgb, heroSaturation, lut, qt_SubRect_lut, saturation);
     if (blend > 0.001) {
-        a = mix(a, graded(c, ambient2.rgb, heroSaturation2, lut2, saturation2), blend);
+        a = mix(a, graded(c, ambient2.rgb, heroSaturation2, lut2, qt_SubRect_lut2, saturation2), blend);
     }
     fragColor = vec4(a * p.a, p.a) * qt_Opacity;
 }

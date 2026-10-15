@@ -9,6 +9,13 @@
 
 const DEG = Math.PI / 180;
 
+// The night's veil, from after dusk until an hour before sunrise.
+const night = { color: [0.04, 0.07, 0.17], opacity: 0.58, lights: 1.0 };
+
+// The day's sun and keyframes as last worked out: they change once a day, the lighting is asked
+// for on every tick.
+let last = { year: NaN, day: NaN, offset: NaN, latitude: NaN, longitude: NaN, sun: null, keys: null, night: null };
+
 // Sunrise and sunset in local hours (NOAA's simplified solar position).
 function sunTimes(date, latitude, longitude) {
     const start = new Date(date.getFullYear(), 0, 0);
@@ -34,13 +41,10 @@ function mixColor(a, b, t) {
     return [mix(a[0], b[0], t), mix(a[1], b[1], t), mix(a[2], b[2], t)];
 }
 
-// Veil colour (0-1 RGB), its opacity, and the lights' strength (0-1) at a moment.
-function lightingAt(date, latitude, longitude) {
-    const sun = sunTimes(date, latitude, longitude);
-    const hour = date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600;
+// The day's keyframes, placed around its sunrise and sunset.
+function keyframes(sun) {
     const noon = (sun.sunrise + sun.sunset) / 2;
-    const night = { color: [0.04, 0.07, 0.17], opacity: 0.58, lights: 1.0 };
-    const keys = [
+    return [
         { at: sun.sunrise - 1.0, color: night.color, opacity: night.opacity, lights: night.lights },
         { at: sun.sunrise, color: [0.62, 0.40, 0.50], opacity: 0.16, lights: 0.5 },        // first light, rosy
         { at: sun.sunrise + 1.0, color: [1.0, 0.78, 0.55], opacity: 0.05, lights: 0.1 },   // warm morning
@@ -51,8 +55,29 @@ function lightingAt(date, latitude, longitude) {
         { at: sun.sunset + 0.3, color: [0.36, 0.24, 0.46], opacity: 0.30, lights: 0.7 },   // dusk
         { at: sun.sunset + 1.2, color: night.color, opacity: night.opacity, lights: night.lights },
     ];
+}
+
+// Veil colour (0-1 RGB), its opacity, and the lights' strength (0-1) at a moment.
+function lightingAt(date, latitude, longitude) {
+    // The sun only changes with the day of the year as sunTimes counts it (one behind the date
+    // just after midnight in summer time), the time zone and the place: it and the day's keyframes
+    // are worked out again only then.
+    const year = date.getFullYear();
+    const day = Math.floor((date - new Date(year, 0, 0)) / 86400000);
+    const offset = date.getTimezoneOffset();
+    if (year !== last.year || day !== last.day || offset !== last.offset || latitude !== last.latitude
+        || longitude !== last.longitude) {
+        const sun = sunTimes(date, latitude, longitude);
+        last = { year: year, day: day, offset: offset, latitude: latitude, longitude: longitude, sun: sun,
+                 keys: keyframes(sun), night: null };
+    }
+    const sun = last.sun;
+    const keys = last.keys;
+    const hour = date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600;
     if (hour <= keys[0].at || hour >= keys[keys.length - 1].at) {
-        return { color: night.color, opacity: night.opacity, lights: night.lights, sun: sun };
+        // The same object all night, so that what's bound to it isn't worked out again every tick.
+        last.night = last.night || { color: night.color, opacity: night.opacity, lights: night.lights, sun: sun };
+        return last.night;
     }
     for (let i = 1; i < keys.length; i++) {
         if (hour <= keys[i].at) {

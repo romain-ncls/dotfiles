@@ -1,30 +1,28 @@
 /*
  * Renders each screen's view at given times, without Plasma, on a virtual display with
  * OpenGL (Hornet is coloured by a shader; the offscreen platform only has the software
- * renderer, which shows her uncoloured):
+ * renderer, which shows her uncoloured), with the system's image formats as Plasma has them:
  *
  *   xvfb-run -a -s "-screen 0 5760x1200x24" env QT_QPA_PLATFORM=xcb \
+ *       QT_PLUGIN_PATH=/run/current-system/sw/lib/qt-6/plugins \
  *       qml tools/preview.qml -- OUT_DIR [--world] TIME...
  *
  * TIME is seconds since the epoch, or HH:MM today (the world's daylight follows
  * the clock). Writes OUT_DIR/<screen>@<time>.png at each screen's real
- * resolution; tools/desk.py lays them out as they sit on the desk.
+ * resolution, once every view has everything it shows; tools/desk.py lays them out as
+ * they sit on the desk.
  */
 import QtQuick
 import QtQuick.Window
 import QtCore
 
 import "../plasma/contents/ui"
+import "desk.js" as Desk
 
 Window {
     id: win
 
-    // This desk, as Qt.application.screens reports it.
-    readonly property var screens: [
-        { name: "DP-3", virtualX: 0, width: 1920, height: 1080, pixelDensity: 1920 / 476.2 },
-        { name: "eDP-1", virtualX: 1920, width: 1920, height: 1200, pixelDensity: 1920 / 344 },
-        { name: "HDMI-A-1", virtualX: 3840, width: 1920, height: 1080, pixelDensity: 1920 / 476.2 },
-    ]
+    readonly property var screens: Desk.screens
     readonly property var args: Qt.application.arguments.slice(Qt.application.arguments.indexOf("--") + 1)
     readonly property string outDir: args[0]
     readonly property bool worldMode: args.indexOf("--world") >= 0
@@ -52,6 +50,7 @@ Window {
         Scene {
             anchors.fill: parent
             screens: win.screens
+            gapMm: Desk.gapMm
             screenName: parent.screenName
             dataDir: win.dataDir
             live: false
@@ -64,6 +63,7 @@ Window {
         WorldScene {
             anchors.fill: parent
             screens: win.screens
+            gapMm: Desk.gapMm
             screenName: parent.screenName
             dataDir: win.dataDir
             live: false
@@ -86,12 +86,23 @@ Window {
         }
     }
 
+    // Whether every view has all it shows in: views that keep track say so (settled); for the
+    // others, the warm-up has to do.
+    function settled() {
+        for (let i = 0; i < views.count; i++) {
+            if (!(views.itemAt(i).item?.settled ?? true)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     Timer {
         interval: 200
         running: true
         repeat: true
         onTriggered: {
-            if (win.pending > 0 || win.warmup-- > 0) {
+            if (win.pending > 0 || win.warmup-- > 0 || !win.settled()) {
                 return;
             }
             if (win.step >= win.times.length) {
