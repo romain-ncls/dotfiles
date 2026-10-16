@@ -128,8 +128,9 @@ function fallTime(h) {
 
 // A jump the way the game makes one: rising at speed v while the button is held (up to
 // `hold`), then slowing under gravity; a double jump starts again at the top of the first;
-// then the fall, down to y1. The jump is held only as long as it needs to clear y1.
-function jumpPlan(y0, y1, double, v, maxHold) {
+// then the fall, down to y1. The jump is held only as long as it needs to clear y1; a double
+// jump's second, longer if she must stay up `minT` seconds (to go a long way at run speed).
+function jumpPlan(y0, y1, double, v, maxHold, minT) {
     v = v || JUMP_SPEED;
     maxHold = maxHold === undefined ? JUMP_HOLD : maxHold;
     const free = v * v / (2 * GRAVITY);
@@ -137,10 +138,10 @@ function jumpPlan(y0, y1, double, v, maxHold) {
     const apex1 = y0 + v * hold1 + free;
     const tA = hold1 + v / GRAVITY;
     const p = { v: v, hold1: hold1, apex1: apex1, tA: tA, v2: 0, hold2: 0, apex: apex1, tB: tA };
-    if (double) {
-        const need = Math.max(0.6, y1 + 0.8 - apex1);
+    const second = need => {
         let v2 = DOUBLE_JUMP_SPEED;
         const free2 = v2 * v2 / (2 * GRAVITY);
+        p.hold2 = 0;
         if (need < free2) {
             v2 = Math.sqrt(2 * GRAVITY * need);
         } else {
@@ -149,8 +150,28 @@ function jumpPlan(y0, y1, double, v, maxHold) {
         p.v2 = v2;
         p.apex = apex1 + v2 * p.hold2 + v2 * v2 / (2 * GRAVITY);
         p.tB = tA + p.hold2 + v2 / GRAVITY;
-    }
+    };
     p.T = p.tB + fallTime(p.apex - y1);
+    if (double) {
+        let lo = Math.max(0.6, y1 + 0.8 - apex1);
+        let hi = DOUBLE_JUMP_SPEED * DOUBLE_JUMP_HOLD + DOUBLE_JUMP_SPEED * DOUBLE_JUMP_SPEED / (2 * GRAVITY);
+        second(lo);
+        p.T = p.tB + fallTime(p.apex - y1);
+        if (minT && p.T < minT && lo < hi) {
+            // Higher, until she's up long enough (the higher, the longer): the least that does.
+            for (let i = 0; i < 16; i++) {
+                const mid = (lo + hi) / 2;
+                second(mid);
+                if (p.tB + fallTime(p.apex - y1) < minT) {
+                    lo = mid;
+                } else {
+                    hi = mid;
+                }
+            }
+            second(hi);
+            p.T = p.tB + fallTime(p.apex - y1);
+        }
+    }
     return p;
 }
 
@@ -385,11 +406,11 @@ Planner.prototype.walkTo = function (x) {
 // plays rising, falling, and at the top of a double jump.
 Planner.prototype.leap = function (x0, y0, x1, y1, opts) {
     opts = opts || {};
-    let p = jumpPlan(y0, y1, !!opts.double, opts.speed, opts.hold);
+    let p = jumpPlan(y0, y1, !!opts.double, opts.speed, opts.hold, opts.minT);
     if (p.apex < y1 + 0.2 && !opts.double) {
         // Too high for one jump: her second, at the top of the first.
         opts = Object.assign({}, opts, { double: true });
-        p = jumpPlan(y0, y1, true, opts.speed, opts.hold);
+        p = jumpPlan(y0, y1, true, opts.speed, opts.hold, opts.minT);
     }
     return this.push({ kind: "jump", plan: p, x0: x0, y0: y0, x1: x1, y1: y1, facingRight: this.facingRight,
                        clip: opts.rise || "Airborne", fall: opts.fall || "Fall", second: opts.double ? "Double Jump" : "",
@@ -426,7 +447,9 @@ Planner.prototype.follow = function (link) {
         this.arrive(link, "Land", 0.25);
     } else if (link.kind === "jump" || link.kind === "jump2") {
         this.face(right);
-        this.leap(link.x0, y0, link.x1, y1, { double: link.kind === "jump2" });
+        // (a double jump as long as she needs to cover the way at run speed: tools/nav.py jump2_time)
+        this.leap(link.x0, y0, link.x1, y1, { double: link.kind === "jump2",
+                                              minT: link.kind === "jump2" ? Math.abs(link.x1 - link.x0) / RUN_SPEED : 0 });
         this.arrive(link, "Land", 0.25);
     } else if (link.kind === "climb") {
         this.climb(link, y0, y1);

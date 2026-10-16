@@ -14,6 +14,7 @@ tools/extract.py                    # Hornet's animations (and the Bell Beast's,
 for room in tut_02 clover_02c bellway_city belltown mosstown_01; do $cap tools/kit.py harvest $room; done
 $cap tools/kit.py atlas ring           # the Clawline rings and poles
 $cap tools/kit.py atlas cog            # Cogwork Core parts: the clock's marks, hands and gears
+$cap tools/kit.py atlas bellhouse      # the bell house: Hornet's bell, its inside and her door
 for room in tut_03 bellway_city mosstown_02 belltown; do $cap tools/kit.py particles $room; done  # motes, drips, smoke, dust
 $cap tools/kit.py harvest belltown_room_spare --save BelltownFurnishingDesk \
     BelltownFurnishingFairyLights BelltownFurnishingSpa BelltownFurnishingGramaphone
@@ -48,8 +49,10 @@ settings say when it stands still there (see Runtime).
   ground running under all three screens, a walkway and branches crossing the bezels,
   floating islands, a climbable step, a cliff) and dressed with pieces from the rooms; each
   screen shows a room's background, rendered with the game's camera, shaders, bloom and
-  colour grading and receding a little behind the rock; Hornet's house is furnished with her
-  Bellhart house's pieces and walled in Bellhart's timber; a lake and waterfall. Plants and
+  colour grading and receding a little behind the rock; Hornet's home is her bell from Bellhart
+  hanging in the top-left corner, painted red, a window in its own shape and an arched doorway
+  showing her room inside (her Bellhart house's furniture), a porch out from under her door; a
+  lake and waterfall. Plants and
   vines on the game's grass shaders are kept apart to sway (`sway.png`), the station's floor
   bells to jingle (their shake frames), and the rooms' own ambient particles (Verdania's
   fireflies) are exported as emitters. The air (`AIR`) is the game's atmosphere pieces placed
@@ -59,7 +62,8 @@ settings say when it stands still there (see Runtime).
   rooms (`CRITTERS`): the grotto's moss flies behind the rock, dragonflies over the meadow and
   the lake that hold still while Hornet plays her needolin, and Verdania's lilypad flies, which
   sing along to it and fly to their next perch when she comes close (`life.js crittersAt`). Navigation (walk, drop,
-  jump, climb) comes from the same rock, so nothing she stands on is hidden.
+  jump, double jump, climb) comes from the same rock, so nothing she stands on is hidden (her
+  bell's floor and walls are rock that isn't drawn, laid where the bell's art has them).
   `world.py --layout IMAGE` draws just the rock and her ways, quickly.
 - `derive.py`: what the wallpaper reads in place of the world's own images, so that each screen
   shows sooner and holds less, and `Derived.qml`, which lists it for the world's build: QOI twins
@@ -79,7 +83,8 @@ settings say when it stands still there (see Runtime).
   room's particle systems (`kit.py particles ROOM`) as templates the world places.
 - `terrain.py`: rock shapes and the dressing (silhouettes, moss masses, edge pieces by the
   way a surface faces, plants in front).
-- `nav.py`: surfaces and links sized with Hornet's real movement.
+- `nav.py`: surfaces and links sized with Hornet's real movement; a double jump carries her as
+  far as she runs while she's up (`life.js` plays it that long).
 - `bake.py`: a single scene from one room (the first version, `SceneId` other than `world`).
 - `room.py`, `game.py`: reading Unity scene data and reproducing the game's look.
 - `explore.py`: a room's map with a unit grid and its terrain, to choose zones.
