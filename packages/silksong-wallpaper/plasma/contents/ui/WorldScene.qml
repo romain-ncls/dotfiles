@@ -118,20 +118,24 @@ Item {
         return height - (yMm - me.y) * pxPerMm;
     }
 
-    // One clock per screen, ticking only when something it shows changes, so that each change is
-    // drawn once, on time. While Hornet moves where she's seen, or grass she walked into springs
-    // back, on every frame its window draws (each tick asks for the next frame, and the frame
-    // brings the next tick). Otherwise on a timer, set for just after the first change to come:
-    // her clip's next cell, the Bell Beast's next frame, a jingling floor bell's, or a step of
-    // what moves on its own (the water, the plants, the particles, the small life, the gears) at
-    // the pace it needs: the water 30 times a second, plants and particles 15, on the grass's own
-    // frames (the game snaps it to 15 a second), the clock's gears 10, else 4 (to notice her
-    // coming and move the daylight). Where she's seen at rest, nearHz if that's more: from 60,
-    // every frame. On the Bell Beast's screen, 12 with its frames, its animations' rate (at 15 its
-    // frames would last one tick, then two: it would look hurried). Not a FrameAnimation: while
-    // one runs with more than one window shown, every timer of the process (Plasma's too) is
-    // rounded to a 16 ms tick of an animation clock that runs 4% fast.
-    property int nearHz: 30 // AmbientNearHz (0: the screen's own pace)
+    // One clock per screen. By default (everyFrame) it ticks on every frame its window draws (each
+    // tick asks for the next frame, and the frame brings the next tick), so that everything moves
+    // as smoothly as the game moves it: the fast falling drops would jump at any slower pace.
+    // Paced (Motion, in the settings), it only ticks when something it shows changes, so that each
+    // change is drawn once, on time, for less work. While Hornet moves where she's seen, or grass
+    // she walked into springs back, on every frame. Otherwise on a timer, set for just after the
+    // first change to come: her clip's next cell, the Bell Beast's next frame, a jingling floor
+    // bell's, or a step of what moves on its own (the water, the plants, the particles, the small
+    // life, the gears) at the pace it needs: the water 30 times a second, plants and particles 15,
+    // on the grass's own frames (the game snaps it to 15 a second), the clock's gears 10, else 4
+    // (to notice her coming and move the daylight). Where she's seen at rest, nearHz if that's
+    // more: from 60, every frame. On the Bell Beast's screen, 12 with its frames, its animations'
+    // rate (at 15 its frames would last one tick, then two: it would look hurried). Not a
+    // FrameAnimation: while one runs with more than one window shown, every timer of the process
+    // (Plasma's too) is rounded to a 16 ms tick of an animation clock that runs 4% fast.
+    property bool everyFrame: true // Motion 0; paced otherwise
+    // Paced, where Hornet rests: Motion 1 is 60, 2 is 30, 3 is 0 (the screen's own pace).
+    property int nearHz: 30
     readonly property bool showsClock: clock !== null
         && clock.x * unitMm > me.x - 30 && clock.x * unitMm < me.x + me.w + 30
     readonly property bool showsAmbient: (swayHere.length > 0 || showsParticles || airHere.length > 0 || crittersHere.length > 0)
@@ -207,7 +211,8 @@ Item {
     function schedule() {
         const t = time;
         const hornetNext = hornetSeen ? Life.hornetChangesAt(world, clips, t) : Infinity;
-        continuous = t < pushUntil || (hornetSeen && (nearHz >= 60 || hornetNext <= t));
+        continuous = (everyFrame && GraphicsInfo.api !== GraphicsInfo.Software) || t < pushUntil
+            || (hornetSeen && (nearHz >= 60 || hornetNext <= t));
         if (continuous) {
             wake.stop();
             return;

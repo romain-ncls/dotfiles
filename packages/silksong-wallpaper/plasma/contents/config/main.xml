@@ -26,9 +26,9 @@
       <label>Longitude for sunrise and sunset</label>
       <default>2.35</default>
     </entry>
-    <entry name="AmbientNearHz" type="Int">
-      <label>Times a second the water, plants, particles and small life move on the screen where Hornet rests: 0 for that screen's own rate, 60 for every frame</label>
-      <default>30</default>
+    <entry name="Motion" type="Int">
+      <label>How often everything moves: 0 every frame on every screen; paced (less work): 1 every frame where Hornet is, 2 thirty times a second where she rests, 3 each screen at the rate of what it shows</label>
+      <default>0</default>
     </entry>
     <entry name="PauseWhen" type="Int">
       <label>On the desktop only (never on the lock screen), stand still: 0 never, 1 while a window is maximized or full screen on that screen, 2 while any window is focused</label>

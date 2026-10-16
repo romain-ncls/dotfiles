@@ -65,7 +65,8 @@ WallpaperItem {
             latitude: root.configuration.Latitude
             longitude: root.configuration.Longitude
             debug: root.configuration.Debug
-            nearHz: root.configuration.AmbientNearHz
+            everyFrame: (root.configuration.Motion ?? 0) === 0
+            nearHz: [60, 60, 30, 0][root.configuration.Motion ?? 0] ?? 60
             watchFiles: root.desktop
             paused: pauser.item?.paused ?? false
         }
