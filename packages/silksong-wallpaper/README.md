@@ -22,18 +22,28 @@ ln -sfn "$PWD/plasma" ~/.local/share/plasma/wallpapers/com.github.romain-ncls.si
 kwriteconfig6 --file kscreenlockerrc --group Greeter --key WallpaperPlugin com.github.romain-ncls.silksong
 kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper \
     --group com.github.romain-ncls.silksong --group General --key SceneId world
+tools/extract_ui.py                 # the lock screen prompt's art and type, from the Steam install
+tools/lockscreen.sh install         # the Silksong prompt on the lock screen, from the next login
 ```
 
 Each step that reads a room loads all of it (about 4 GB of memory): run one at a time,
 under a memory cap as above. `world.py` renders its zones one per process for that reason.
 
-The last three lines make it the lock screen's wallpaper. On the desktop, choose Silksong
+The three lines after `world.py` make it the lock screen's wallpaper, the last two give the lock
+screen its prompt (see Lock screen). On the desktop, choose Silksong
 Aquarium as each screen's wallpaper (Desktop and Wallpaper, from the desktop's menu): its
 settings say when it stands still there (see Runtime).
 
 ## Tools
 
 - `extract.py`: Hornet's tk2d animation clips, aligned on her pivot.
+- `extract_ui.py`: the lock screen prompt's art (`ui/`): the game's own font files (Trajan Pro,
+  Perpetua), the frames of the ornaments that grow open (Hornet's dialogue fleur, the weaver's
+  prompt fleur) and of Hornet's needle, the full stop of other characters' lines, the inventory's
+  hairline, the menu's selection mark, a pair of bug eyes open and half-closed (from the shaman's
+  memory), and `Kit.qml`, which lists them. Run it again when an update raises its `KIT_VERSION`.
+- `lockscreen.sh`: puts the prompt on the lock screen for this user, or takes it off (see Lock
+  screen).
 - `world.py`: the aquarium, one small world across the screens. Its rock is authored (a
   ground running under all three screens, a walkway and branches crossing the bezels,
   floating islands, a climbable step, a cliff) and dressed with pieces from the rooms; each
@@ -110,6 +120,36 @@ settings say when it stands still there (see Runtime).
   screen's every tick, `--trace-frames` sums up, for the grass, the Bell Beast, the bells, Hornet
   and the small life, how often each changed and any frame skipped, held or drawn late;
   `--profile` the render times of every frame.
+
+## Lock screen
+
+`lockscreen/` is Plasma 6.7's lock screen prompt with the game's look, chosen among mockups: the
+pause menu's column between Hornet's dialogue fleur and the weaver's prompt fleur, the clock and
+date in Trajan Pro, for each character typed the full stop the game ends other characters' lines
+with (a pair of bug eyes at the end of the line shows the password), the inventory's hairline
+under them, and Sleep and Switch User as menu items. A long password's full stops get smaller,
+then the field grows. Messages are written out as dialogue is, ending on Hornet's needle, and the
+column opens to let them in. While it's up the aquarium behind is darkened and blurred; idle, the
+lock screen shows the aquarium alone, as before. Everything it does is Plasma's own
+(`SilksongLockUi.qml` keeps its authenticator calls, messages, timers and keys), and
+`LockScreen.qml` shows Plasma's own prompt when the art is missing or older than the prompt needs
+(`extract_ui.py` not run, or not since an update) or the Silksong one can't be loaded.
+
+The lock screen takes its prompt from a shell package: the one `plasmashellrc` names, else
+`$PLASMA_DEFAULT_SHELL`, else `org.kde.plasma.desktop`, the desktop's. `lockscreen.sh install`
+changes nothing in the system and leaves the desktop alone:
+
+- `~/.local/share/plasma/shells/com.github.romain-ncls.silksong-lock`, a shell package with only
+  `lockscreen/` (Plasma falls back to `org.kde.plasma.desktop` for the rest): `LockScreen.qml`
+  copied (Plasma refuses an entry file whose real path leaves its package), the others linked,
+  to `lockscreen/` and to the system's own prompt files. A Plasma env script links it again at
+  each login, which follows Plasma updates on NixOS and Arch alike; after editing
+  `LockScreen.qml`, `lockscreen.sh link`.
+- a drop-in giving KWin, which starts the lock screen, `PLASMA_DEFAULT_SHELL` naming it. Only
+  KWin: plasmashell reads the same variable and would lay out a new, empty desktop
+  (`plasma-<shell>-appletsrc`).
+
+It applies from the next login (KWin's next start). `lockscreen.sh uninstall` takes both away.
 
 ## Runtime
 
