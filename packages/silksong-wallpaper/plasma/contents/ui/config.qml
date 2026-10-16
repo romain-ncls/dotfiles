@@ -11,7 +11,7 @@ Kirigami.FormLayout {
     property alias cfg_SceneId: scene.text
     property alias cfg_GapMm: gap.value
     property real cfg_UnitMm
-    property int cfg_AmbientNearHz
+    property alias cfg_Motion: motion.currentIndex
     property alias cfg_PauseWhen: pauseWhen.currentIndex
     property alias cfg_Debug: debug.checked
     property real cfg_Latitude
@@ -54,17 +54,10 @@ Kirigami.FormLayout {
         }
     }
 
-    // Stored as the rate itself, not as the choice's place in the list; and shown from it again
-    // after a choice (which undoes a plain binding), as when Defaults resets it.
     QQC2.ComboBox {
-        id: nearHz
-        readonly property var rates: [0, 30, 60]
-        Kirigami.FormData.label: "Motion where Hornet rests:"
-        model: ["At the screen's own rate", "30 times a second", "Every frame"]
-        Binding on currentIndex {
-            value: Math.max(0, nearHz.rates.indexOf(root.cfg_AmbientNearHz))
-        }
-        onActivated: index => root.cfg_AmbientNearHz = rates[index]
+        id: motion
+        Kirigami.FormData.label: "Motion:"
+        model: ["Every frame, on every screen", "Paced: every frame where Hornet is", "Paced: 30 times a second where she rests", "Paced: each screen at its own rate"]
     }
 
     QQC2.ComboBox {

@@ -109,7 +109,7 @@ settings say when it stands still there (see Runtime).
   `--at 2026-10-12T07:17`, to measure the same moment of her day again): when each screen
   shows (how far apart, and whether it still lacked anything) and has all its images in, how
   often they changed on the way, then CPU, frames and ticks per window, GPU time and memory,
-  and any warning Qt or the QML printed. `--near-hz` sets `AmbientNearHz`, and
+  and any warning Qt or the QML printed. `--motion` sets `Motion`, and
   `--no-system-plugins` leaves KDE's image formats out (the PNGs then); `--fader` draws each
   screen through the lock screen's WallpaperFader and `--greeter` makes each scene only after
   holding the GUI thread a moment, as the greeter does; `--busy-anim` keeps an animation
@@ -175,12 +175,14 @@ included), then fades in, all the screens of a process together (`reveal.js`), o
 seconds with whatever it has; on the desktop, Plasma's splash screen and panels wait for it. It
 goes black again to load anew when the world is rebuilt or the screens change.
 
-Each screen keeps its own clock (`WorldScene.qml`), which only ticks when something it shows
-changes: on its window's frames while Hornet moves on it; else just after her clip's next cell,
-the Bell Beast's and the floor bells' next frames, and at the pace of what moves on its own (the
-water 30 times a second, plants and particles 15, on the grass's own frames; 12 with the Bell
-Beast's). Where she rests, that's `AmbientNearHz` times a second if more: 30 by default, 60 for
-every frame, 0 for the screen's own pace. It stops while its scene is hidden (the desktop of
+Each screen keeps its own clock (`WorldScene.qml`). By default (`Motion`, in its settings) it
+ticks on every frame its window draws, so that everything moves as smoothly as in the game (the
+falling drops would jump at any slower pace). Paced, for less work, it only ticks when something
+it shows changes: on its window's frames while Hornet moves on it; else just after her clip's
+next cell, the Bell Beast's and the floor bells' next frames, and at the pace of what moves on
+its own (the water 30 times a second, plants and particles 15, on the grass's own frames; 12 with
+the Bell Beast's); where she rests, every frame, 30 times a second, or that screen's own pace,
+by the choice. The plants keep to the game's 15 frames a second either way. It stops while its scene is hidden (the desktop of
 another activity), paused (below) or its window draws nothing (the screen off, the window
 covered), and starts again at the current moment, as it does when the machine wakes or the clock
 is set; if what it shows then isn't loaded (her clips of a minute later), it holds its last frame

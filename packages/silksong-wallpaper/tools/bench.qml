@@ -4,7 +4,7 @@
  * headless compositor so nothing shows on the desk:
  *
  *   qml tools/bench.qml -- --t0 EPOCH_MS [--offset SECONDS] [--seconds N] [--only SCREEN]
- *       [--near-hz HZ] [--greeter] [--fader] [--busy-anim] [--hide-at S] [--show-at S]
+ *       [--motion N] [--greeter] [--fader] [--busy-anim] [--hide-at S] [--show-at S]
  *       [--pause-at S] [--resume-at S] [--jump-at S --jump SECONDS] [--trace-ticks SCREEN]
  *       [--trace-frames SCREEN[,SCREEN...]]
  *
@@ -28,8 +28,8 @@
  * As kscreenlocker_greet runs it: each scene is made in its window, at its size, as main.qml
  * makes it. --greeter only makes it after holding the GUI thread for a moment, as the greeter
  * makes each wallpaper before the lock screen it goes in, and the wallpaper waits for its window;
- * --fader draws it through the lock screen's WallpaperFader (tools/bench_fader.qml). --near-hz
- * sets the scenes' AmbientNearHz (their own default otherwise). --busy-anim keeps an animation
+ * --fader draws it through the lock screen's WallpaperFader (tools/bench_fader.qml). --motion
+ * sets the scenes' Motion, as the wallpaper's setting (0, every frame, otherwise). --busy-anim keeps an animation
  * running throughout, as a panel or an applet animating does in plasmashell: every timer of the
  * process then rides the animation clock. --hide-at and --show-at (seconds into the run) hide and
  * show every scene, as Plasma does on an activity switch; --pause-at and --resume-at pause and
@@ -70,7 +70,7 @@ QtObject {
     readonly property real jump: Number(arg("--jump", 0))
     readonly property string traceTicks: arg("--trace-ticks", "")
     readonly property var traceFrames: arg("--trace-frames", "").split(",")
-    readonly property real nearHz: Number(arg("--near-hz", -1))
+    readonly property int motion: Number(arg("--motion", 0)) // as the wallpaper's Motion setting
     readonly property bool busyAnim: flag("--busy-anim")
     readonly property url dataDir: StandardPaths.writableLocation(StandardPaths.GenericDataLocation) + "/silksong-wallpaper"
 
@@ -202,9 +202,8 @@ QtObject {
                     timeOffset: bench.offset
                 }
                 onLoaded: {
-                    if (bench.nearHz >= 0) {
-                        item.nearHz = bench.nearHz;
-                    }
+                    item.everyFrame = bench.motion === 0;
+                    item.nearHz = [60, 60, 30, 0][bench.motion] ?? 60;
                 }
             }
             // The lock screen's fader, made after the wallpaper as in the greeter.

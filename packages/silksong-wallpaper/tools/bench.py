@@ -5,7 +5,7 @@
 """The world's cost, measured as the lock screen runs it (tools/bench.qml), on a headless
 Weston with the GL renderer: the real GPU, but nothing shown on the desk.
 
-    tools/bench.py [--at [YYYY-MM-DDT]HH:MM | --offset S] [--seconds N] [--only SCREEN] [--near-hz HZ]
+    tools/bench.py [--at [YYYY-MM-DDT]HH:MM | --offset S] [--seconds N] [--only SCREEN] [--motion N]
                    [--greeter] [--fader] [--busy-anim] [--idle S] [--hide-at S] [--show-at S]
                    [--pause-at S] [--resume-at S] [--jump-at S --jump S] [--trace-ticks SCREEN]
                    [--trace-frames SCREEN[,SCREEN...]] [--no-system-plugins] [--profile] [--baseline]
@@ -28,8 +28,8 @@ GPU's busy share from the render engine's RC6 residency, is noisy: the desktop's
 it too (--baseline first measures it without the bench).
 
 As kscreenlocker_greet runs it: the QML disk cache off, the system's Qt plugins on the path
-(kimageformats, for QOI images; --no-system-plugins leaves them out). --near-hz sets the scenes'
-AmbientNearHz (30 otherwise, as by default). --greeter makes each scene only after holding the
+(kimageformats, for QOI images; --no-system-plugins leaves them out). --motion sets the scenes'
+Motion (0, every frame, otherwise, as by default; 1-3 paced). --greeter makes each scene only after holding the
 GUI thread a moment, as the greeter makes the lock screen first; --fader draws each screen through
 the lock screen's WallpaperFader; --busy-anim keeps an animation running in the process, as a
 panel animating does in plasmashell. --idle lets Weston go idle (outputs off, no more frame
@@ -161,7 +161,7 @@ def main():
     ap.add_argument("--offset", type=float, default=0.0, help="seconds added to the wall clock")
     ap.add_argument("--seconds", type=float, default=20)
     ap.add_argument("--only", help="only this screen's window")
-    ap.add_argument("--near-hz", type=int, help="the scenes' AmbientNearHz")
+    ap.add_argument("--motion", type=int, choices=range(4), help="the scenes' Motion (0 every frame; 1-3 paced)")
     ap.add_argument("--greeter", action="store_true", help="make each scene after the lock screen, as the greeter does")
     ap.add_argument("--fader", action="store_true", help="draw through the lock screen's WallpaperFader")
     ap.add_argument("--busy-anim", action="store_true", help="keep an animation running in the process")
@@ -227,7 +227,7 @@ def main():
             env["QML_IMPORT_PATH"] = str(SYSTEM_QT / "qml")
         if a.profile:
             env.update(QSG_RHI_PROFILE="1", QT_LOGGING_RULES="qt.scenegraph.time.renderloop=true")
-        options = {"--only": a.only, "--near-hz": a.near_hz, "--hide-at": a.hide_at, "--show-at": a.show_at,
+        options = {"--only": a.only, "--motion": a.motion, "--hide-at": a.hide_at, "--show-at": a.show_at,
                    "--pause-at": a.pause_at, "--resume-at": a.resume_at, "--jump-at": a.jump_at, "--jump": a.jump,
                    "--trace-ticks": a.trace_ticks, "--trace-frames": a.trace_frames}
         t0 = int(time.time() * 1000)
