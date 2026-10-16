@@ -1,16 +1,17 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["UnityPy>=1.25", "pillow", "numpy", "lz4"]
+# dependencies = ["UnityPy>=1.25", "pillow", "numpy", "lz4", "scipy"]
 # ///
 """Build the aquarium: one world laid across the desk.
 
 The world's structure is authored (layout()): one ground under all three screens, a walkway
-and branches crossing the bezels, islands, a cliff, Hornet's house and balcony. It is dressed
+and branches crossing the bezels, islands, a cliff, Hornet's bell and its porch. It is dressed
 with pieces harvested from rooms (tools/kit.py, tools/terrain.py) so every edge is covered in
 moss, clover, gilded stone or Bellhart timber. Behind each screen, a zone shows a room's
-background in that room's own colours; Hornet's home is furnished with her Bellhart house's
-pieces (FURNITURE); props from other rooms stand around (PROPS); a lake and its waterfall.
+background in that room's own colours; Hornet's home is her bell from Bellhart hanging in the
+corner (build_bell), furnished with her Bellhart house's pieces (FURNITURE); props from other
+rooms stand around (PROPS); a lake and its waterfall.
 Hornet navigates the same rock that is drawn.
 
     tools/world.py                 render the zones that changed, then compose the world
@@ -20,7 +21,7 @@ Hornet navigates the same rock that is drawn.
 Zones are rendered one per process (a room takes about 4 GB) and cached in
 ~/.cache/silksong-wallpaper/zones; the kits must be harvested first (tools/kit.py harvest ROOM
 for tut_02, clover_02c, bellway_city, belltown, mosstown_01, and belltown_room_spare with its
-furnishing flags).
+furnishing flags; tools/kit.py atlas bellhouse for her bell).
 The world lands in ~/.local/share/silksong-wallpaper/world:
 
   back_NN, mid_NN, front_NN, lights_NN.png   tiles: the backdrops (behind Hornet's light), the
@@ -87,7 +88,7 @@ CITADEL_FLOOR = 3.7  # the station's floor at both its ends, where the ground on
 CLIFF_TOP = 9.8  # the shrine's ground, over the bench's niche
 LOOKOUT = 19.4  # the ledge high on the right wall
 TREE = 11.5  # the walkway at the great tree's foot, from bridge to bridge across the laptop
-TOP = 17.5  # the floor of Hornet's house
+TOP = 14.415  # the floor of Hornet's home, inside her bell (on a row of nav's grid: she stands right on it)
 CEILING = 26.1  # underside of the rock along the top of the side monitors
 BEZELS = ((L1 + C0) / 2, (C1 + R0) / 2)  # their middles
 BAND = 7.0  # across a bezel, backdrops, colours and dressing change over this far on each side
@@ -210,8 +211,32 @@ ZONES = [
          particles=[r"^immediate_BG"]),  # its fireflies
 ]
 
-# Hornet's home: the top-left corner, built from her Bellhart house's own pieces.
-HOME = {"region": (L0 + 0.9, TOP - 0.5, 20.5, CEILING), "door_x": 21.75, "biome": "house"}
+# Hornet's home: her bell from Bellhart (the game's bell house: the bellhouse kit), hanging in the
+# top-left corner from the rock, a little bigger than the game's and painted red, as she paints
+# hers. A window in its own shape and an arched doorway through its right flank show her room
+# inside; a porch runs out from under her door, this far past its flank.
+BELL = {"kit": "bellhouse", "scale": 1.15, "left": 3.0, "porch": 2.6}
+BELL_BODY = (8.078, 9.562)  # its body's art (Hornet_bell_outer_0000_1) at the game's size, units
+BELL_DOOR = (1.656, 3.688)  # her door's (hornet_bell_door_open0000)
+BELL_INSIDE = (0.0517, 0.9536)  # the inner faces of its walls, 1.5 above her floor, across its width (build_bell checks)
+BELL_RED = np.array([150, 32, 42], np.float32)  # Hornet's red, her bell's paint
+
+
+def bell_frame():
+    """Where the bell hangs, in world units: its body's box (her floor on its rim's inner ledge),
+    the inner faces of its walls, her door, the porch's end."""
+    s, left = BELL["scale"], BELL["left"]
+    bw, bh = BELL_BODY[0] * s, BELL_BODY[1] * s
+    bottom = TOP - 0.095 * bh
+    dw, dh = BELL_DOOR[0] * s, BELL_DOOR[1] * s
+    in_l, in_r = left + BELL_INSIDE[0] * bw, left + BELL_INSIDE[1] * bw
+    return {"s": s, "left": left, "right": left + bw, "cx": left + bw / 2, "w": bw, "h": bh, "bottom": bottom,
+            "top": bottom + bh, "in_l": in_l, "in_r": in_r, "door": (dw, dh), "door_x": in_r - dw / 2 + 0.05,
+            "porch": left + bw + BELL["porch"]}
+
+
+_bell = bell_frame()
+HOME = {"region": (_bell["left"], TOP - 0.5, _bell["right"], _bell["top"])}  # where her house's colours are hers
 
 # The lake at the foot of the right monitor's cliff, and the waterfall pouring into it from a
 # crack in the rock above, down past the cliff's edge into a deep pool between the stepping rock
@@ -225,8 +250,8 @@ def layout():
     """The world's rock, in world units. One ground runs under all three screens (moss reaches
     into the laptop and tapers onto the Citadel's own floor); the Citadel's arcade carries a
     walkway across the laptop and both bezels, ending a few units into each side screen; a few
-    well-spaced islands, a climbable step, Hornet's balcony and a cliff with a niche behind the
-    waterfall make the ways between. Nothing Hornet stands on is hidden."""
+    well-spaced islands, a climbable step, the porch of Hornet's bell and a cliff with a niche
+    behind the waterfall make the ways between. Nothing Hornet stands on is hidden."""
     def R(name):
         """Each rock's own randomness: reshaping one never reshapes the others."""
         return np.random.default_rng([11, zlib.crc32(name.encode())])
@@ -256,14 +281,17 @@ def layout():
     rocks.append(T.box(R("ceiling right"), R0 - 0.8, CEILING, R1 + 1.5, H + 1.0, walk_top=False))
     rocks.append(T.blob(R("hanging mass right"), [(95.0, CEILING + 0.3), (98.0, 24.6), (102.5, 23.8), (106.0, 24.8), (109.0, CEILING + 0.3)]))
     rocks.append(T.box(R("above the laptop"), C0 - 0.8, C_TOP + 0.3, C1 + 0.8, H + 1.0, walk_top=False, dress=False))
-    # Hornet's house: its floor runs out of her door onto a balcony, over a foundation in the
-    # rock; the wall with her door.
-    rocks.append(T.box(R("house floor"), L0 + 0.9, TOP - 0.6, 26.5, TOP, biome="bellhart", level=True))
-    rocks.append(T.blob(R("house foundation"), [(L0 - 1.5, TOP - 0.4), (21.2, TOP - 0.4), (20.6, 16.0), (15.0, 15.6), (8.0, 15.5),
-                              (2.0, 15.8), (L0 - 1.5, 15.4)], rounds=1))
-    rocks += T.wall(R("house wall"), 20.5, 23.0, TOP, H + 1.0, doors=[(TOP, TOP + 3.1)], biome="bellhart")
-    # Left monitor: from the hill up to an island, a higher one, and from there the balcony or
-    # the walkway.
+    # Hornet's bell (drawn by build_bell): its floor runs out of her door onto the porch; its walls
+    # and crown, up into the rock it hangs from, hold her in but for the doorway in its right flank.
+    b = bell_frame()
+    bell = dict(draw=False, dress=False)
+    rocks.append(T.box(R("bell floor"), b["left"], b["bottom"], b["right"], TOP, level=True, **bell))
+    rocks.append(T.box(R("bell porch"), b["right"] - 0.5, TOP - 0.95, b["porch"] - 0.25, TOP, level=True, **bell))  # (she stops short of its tip)
+    rocks.append(T.box(R("bell wall left"), b["left"], TOP - 0.1, b["in_l"], H + 1.0, walk_top=False, **bell))
+    rocks.append(T.box(R("bell wall right"), b["in_r"], TOP + b["door"][1], b["right"], H + 1.0, walk_top=False, **bell))
+    rocks.append(T.box(R("bell crown"), b["left"], b["top"] - 0.6, b["right"], H + 1.0, walk_top=False, **bell))
+    # Left monitor: from the hill up to an island, a higher one, and from there the walkway; from
+    # the low one, a double jump up to her porch.
     rocks.append(T.island(R("island left low"), 23.0, 28.0, 8.8, depth=1.8))
     rocks.append(T.island(R("island left high"), 31.5, 36.5, 13.8, depth=1.8))
     # The walkway at the great tree's foot, on the Citadel's arcade.
@@ -356,7 +384,7 @@ BEAM_PIECE = ("tut_02", "white_palace_light_beam")
 HAZE_PIECE = ("clover_02c", "haze2")
 FOG_PIECE = ("tut_02", "temp fog")
 AIR = [
-    # Left: two shafts from behind the mass hanging from the ceiling (clear of Hornet's house).
+    # Left: two shafts from behind the mass hanging from the ceiling (clear of Hornet's bell).
     {"kind": "shaft", "piece": BEAM_PIECE, "top": (35.0, CEILING), "length": 24.0, "width": 3.4, "gain": 1.7},
     {"kind": "shaft", "piece": BEAM_PIECE, "top": (45.2, CEILING), "length": 23.0, "width": 2.2, "gain": 1.5},
     # The laptop: two on the great tree, ending on the walkway (the station below is roofed).
@@ -396,15 +424,16 @@ DUST_DRIFT = [-0.12, 0.12, -0.14, 0.08]
 # shows 65, so they're drawn larger ("grow") to read on screen as they do in the game.
 MOTES = [
     # Left: the grotto's motes (the next room's, tut_03) far back, near, and big and blurred in
-    # front; its amber fungus spores; drips from the moss under the house, the mass hanging from
-    # the ceiling and the low island.
-    {"kit": "tut_03", "system": "far BG", "box": (3.6, 2.0, 25.0, 15.0), "count": 64, "grow": 1.8},
+    # front; its amber fungus spores; drips from the moss on the ceiling beside the bell, the mass
+    # hanging from the ceiling and the low island.
+    {"kit": "tut_03", "system": "far BG", "box": (3.6, 2.0, 25.0, 13.2), "count": 55, "grow": 1.8},  # (under the bell)
     {"kit": "tut_03", "system": "far BG", "box": (25.0, 2.0, 47.5, 15.0), "count": 64, "grow": 1.8},
+    {"kit": "tut_03", "system": "far BG", "box": (13.0, 13.2, 27.0, 23.0), "count": 32, "grow": 1.8},
     {"kit": "tut_03", "system": "far BG", "box": (27.0, 15.5, 47.5, 23.0), "count": 40, "grow": 1.8},
     {"kit": "tut_03", "system": "immediate_BG", "box": (3.6, 2.0, 47.5, 14.0), "count": 48, "grow": 1.6},
     {"kit": "tut_03", "system": "fung_immediate_BG", "box": (22.0, 2.5, 46.0, 12.0), "count": 16, "grow": 1.4, "layer": "front"},
     {"kit": "tut_03", "system": "FG", "box": (0.0, 0.0, 47.6, H), "count": 12, "grow": 1.3, "layer": "front"},
-    {"kit": "tut_03", "system": "Fungus_drips", "edge": (2.0, 20.0, 15.4), "count": 2},
+    {"kit": "tut_03", "system": "Fungus_drips", "edge": (14.0, 29.0, 25.2), "count": 2},
     {"kit": "tut_03", "system": "Fungus_drips", "edge": (33.0, 44.0, 23.6), "count": 2},
     {"kit": "tut_03", "system": "Fungus_drips", "edge": (24.0, 27.0, 7.4), "count": 1},
     # The laptop: Mosshome's low smoke drifting along the walkway at the tree's foot; dust
@@ -511,45 +540,36 @@ def vault_pieces():
     return out
 
 
-# Hornet's home, furnished with her Bellhart house's pieces, arranged as in her room (mirrored:
-# her door is on the right here). A group is placed by its first piece's origin at world x (and
-# its height above the floor as in the room, or `top`/`y`); the other pieces keep their offsets in
-# the room. "spot" pieces aren't drawn: they mark where her animations play. Layers: back (behind
-# Hornet and the rock), over (over the rock: her door), front (in front of her).
+# Hornet's home, furnished with her Bellhart house's pieces, laid out as in her room there but
+# mirrored (her door is on the right here) and drawn closer together to fit in her bell (build_bell).
+# A group is placed by its first piece's origin: where her room has it, or at world x (and at its
+# height above the floor as in the room, or at `y`); the other pieces keep their offsets in the
+# room. "spot" pieces aren't drawn: they mark where her animations play. Layers: back (behind
+# Hornet), front (in front of her).
 HOUSE = "belltown_room_spare"
 HOUSE_FLOOR = 6.1  # the floor of her room, in room units
+ROOM_CX = 24.37  # the middle of her room's back wall, in room units
 CAM_Z = 38.1  # the game camera's distance: farther pieces look smaller
+MEMENTOS = ["Grey Memento", "Hunter Heart", "Crowman Memento", "Hunter Memento", "Memento Garmond", "Memento Seth",
+            "Memento Surface", "Sprintmaster Memento"]
 FURNITURE = [
-    # The back wall twice over, curtains between and at the sides.
-    {"items": ["pinhome_0012_1@9.88"], "x": 5.5, "flip": True},
-    {"items": ["pinhome_0012_1@9.88"], "x": 15.3},
-    {"items": ["pinhome_0012_1@3.06"], "x": 10.5},
-    {"items": ["pinhome_0012_1@3.52"], "x": 2.3},
-    {"items": ["pinhome_0012_1@3.52"], "x": 19.0, "flip": True},
-    # Drapes and fairy lights along the ceiling.
-    *({"items": ["pinhome_0012_1@3.04"], "x": x, "top": CEILING + 0.5, "scale": 0.8, "flip": i % 2 == 1}
-      for i, x in enumerate((1.4, 7.5, 13.5, 19.7))),
-    *({"items": [{"piece": "pinhome_0012_1@6.67", "light": True}], "x": x, "top": CEILING + 0.3, "flip": i % 2 == 1}
-      for i, x in enumerate((4.4, 10.5, 16.6))),
-    # The gramophone (its horn high on the wall), the trophy shelf with her mementos, pots below.
-    {"items": ["gramophone_base", "gramophone_horn"], "x": 2.6, "flip": True},
-    {"items": ["trophy_shelf", "Grey Memento", "Hunter Heart", "Crowman Memento", "Hunter Memento", "Memento Garmond",
-               "Memento Seth", "Memento Surface", "Sprintmaster Memento"], "x": 6.2, "flip": True},
-    {"items": ["sc_junk_piles_small_0000_1"], "x": 5.6},
-    # The bed under its arch, the desk with her lists, stool and lamp bug, the hanging tub.
-    {"items": ["RestBench", "trophy_cabinet@1.88", "pinhome_0012_1@1.83", {"piece": "hornet@3.33", "spot": "bed"}],
-     "x": 10.3, "flip": True},
+    # The back wall, a curtain at each side, a drape across the top.
+    {"items": ["pinhome_0012_1@9.88"]},
+    {"items": ["pinhome_0012_1@3.52"]},
+    {"items": ["pinhome_0012_1@3.06"]},
+    {"items": ["pinhome_0012_1@5.25"]},
+    # The gramophone's horn alone, high on the wall by her door, turned to the room (its box
+    # would stand behind the desk, unseen).
+    {"items": ["gramophone_horn"], "x": BELL["left"] + 7.5, "y": TOP + 5.15, "flip": False},
+    # The trophy shelf with her mementos, past her bed's head.
+    {"items": ["trophy_shelf", *MEMENTOS], "x": BELL["left"] + 2.75},
+    # The bed under its arch; the desk with her lists, stool and lamp bug.
+    {"items": ["RestBench", "trophy_cabinet@1.88", "pinhome_0012_1@1.83", {"piece": "hornet@3.33", "spot": "bed"}]},
     {"items": ["desk", "librarian_list", "materium_list", "momento_list", "relicseeker_list", "extra 2", "seat",
                "house_furnishing_0010_1@0.61", "house_furnishing_0010_1@0.65", {"piece": "shop_lamp_bug0000", "light": True},
-               {"piece": "hornet@2.39", "spot": "desk", "scale": 0.93}], "x": 15.3, "flip": True},
-    {"items": ["bucket sprite", "house_furnishing_0004_1@3.42", "house_furnishing_0005_1@0.66",
-               "house_furnishing_0004_1@2.24", "house_furnishing_0005_1@2.03", "house_furnishing_0005_1@2.47"],
-     "x": 18.0, "flip": True},
-    # Her door in the wall, with its glow; the floorboards in front.
-    {"items": ["pinhome_0012_1@2.94", {"piece": "hornet_door_glow", "light": True}], "x": 21.75, "flip": True,
-     "layer": "over"},
-    {"items": ["bone_relic_room_0007_1@11.66"], "x": 5.8, "layer": "front"},
-    {"items": ["bone_relic_room_0007_1@11.66"], "x": 15.6, "layer": "front", "flip": True},
+               {"piece": "hornet@2.39", "spot": "desk", "scale": 0.93}]},
+    # The floorboards in front.
+    {"items": ["bone_relic_room_0007_1@11.66"], "layer": "front"},
 ]
 
 
@@ -568,11 +588,11 @@ PROPS = [
 # Places Hornet spends time, in world units, at about height `near`. Home spots are filled in
 # from the furniture.
 POIS = [
-    {"id": "gramophone", "zone": "home", "x": 4.6, "near": TOP, "activity": "listen", "face": -1},
+    {"id": "gramophone", "zone": "home", "x": BELL["left"] + 6.6, "near": TOP, "activity": "listen", "face": 1},
     {"id": "village", "zone": "grotto", "x": 9.5, "near": GROUND, "activity": "needolin"},
     {"id": "step", "zone": "grotto", "x": 2.2, "near": 9.6, "activity": "map"},
     {"id": "hill", "zone": "grotto", "x": 30.5, "near": 3.2, "activity": "lookup"},
-    {"id": "balcony", "zone": "grotto", "x": 25.0, "near": TOP, "activity": "lookup"},
+    {"id": "porch", "zone": "grotto", "x": _bell["porch"] - 0.9, "near": TOP, "activity": "lookup"},
     {"id": "bell_beast", "zone": "bell_beast", "x": 60.6, "near": 0.7, "activity": "visit", "face": 1},
     {"id": "clock", "zone": "great_tree", "x": 64.0, "near": 12.4, "activity": "lookup"},
     {"id": "lake", "zone": "verdania", "x": 97.4, "near": 3.6, "activity": "needolin_sit", "face": 1},
@@ -1046,32 +1066,249 @@ def as_light(img):
     return Image.fromarray((np.concatenate([rgb, lum], -1).clip(0, 1) * 255).round().astype(np.uint8), "RGBA")
 
 
-def build_home(canvases, kit, grade):
-    """Hornet's home from her house's pieces; returns where her bed and desk animations play."""
+def build_home(canvases, kit, grade, room_cx, spread):
+    """Hornet's room from her house's pieces (FURNITURE), its back wall's middle at room_cx, the
+    groups placed by the room spread by `spread`; returns where her bed and desk animations play."""
     spots = {}
     for group in FURNITURE:
         items = [i if isinstance(i, dict) else {"piece": i} for i in group["items"]]
         first = find_piece(kit, items[0]["piece"])
         s = CAM_Z / (CAM_Z + first["zMedian"]) * group.get("scale", 1.0)
-        mirror = -1 if group.get("flip") else 1
+        flip = group.get("flip", True)
+        mirror = -1 if flip else 1
         ox, oy = first["at"]
-        base_y = TOP + (oy - HOUSE_FLOOR) * s
-        if "y" in group:
-            base_y = group["y"]
-        elif "top" in group:
-            base_y = group["top"] - (1 - first["pivot"][1]) * first["height"] * s
+        gx = group["x"] if "x" in group else room_cx + mirror * (ox - ROOM_CX) * spread
+        base_y = group["y"] if "y" in group else TOP + (oy - HOUSE_FLOOR) * s
         for item in items:
             p = find_piece(kit, item["piece"])
-            x = group["x"] + mirror * (p["at"][0] - ox) * s
+            x = gx + mirror * (p["at"][0] - ox) * s
             y = base_y + (p["at"][1] - oy) * s
             if item.get("spot"):
-                spots[item["spot"]] = (round(x, 3), round(y, 3), item.get("scale", 1.0), bool(group.get("flip")))
+                spots[item["spot"]] = (round(x, 3), round(y, 3), item.get("scale", 1.0), flip)
                 continue
             img = grade_image(kit.image(p), grade)
-            args = (x, y, p["width"] * s, p["height"] * s, 0, bool(group.get("flip")))
+            args = (x, y, p["width"] * s, p["height"] * s, 0, flip)
             canvases[group.get("layer", "back")].paste(img, *args, anchor=tuple(p["pivot"]))
             if item.get("light"):
                 canvases["lights"].paste(as_light(img), *args, anchor=tuple(p["pivot"]))
+    return spots
+
+
+BELL_SS = 4  # the bell's cut is drawn this many times finer than the world, for smooth edges
+BELL_BRONZE = (2666, 1500)  # the bell's art stretched this big (pixels, from the world's top left) is the cut's bronze
+
+
+def bell_window(cx, y_b, y_t, wb, ws, dome_h, n=160):
+    """A bell-shaped window: its sides flaring gently from its shoulders (half width ws) to its
+    foot (wb), a dome dome_h high on top."""
+    y_s = y_t - dome_h
+    pts = []
+    for i in range(n + 1):  # right side, foot to shoulder
+        y = y_b + (y_s - y_b) * i / n
+        u = (y_s - y) / (y_s - y_b)
+        pts.append((cx + ws + (wb - ws) * u * u, y))
+    for i in range(1, n):  # the dome, right to left
+        a = math.pi * i / n
+        pts.append((cx + ws * math.cos(a), y_s + dome_h * math.sin(a)))
+    for i in range(n + 1):  # left side, shoulder to foot
+        y = y_s - (y_s - y_b) * i / n
+        u = (y_s - y) / (y_s - y_b)
+        pts.append((cx - ws - (wb - ws) * u * u, y))
+    return pts
+
+
+def arch(x0, x1, y0, spring, rise, n=80):
+    """An arched opening from x0 to x1, its sides up from y0 to `spring`, an elliptic arch above."""
+    cxm, r = (x0 + x1) / 2, (x1 - x0) / 2
+    pts = [(x0, y0), (x1, y0), (x1, spring)]
+    for i in range(1, n):
+        a = math.pi * i / n
+        pts.append((cxm + r * math.cos(a), spring + rise * math.sin(a)))
+    pts.append((x0, spring))
+    return pts
+
+
+class Cut:
+    """Shapes drawn BELL_SS times finer than an image of the world's top left (`shape`), over a box
+    of the world, read back as smooth coverage."""
+
+    def __init__(self, x0, y0, x1, y1, shape):
+        self.shape = shape
+        self.X0, self.X1 = round(x0 * PPU), round(x1 * PPU)  # snapped to the image's pixels
+        self.Y0, self.Y1 = round((H - y1) * PPU), round((H - y0) * PPU)  # rows, top to bottom
+        self.x0, self.y1 = self.X0 / PPU, H - self.Y0 / PPU
+        self.k = PPU * BELL_SS
+        self.size = ((self.X1 - self.X0) * BELL_SS, (self.Y1 - self.Y0) * BELL_SS)
+
+    def mask(self, *polys):
+        from PIL import ImageDraw
+        img = Image.new("L", self.size, 0)
+        d = ImageDraw.Draw(img)
+        for poly in polys:
+            d.polygon([((x - self.x0) * self.k, (self.y1 - y) * self.k) for x, y in poly], fill=255)
+        return np.asarray(img) > 127
+
+    def fine(self, mask):
+        """A mask of the image, over the box, BELL_SS times finer."""
+        img = Image.fromarray((mask * 255).astype(np.uint8)).crop((self.X0, self.Y0, self.X1, self.Y1))
+        return np.asarray(img.resize(self.size, Image.BILINEAR)) > 127
+
+    def down(self, a):
+        """A field drawn finer, averaged back down onto the image."""
+        h, w = a.shape
+        out = np.zeros(self.shape, np.float32)
+        out[self.Y0:self.Y1, self.X0:self.X1] = a.reshape(h // BELL_SS, BELL_SS, w // BELL_SS, BELL_SS).mean(axis=(1, 3))
+        return out
+
+    def round_corners(self, m, r):
+        """Concave corners filled with fillets of radius r (units), convex ones kept."""
+        from scipy import ndimage
+        rr = round(r * self.k)
+        grown = ndimage.distance_transform_edt(~m) <= rr
+        return ndimage.distance_transform_edt(grown) > rr
+
+
+def tinted(img, rgb, k=1.0):
+    a = np.asarray(img).astype(np.float32)
+    a[..., :3] = a[..., :3] * k * np.array(rgb) / 255
+    return Image.fromarray(a.clip(0, 255).astype(np.uint8), "RGBA")
+
+
+def build_bell(layers, house, grade):
+    """Hornet's bell, hanging in the corner, her room inside: drawn into the world's layers;
+    returns where her bed and desk animations play (build_home).
+
+    Its body and crown are the game's, painted red (the game's paint is a mask it tints), in
+    front of Hornet, its ring up into the rock. Through a window in the bell's own shape and an
+    arched doorway in its right flank (cut as smooth curves, joined by rounded corners, edged in
+    the bell's dark bronze with a soft shadow inside) her room shows, behind her: the bronze dome
+    inside the game's bell, her furniture, the chain of lights. Her door stands in the doorway,
+    lit warm from inside; the porch runs out from under it, Bellhart's long balcony lip, its cut
+    end behind the bell's rim. The bell's own pieces keep their colours (the game's, as the
+    bellhouse atlas has them); her furniture takes her house's."""
+    from scipy import ndimage
+    b = bell_frame()
+    s, cx, floor, top, bw, bh = b["s"], b["cx"], TOP, b["top"], b["w"], b["h"]
+    dw, dh = b["door"]
+    door_x = b["door_x"]
+    kit = terrain.Kit(BELL["kit"])
+
+    def art(k, spec):
+        p = find_piece(k, spec)
+        return k.image(p), p
+
+    # Drawn on images of the world's top left, down to under the porch.
+    shape = (round((H - b["bottom"] + 1.5) * PPU), round((b["porch"] + 1.5) * PPU))
+
+    def corner():
+        c = terrain.Canvas((1, 1), PPU)
+        c.h_units, c.img = H, Image.new("RGBA", shape[::-1], (0, 0, 0, 0))
+        return c
+
+    def clip(c, keep):
+        a = np.asarray(c.img).copy()
+        a[..., 3] = (a[..., 3] * keep).astype(np.uint8)
+        c.img = Image.fromarray(a, "RGBA")
+
+    def Y(y):
+        return round((H - y) * PPU)
+
+    # The body, painted, and the room inside its walls, above her floor.
+    outer, po = art(kit, "Hornet_bell_outer_0000_1")
+    body = corner()
+    body.paste(outer, cx, b["bottom"], po["width"] * s, po["height"] * s, anchor=(0.5, 0.0))
+    paint, pp = art(kit, "Hornet_bell_outer_0000_1_red_paint")
+    a = np.asarray(paint).astype(np.float32)
+    a[..., :3] = (a[..., :3] / 255) ** 0.8 * BELL_RED * 1.25
+    body.paste(Image.fromarray(a.clip(0, 255).astype(np.uint8), "RGBA"), cx, b["bottom"] + bh * 0.055,
+               pp["width"] * s, pp["height"] * s, anchor=(0.5, 0.0))
+    sil = ndimage.binary_fill_holes(ndimage.binary_closing(np.asarray(body.img)[..., 3] > 127, iterations=6))
+    inside = ndimage.binary_erosion(sil, iterations=round(0.32 * s * PPU))
+    inside[Y(floor):, :] = False
+    row = np.nonzero(inside[Y(floor + 1.5)])[0]
+    if abs(row.min() / PPU - b["in_l"]) > 0.05 or abs(row.max() / PPU - b["in_r"]) > 0.05:
+        print(f"warning: the bell's walls are at {row.min() / PPU:.3f} and {row.max() / PPU:.3f}, BELL_INSIDE has them at "
+              f"{b['in_l']:.3f} and {b['in_r']:.3f}", file=sys.stderr)
+    xs = np.nonzero(inside.any(axis=0))[0]
+    iw = (xs.max() - xs.min()) / PPU
+
+    # Inside, behind Hornet: the dome, her room between the left wall and her door, the chain of lights.
+    cans = {"back": corner(), "mid": corner(), "front": corner(), "lights": corner()}
+    dome, _ = art(kit, "bell_interior_temp_0002_3")
+    cans["back"].paste(tinted(dome, (255, 225, 205), 0.85), cx, floor - 0.6, iw * 1.12, (top - floor) * 1.04, anchor=(0.5, 0.0))
+    span_l, span_r = b["in_l"] + 0.2, door_x - dw / 2 - 0.15
+    spread = (span_r - span_l) / 9.0  # her room's furniture, 9 units across there
+    spots = build_home(cans, house, grade, span_l + (30.0 - ROOM_CX) * spread, spread)
+    chain, pc = art(kit, "Hornet_bell_interior_0001_1_light_chain")
+    cans["back"].paste(chain, cx, top - 1.0 * s, iw * 0.7, iw * 0.7 * pc["height"] / pc["width"], anchor=(0.5, 1.0))
+    for name in ("back", "front", "lights"):
+        clip(cans[name], inside)
+    # The warm light through her door.
+    gw, gh = 160, 220
+    yy, xx = np.mgrid[0:gh, 0:gw]
+    d = np.sqrt(((xx - gw / 2) / (gw / 2)) ** 2 + ((yy - gh * 0.55) / (gh / 2)) ** 2)
+    warm = np.dstack([np.full((gh, gw), 255.0), np.full((gh, gw), 196.0), np.full((gh, gw), 130.0),
+                      np.clip(1 - d, 0, 1) ** 1.6 * 150])
+    cans["lights"].paste(Image.fromarray(warm.astype(np.uint8), "RGBA"), door_x - 0.1, floor + dh * 0.5, dw * 2.0, dh * 1.3)
+
+    # The cut: a bell-shaped window, an arched doorway out through the right flank, joined.
+    cut = Cut(b["left"] - 1.0, floor - 2.0, b["right"] + 1.5, top + 1.0, shape)
+    edge_r = b["right"] + 0.6
+    window = bell_window(cx - 0.35, floor - 0.02, top - 0.31 * bh, 3.05, 2.75, 1.55)
+    x0, x1 = door_x - dw / 2 - 0.12, door_x + dw / 2 + 0.12
+    spring = floor + dh - (x1 - x0) * 0.62
+    doorway = arch(x0, x1, floor - 0.02, spring, (x1 - x0) * 0.62)
+    passage = [(door_x, floor - 0.02), (edge_r, floor - 0.02), (edge_r, spring), (door_x, spring)]
+    hole_f = cut.round_corners(cut.mask(window, doorway, passage), 0.32)
+    sil_f = cut.fine(sil)
+    hole_f &= sil_f | ~ndimage.binary_erosion(np.ones_like(sil_f), iterations=1)
+    # What's left of the shell, its lip of dark bronze along the cut, a shadow just inside it.
+    d_out = ndimage.distance_transform_edt(~hole_f) / cut.k  # on the shell: how far from the cut
+    d_in = ndimage.distance_transform_edt(hole_f) / cut.k  # in the opening: how far from its edge
+    hole = cut.down(hole_f.astype(np.float32))
+    lip = cut.down(((1 - smoothstep((d_out - 0.17) / 0.06)) * ~hole_f * sil_f).astype(np.float32))
+    shade = cut.down(((1 - smoothstep(d_in / 0.45)) * hole_f).astype(np.float32))
+    bronze = np.asarray(outer.resize(BELL_BRONZE, Image.LANCZOS)).astype(np.float32)[:shape[0], :shape[1], :3] * 0.36
+    m = sil.astype(np.float32)
+    bronze += (m - ndimage.grey_erosion(m, size=(5, 5)))[..., None] * np.array([150, 105, 70]) * 0.6  # its edge, lit
+    shell = np.asarray(body.img).astype(np.float32)
+    shell[..., 3] *= 1 - hole
+    shell[..., :3] = shell[..., :3] * (1 - lip[..., None]) + bronze * 0.75 * lip[..., None]
+    shell = Image.fromarray(shell.clip(0, 255).astype(np.uint8), "RGBA")
+    crown, pk = art(kit, "Hornet_bell_outer_0001_1")
+    c = corner()
+    c.paste(crown, cx, top - 0.36 * s, pk["width"] * s, pk["height"] * s, anchor=(0.5, 0.0))
+    shell.alpha_composite(c.img)
+    a = np.asarray(shell).copy()
+    a[:Y(CEILING + 0.1), :, 3] = 0  # the crown's ring, into the rock
+    cans["front"].img.alpha_composite(Image.fromarray(a, "RGBA"))
+    a = np.zeros(shape + (4,), np.uint8)
+    a[..., 3] = (shade * 150).astype(np.uint8)
+    cans["mid"].img.alpha_composite(Image.fromarray(a, "RGBA"))
+
+    # Behind Hornet, out there: the porch, its inner end under the bell's rim; her door in the doorway.
+    lip_img, _ = art(terrain.Kit("belltown"), "balcony_lip@9.53")
+    lip_img = lip_img.crop((round(lip_img.width * 0.55), 0, lip_img.width, lip_img.height))
+    pw = lip_img.width / lip_img.height  # 1 unit deep, as deep as the bell's rim
+    cans["mid"].paste(tinted(lip_img, (235, 215, 200), 0.8), b["porch"] - pw / 2, floor + 0.04, pw, 1.0, anchor=(0.5, 1.0))
+    door = corner()
+    door.paste(art(kit, "hornet_bell_door_open0000")[0], door_x, floor - 0.05, dw, dh, anchor=(0.5, 0.0))
+    clip(door, inside | (hole > 0.01))
+    cans["mid"].img.alpha_composite(door.img)
+
+    # The lights shine on what's drawn by day too, as they do at night (on the lights layer): her
+    # room, and what shows through her doorway.
+    lit = np.asarray(cans["lights"].img).astype(np.float32)
+    glow = lit[..., :3] * lit[..., 3:] / 255 * 0.6
+    a = np.asarray(layers["back"].crop((0, 0, shape[1], shape[0]))).astype(np.float32)
+    a[..., :3] += glow
+    layers["back"].paste(Image.fromarray(a.clip(0, 255).astype(np.uint8), "RGBA"), (0, 0))
+    for name in ("back", "mid", "front"):
+        a = np.asarray(cans[name].img).astype(np.float32)
+        a[..., :3] += glow
+        cans[name].img = Image.fromarray(a.clip(0, 255).astype(np.uint8), "RGBA")
+        layers[name].alpha_composite(cans[name].img)
+    layers["lights"].alpha_composite(cans["lights"].img)
     return spots
 
 
@@ -1102,11 +1339,12 @@ def compose():
                           "width": zone.region[2] - zone.region[0], "height": zone.region[3] - zone.region[1],
                           "floor": zone.world[1], "light": bake_light(meta["grade"]),
                           "grade": hero_grade(meta["grade"])})
-    # 2. Hornet's home: no backdrop shows inside, only her furniture.
+    # 2. Hornet's home: her bell in the corner, her room inside.
     hx0, hy0, hx1, hy1 = HOME["region"]
-    box = (round(hx0 * PPU), 0, round(hx1 * PPU), Hpx - round(hy0 * PPU))  # up to the top: no backdrop over it
-    for name, img in layers.items():
-        img.paste((0, 0, 0, 255 if name == "back" else 0), box)
+    house = terrain.Kit(HOUSE)
+    house_g = json.loads((house.dir / "grade.json").read_text())
+    grades["home"] = _Grade(house_g)
+    spots = build_bell(layers, house, grades["home"])
 
     def canvas(img):
         c = terrain.Canvas((1, 1), PPU)
@@ -1114,11 +1352,6 @@ def compose():
         return c
 
     canvases = {name: canvas(img) for name, img in layers.items()}
-    canvases["over"] = canvas(Image.new("RGBA", (W, Hpx), (0, 0, 0, 0)))
-    house = terrain.Kit(HOUSE)
-    house_g = json.loads((house.dir / "grade.json").read_text())
-    grades["home"] = _Grade(house_g)
-    spots = build_home(canvases, house, grades["home"])
     zones_out.append({"id": "home", "room": HOUSE, "left": hx0, "bottom": hy0, "width": hx1 - hx0,
                       "height": hy1 - hy0, "floor": TOP, "light": bake_light(house_g),
                       "grade": hero_grade(house_g)})
@@ -1132,8 +1365,6 @@ def compose():
     # 3. The rock, dressed for the zone each face looks into (or as its own biome says), in the
     # middle layer: in front of Hornet's light, behind her.
     def zone_at(x, y):
-        if x <= hx1 + 0.5 and y >= hy0 + 0.2:  # the house, and the rock around it up there
-            return "home"
         for z in reversed(ZONES):
             r = z.region
             if r[0] <= x <= r[2] and r[1] <= y <= r[3]:
@@ -1141,7 +1372,6 @@ def compose():
         return None
 
     biome_of = {z.id: z.biome for z in ZONES}
-    biome_of["home"] = HOME["biome"]
     biomes = {}
 
     def pick(x, y):
@@ -1168,9 +1398,9 @@ def compose():
         """The colours at a point: its zone's, blended with the next screen's across a bezel."""
         zid = zone_at(x, y) or "grotto"
         for b in BEZELS:
-            if abs(x - b) < BAND and zid != "home":
+            if abs(x - b) < BAND:
                 left, right = zone_at(b - BAND - 0.5, y), zone_at(b + BAND + 0.5, y)
-                if left and right and left != right and left != "home":
+                if left and right and left != right:
                     t = round(float(smoothstep((x - b + BAND) / (2 * BAND))) * 4) / 4
                     return blend_grades(grades, left, right, t)
         return zid
@@ -1248,10 +1478,6 @@ def compose():
         x += drape.uniform(-0.4, 0.4)
         canvases["mid"].paste(img, x, TREE - 0.15, c["width"] * k, c["height"] * k * kept, 0, drape.random() < 0.5,
                               anchor=(0.5, 1.0))
-    # Her door, over the wall's rock, standing on the floor.
-    door = canvases["over"].img
-    door.paste((0, 0, 0, 0), (round(hx1 * PPU), Hpx - round((TOP - 0.15) * PPU), round((HOME["door_x"] + 2) * PPU), Hpx))
-    layers["mid"].alpha_composite(door)
 
     # 4. Props from other rooms, standing on the ground; the lake and its waterfall.
     solid = nav.solid_map(WORLD, [r.points for r in rocks if r.solid])
@@ -1913,7 +2139,7 @@ def wireframe_svg():
         out.append(f'<text class="label opening" x="{X(x)}" y="{Y(y)}" text-anchor="{anchor}">opening</text>')
     hx0, hy0, hx1, hy1 = HOME["region"]
     out.append(f'<rect class="house" x="{X(hx0)}" y="{Y(hy1)}" width="{(hx1 - hx0) * k:.1f}" height="{(hy1 - hy0) * k:.1f}"/>')
-    out.append(f'<text class="label strong" x="{X(hx0 + 0.6)}" y="{Y(hy1 - 1.4)}">Hornet\'s house</text>')
+    out.append(f'<text class="label strong" x="{X(hx0 + 0.6)}" y="{Y(hy1 - 1.4)}">Hornet\'s bell</text>')
     xs, _ = arcade_spans()
     out.append(f'<text class="label" x="{X((xs[0] + xs[-1]) / 2)}" y="{Y(ARCADE["foot"] - 0.9)}" text-anchor="middle">'
                'Citadel arcade, gilded arches on both sides of each bezel</text>')
@@ -1964,7 +2190,7 @@ def wireframe_svg():
         if prop["piece"] in ("RestBench",):
             out.append(f'<rect class="prop" x="{X(prop["x"] - 1.6)}" y="{Y(prop["near"] + 1.0)}" width="{3.2 * k:.1f}" height="{1.0 * k:.1f}" rx="3"/>')
     places = place_pois(nav_map, [], [dict(q) for q in POIS]) + [
-        {"id": "bed", "x": 9.9, "y": TOP}, {"id": "desk", "x": 15.4, "y": TOP}]
+        {"id": "bed", "x": BELL["left"] + 2.2, "y": TOP}, {"id": "desk", "x": BELL["left"] + 5.2, "y": TOP}]  # (build_bell's)
     for q in places:
         x, y = q["x"], q["y"]
         out.append(f'<path class="hornet" d="M{X(x - 0.45)},{Y(y)} L{X(x + 0.45)},{Y(y)} L{X(x + 0.3)},{Y(y + 1.5)} '
@@ -2037,7 +2263,11 @@ def main():
     p.add_argument("--compose-only", action="store_true", help="skip rendering, compose cached zones")
     p.add_argument("--layout", metavar="IMAGE", help="only draw the rock and Hornet's ways into IMAGE")
     p.add_argument("--wireframe", metavar="SVG", help="write the to-scale wireframe (SVG markup) into SVG")
+    p.add_argument("--out", metavar="DIR", help="compose into DIR instead of the wallpaper's world (to look at first)")
     args = p.parse_args()
+    global OUT
+    if args.out:
+        OUT = Path(args.out).resolve()
 
     if args.layout:
         layout_preview(args.layout)

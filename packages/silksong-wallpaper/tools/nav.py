@@ -21,6 +21,9 @@ JUMP_HOLD = 8 / 50  # JUMP_STEPS at Unity's 50 Hz fixed step
 JUMP_HEIGHT = JUMP_SPEED * JUMP_HOLD + JUMP_SPEED ** 2 / (2 * GRAVITY)  # about 5.9
 JUMP_MAX = JUMP_HEIGHT - 0.6  # keep a margin for a believable landing
 DOUBLE_JUMP_MAX = JUMP_MAX + 2.6  # the Faydown Cloak's second jump (DOUBLE_JUMP_RISE_STEPS)
+DOUBLE_JUMP_SPEED = 15.0  # the second jump, as life.js plays it: this fast, held this long
+DOUBLE_JUMP_HOLD = 0.12
+DOUBLE_JUMP_RISE = DOUBLE_JUMP_SPEED * DOUBLE_JUMP_HOLD + DOUBLE_JUMP_SPEED ** 2 / (2 * GRAVITY)  # about 3.7
 MAX_FALL = 30.0
 RUN_SPEED = 8.25
 WALK_SPEED = 5.0
@@ -40,6 +43,13 @@ def jump_time(rise):
     """Time from take-off to landing on a ledge `rise` units higher (rise may be negative)."""
     up = JUMP_HOLD + JUMP_SPEED / GRAVITY
     return up + fall_time(max(0.0, JUMP_HEIGHT - rise))
+
+
+def jump2_time(rise):
+    """Time from take-off to landing on a ledge `rise` units higher with the whole of her second
+    jump, at the top of the first: as long as she can stay up, for the furthest reach."""
+    up = JUMP_HOLD + JUMP_SPEED / GRAVITY + DOUBLE_JUMP_HOLD + DOUBLE_JUMP_SPEED / GRAVITY
+    return up + fall_time(max(0.0, JUMP_HEIGHT + DOUBLE_JUMP_RISE - rise))
 
 
 def solid_map(world_size, polygons):
@@ -158,6 +168,9 @@ def links(solid, world_h, surfs):
         out.append({"kind": kind, "from": a, "x0": round(xa, 3), "y0": round(height(surfs[a], xa), 3),
                     "to": b, "x1": round(xb, 3), "y1": round(height(surfs[b], xb), 3), "time": round(t, 3)})
 
+    # A double jump carries her further than one (at run speed, for as long as she's up): the
+    # furthest, onto a ledge just too high for one jump.
+    reach2 = RUN_SPEED * jump2_time(JUMP_MAX)
     for a, sa in enumerate(surfs):
         for end, direction in ((sa["x0"], -1), (sa["x1"], 1)):
             ya = height(sa, end)
@@ -165,7 +178,7 @@ def links(solid, world_h, surfs):
                 if a == b:
                     continue
                 # Landing spots on b within reach beyond this end.
-                lo, hi = sorted((end + direction * 0.3, end + direction * JUMP_REACH))
+                lo, hi = sorted((end + direction * 0.3, end + direction * max(JUMP_REACH, reach2)))
                 lo, hi = max(lo, sb["x0"]), min(hi, sb["x1"])
                 if lo > hi:
                     continue
@@ -173,7 +186,12 @@ def links(solid, world_h, surfs):
                 yb = height(sb, xb)
                 dy = yb - ya
                 dx = abs(xb - end)
-                if dx <= 1.2 and abs(dy) <= STEP:
+                if dx > JUMP_REACH:
+                    # Too far for one jump: a double jump onto a ledge higher than one reaches.
+                    if (JUMP_MAX < dy <= DOUBLE_JUMP_MAX and dx <= RUN_SPEED * jump2_time(dy)
+                            and clear(solid, world_h, end, ya, xb, yb, 1.0)):
+                        add("jump2", a, end, b, xb, jump2_time(dy))
+                elif dx <= 1.2 and abs(dy) <= STEP:
                     add("walk", a, end, b, xb, dx / WALK_SPEED)  # over a small bump
                 elif dy < -0.3 and dx > 3.5 and clear(solid, world_h, end, ya, xb, yb, 1.0):
                     add("jump", a, end, b, xb, jump_time(dy))  # across a gap, landing lower
