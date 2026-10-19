@@ -38,6 +38,7 @@ const WALLSLIDE_ACCEL = 24; // down a wall (HeroController.WALLSLIDE_ACCEL), aft
 const WALLSLIDE_STICK = 0.15;
 const BIG_FALL_TIME = 0.5; // falling at full speed longer than this, she lands hard
 const FLOAT_MIN = 4;      // she opens her cloak only on a longer way down (tools/nav.py FLOAT_MIN)
+const WATER_JUMP_LIFT = 1; // jumping out of the water, she's lifted this much first (tools/nav.py)
 const GRAVITY = 60;       // Physics2D gravity
 const MAX_FALL = 30;
 const JUMP_SPEED = 18.6;  // held for JUMP_HOLD, then she falls back under gravity
@@ -801,12 +802,19 @@ Planner.prototype.faceInAir = function (right) {
 Planner.prototype.follow = function (link, gait) {
     const right = link.x1 > link.x0 ? true : link.x1 < link.x0 ? false : this.facingRight;
     const feet = this.world.heroFeet;
-    const y0 = link.y0 + feet;
+    let y0 = link.y0 + feet;
     const y1 = link.y1 + feet;
     const toWater = !!this.nav.surfaces[link.to].water;
     const leap = link.kind === "jump" || link.kind === "jump2" || link.kind === "mantle" || link.kind === "mantle2";
     if (link.kind !== "harpoon" && link.kind !== "bounce" && link.kind !== "climb" && link.kind !== "slide") {
         this.travel(link.x0, gait, leap);
+    }
+    if (leap && this.inWater()) {
+        // Out of the water: the game lifts her first, then she jumps.
+        this.takeOff(right);
+        this.push({ kind: "line", clip: "Airborne", x0: link.x0, y0: y0, x1: link.x0, y1: y0 + WATER_JUMP_LIFT, facingRight: right },
+            0.08);
+        y0 += WATER_JUMP_LIFT;
     }
     switch (link.kind) {
     case "walk": {

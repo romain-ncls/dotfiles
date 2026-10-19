@@ -42,7 +42,10 @@ FLOAT_MAX = 22.0  # she drifts at most this far across under it
 WALLSLIDE_ACCEL = 24.0  # down a wall (HeroController.WALLSLIDE_ACCEL), after sticking to it a moment
 WALLSLIDE_STICK = 0.15
 SWIM_DEPTH = 1.2  # water this deep is swum, shallower she doesn't go into
-SWIM_SINK = 1.0  # swimming, her feet are this far under the water's surface
+# Swimming, the game holds her pivot 0.4 above its water region (SurfaceWaterRegion), whose drawn
+# surface is 0.35 above it: her pivot just above the water's surface, her feet this far under it.
+SWIM_SINK = 1.5
+WATER_JUMP_LIFT = 1.0  # jumping out, she's lifted this much first (HeroWaterController.jumpTranslateHeight)
 SWIM_SPEED = 5.0  # HeroWaterController.swimSpeed
 WADE_GAP = 2.5  # from the end of a shore this far out to where the water is deep enough
 
@@ -229,6 +232,7 @@ def links(solid, world_h, surfs):
     reach2 = RUN_SPEED * jump2_time(JUMP_MAX)
     far = max(jump_reach(-6.0), reach2, FLOAT_MAX)
     for a, sa in enumerate(surfs):
+        lift = WATER_JUMP_LIFT if sa.get("water") else 0.0  # out of the water she jumps from higher
         for end, direction in ((sa["x0"], -1), (sa["x1"], 1)):
             ya = height(sa, end)
             for b, sb in enumerate(surfs):
@@ -267,6 +271,8 @@ def links(solid, world_h, surfs):
                         if abs(xf - end) <= float_reach(ya - yf) and clear_float(solid, world_h, end, ya, xf, yf):
                             add("float", a, end, b, xf, float_time(ya - yf) + 0.3)
                 elif dy > 0.3:
+                    ya += lift
+                    dy -= lift
                     if dy <= JUMP_MAX:
                         if dx <= jump_reach(dy) and clear(solid, world_h, end, ya, xb, yb, 1.0):
                             add("jump", a, end, b, xb, jump_time(dy))
@@ -282,6 +288,7 @@ def links(solid, world_h, surfs):
                         elif edge and DOUBLE_JUMP_MAX < dy <= MANTLE2_MAX and dx <= reach2 \
                                 and clear(solid, world_h, end, ya, *hang, 0.2):
                             add("mantle2", a, end, b, xb, jump_time(JUMP_MAX) + 0.8)
+                    ya -= lift
                 elif abs(dy) <= 0.3 and dx > 0.6 and dx <= jump_reach(0) and clear(solid, world_h, end, ya, xb, yb, 1.5):
                     add("jump", a, end, b, xb, jump_time(0))
         # Up onto this surface's ends from a surface below: she takes off a little way out from
@@ -294,7 +301,7 @@ def links(solid, world_h, surfs):
             for b, sb in enumerate(surfs):
                 if b == a or not sb["x0"] <= xt <= sb["x1"]:
                     continue
-                ya = height(sb, xt)
+                ya = height(sb, xt) + (WATER_JUMP_LIFT if sb.get("water") else 0.0)
                 dy = yb - ya
                 if 0.3 < dy <= JUMP_MAX and clear(solid, world_h, xt, ya, xl, yb, 1.0):
                     add("jump", b, xt, a, xl, jump_time(dy))
