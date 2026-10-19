@@ -64,6 +64,8 @@ WallpaperItem {
             gapMm: root.configuration.GapMm
             latitude: root.configuration.Latitude
             longitude: root.configuration.Longitude
+            dayHours: [root.configuration.NightUntil ?? "", root.configuration.DayFrom ?? "",
+                       root.configuration.DayUntil ?? "", root.configuration.NightFrom ?? ""]
             debug: root.configuration.Debug
             everyFrame: (root.configuration.Motion ?? 0) === 0
             nearHz: [60, 60, 30, 0][root.configuration.Motion ?? 0] ?? 60

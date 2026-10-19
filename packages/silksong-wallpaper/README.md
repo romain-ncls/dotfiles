@@ -193,6 +193,12 @@ covered), and starts again at the current moment, as it does when the machine wa
 is set; if what it shows then isn't loaded (her clips of a minute later), it holds its last frame
 until it is, 300 ms at most, rather than draw her missing.
 
+The light of the day (`daylight.js`: a veil over everything, and the lamps that shine through it
+at night) follows set hours (in its settings, by default for a working day, to see the night):
+full night until `NightUntil` (09:30), dawn until `DayFrom` (10:00), day until `DayUntil` (17:00),
+the golden hour and dusk, full night from `NightFrom` (17:30). With those empty, it follows the
+real sunrise and sunset where you are (`Latitude`, `Longitude`).
+
 On the desktop the world stands still while you work (`PauseWhen`, in its settings, from the
 windows Plasma's task manager sees, `Pauser.qml`): by default on every screen together while
 any window is focused, or only on the screen a window covers, maximized or full screen. Windows

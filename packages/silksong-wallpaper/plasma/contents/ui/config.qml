@@ -16,6 +16,10 @@ Kirigami.FormLayout {
     property alias cfg_Debug: debug.checked
     property real cfg_Latitude
     property real cfg_Longitude
+    property alias cfg_NightUntil: nightUntil.text
+    property alias cfg_DayFrom: dayFrom.text
+    property alias cfg_DayUntil: dayUntil.text
+    property alias cfg_NightFrom: nightFrom.text
     property alias formLayout: root
 
     QQC2.TextField {
@@ -52,6 +56,32 @@ Kirigami.FormLayout {
                 root.cfg_Longitude = parts[1];
             }
         }
+    }
+
+    // The light's hours: all four, in order, or the sun's.
+    component Hour: QQC2.TextField {
+        placeholderText: "with the sun"
+        validator: RegularExpressionValidator { regularExpression: /^(\d{1,2}:\d{2})?$/ }
+    }
+
+    Hour {
+        id: nightUntil
+        Kirigami.FormData.label: "Night until:"
+    }
+
+    Hour {
+        id: dayFrom
+        Kirigami.FormData.label: "Day from:"
+    }
+
+    Hour {
+        id: dayUntil
+        Kirigami.FormData.label: "Day until:"
+    }
+
+    Hour {
+        id: nightFrom
+        Kirigami.FormData.label: "Night from:"
     }
 
     QQC2.ComboBox {

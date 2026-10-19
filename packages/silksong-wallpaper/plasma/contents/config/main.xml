@@ -26,6 +26,22 @@
       <label>Longitude for sunrise and sunset</label>
       <default>2.35</default>
     </entry>
+    <entry name="NightUntil" type="String">
+      <label>The night lasts until this time (HH:MM), then dawn; with DayFrom, DayUntil and NightFrom (all four, in order), these hours replace the sun's</label>
+      <default>09:30</default>
+    </entry>
+    <entry name="DayFrom" type="String">
+      <label>Day from this time (HH:MM), after dawn</label>
+      <default>10:00</default>
+    </entry>
+    <entry name="DayUntil" type="String">
+      <label>Day until this time (HH:MM), then the golden hour and dusk</label>
+      <default>17:00</default>
+    </entry>
+    <entry name="NightFrom" type="String">
+      <label>Full night from this time (HH:MM)</label>
+      <default>17:30</default>
+    </entry>
     <entry name="Motion" type="Int">
       <label>How often everything moves: 0 every frame on every screen; paced (less work): 1 every frame where Hornet is, 2 thirty times a second where she rests, 3 each screen at the rate of what it shows</label>
       <default>0</default>

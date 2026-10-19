@@ -19,6 +19,9 @@ Item {
     property real gapMm: 15
     property real latitude: 48.85
     property real longitude: 2.35
+    // Set hours for the light ("HH:MM": night until, day from, day until, night from), or empty
+    // for the sun's (daylight.js dayHours).
+    property var dayHours: ["09:30", "10:00", "17:00", "17:30"]
     property bool debug: false
 
     // Seconds since the epoch. Driven by the wall clock (shifted by timeOffset, to try another
@@ -109,7 +112,7 @@ Item {
     // The daylight and the clock's hands only change by the second (lightingAt reads the time to
     // the second), so they're worked out once a second rather than on every tick.
     readonly property real wholeSecond: Math.floor(time)
-    readonly property var daylight: Daylight.lightingAt(new Date(wholeSecond * 1000), latitude, longitude)
+    readonly property var daylight: Daylight.lightingAt(new Date(wholeSecond * 1000), latitude, longitude, dayHours)
 
     function toX(xMm) {
         return (xMm - me.x) * pxPerMm;
