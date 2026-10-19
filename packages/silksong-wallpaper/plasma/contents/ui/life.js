@@ -6,9 +6,15 @@
  * 04:00 with Hornet asleep and picks what she does next from her needs and the
  * hour. Each copy then shows the moment it's at, so they agree without talking.
  *
- * world.nav (tools/nav.py) has the surfaces she stands on, the links between
- * them (walk, drop, jump, jump2, climb, harpoon, bounce) and the places she
- * spends time.
+ * world.nav (tools/nav.py) has the surfaces she stands on (and the water she
+ * swims on), the links between them (walk, drop, jump, jump2, mantle, mantle2,
+ * float, climb, slide, wade, harpoon, bounce) and the places she spends time.
+ * She moves as she does in the game, at its speeds and with its animations:
+ * running (starting, stopping, turning, landing into it), walking, walking with
+ * her map open, sprinting, swimming, each as she chooses for the trip; she takes
+ * each link on the move, jumping from a run and running on from where she lands. Each trip picks its
+ * way with her own preferences and a little chance, so the same trip goes
+ * different ways (routeTree).
  *
  * The screens ask for her (and the Bell Beast, the small life) on every frame,
  * so what runs that often has no for-of loop or array destructuring: in the
@@ -22,7 +28,16 @@
 
 const WALK_SPEED = 5;     // HeroController.WALK_SPEED
 const RUN_SPEED = 8.25;   // HeroController.RUN_SPEED
-const RUN_FROM = 14;      // run when the walk is longer than this
+const SPRINT_SPEED = 17.5; // the Sprint FSM's Sprint Speed Regular
+const MAP_WALK_SPEED = 4; // the Map Control FSM's Walk Speed
+const SWIM_SPEED = 5;     // HeroWaterController.swimSpeed
+const SWIM_DASH_SPEED = 10; // its sprintSwimSpeed
+const FLOAT_SPEED = 3;    // how fast she sinks under the Drifter's Cloak (HeroController.FLOAT_SPEED)
+const FLOAT_OPEN = 0.3;   // she falls this long while it opens (tools/nav.py FLOAT_OPEN)
+const WALLSLIDE_ACCEL = 24; // down a wall (HeroController.WALLSLIDE_ACCEL), after sticking to it a moment
+const WALLSLIDE_STICK = 0.15;
+const BIG_FALL_TIME = 0.5; // falling at full speed longer than this, she lands hard
+const FLOAT_MIN = 4;      // she opens her cloak only on a longer way down (tools/nav.py FLOAT_MIN)
 const GRAVITY = 60;       // Physics2D gravity
 const MAX_FALL = 30;
 const JUMP_SPEED = 18.6;  // held for JUMP_HOLD, then she falls back under gravity
@@ -152,6 +167,27 @@ function jumpPlan(y0, y1, double, v, maxHold, minT) {
         p.tB = tA + p.hold2 + v2 / GRAVITY;
     };
     p.T = p.tB + fallTime(p.apex - y1);
+    if (!double && minT && p.T < minT && hold1 < maxHold) {
+        // Held longer, until she's up long enough: the least that does.
+        let lo = hold1;
+        let hi = maxHold;
+        const plan = h => {
+            p.hold1 = h;
+            p.apex1 = p.apex = y0 + v * h + free;
+            p.tA = p.tB = h + v / GRAVITY;
+            p.T = p.tB + fallTime(p.apex - y1);
+        };
+        for (let i = 0; i < 16; i++) {
+            const mid = (lo + hi) / 2;
+            plan(mid);
+            if (p.T < minT) {
+                lo = mid;
+            } else {
+                hi = mid;
+            }
+        }
+        plan(hi);
+    }
     if (double) {
         let lo = Math.max(0.6, y1 + 0.8 - apex1);
         let hi = DOUBLE_JUMP_SPEED * DOUBLE_JUMP_HOLD + DOUBLE_JUMP_SPEED * DOUBLE_JUMP_SPEED / (2 * GRAVITY);
@@ -173,6 +209,26 @@ function jumpPlan(y0, y1, double, v, maxHold, minT) {
         }
     }
     return p;
+}
+
+// When a jump (held as long as it can be) first rises to y1, or its top if it doesn't get there:
+// where she catches a ledge.
+function riseTime(p, y0, y1) {
+    const top = p.v2 ? p.tB : p.tA;
+    if (jumpY(p, y0, top) <= y1) {
+        return top;
+    }
+    let lo = 0;
+    let hi = top;
+    for (let i = 0; i < 20; i++) {
+        const mid = (lo + hi) / 2;
+        if (jumpY(p, y0, mid) < y1) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return hi;
 }
 
 function jumpY(p, y0, t) {
@@ -224,111 +280,204 @@ function routesFor(world) {
         for (let i = 1; i < ss.length; i++) {
             onSurface[ss[i]].push(i);
         }
-        routes = { key: key, starts: new Map(), nav: nav, xs: xs, ss: ss, onSurface: onSurface };
+        // Each surface's nodes in order along it, and where each node is in that order: walking
+        // to a node further along passes the ones between, so only neighbours need joining.
+        const along = onSurface.map(list => list.slice().sort((i, j) => xs[i] - xs[j] || i - j));
+        const place = new Array(xs.length).fill(-1);
+        along.forEach(list => list.forEach((v, k) => {
+            place[v] = k;
+        }));
+        routes = { key: key, starts: new Map(), nav: nav, xs: xs, ss: ss, onSurface: onSurface, along: along, place: place };
     }
     return routes;
 }
 
-// Dijkstra from (surface a, x) to every link end: { dist, prev, order }, order being the nodes as
-// they were settled, the cheapest first (the lower index on a tie).
+// The cheapest ways from (surface a, x) to every link end (routeTree at each link's own time),
+// kept for the world build, with the ways to each goal asked for: { tree, paths }.
 function routesFrom(R, a, xa) {
     const byX = R.starts.get(a) || new Map();
     R.starts.set(a, byX);
     let from = byX.get(xa);
-    if (from) {
-        return from;
+    if (!from) {
+        if (!R.ones) {
+            R.ones = new Float64Array(R.nav.links.length).fill(1);
+        }
+        from = { tree: routeTree(R, a, xa, R.ones), paths: R.nav.surfaces.map(() => new Map()) };
+        byX.set(xa, from);
     }
-    const n = R.xs.length;
-    const xs = R.xs.slice();
-    const ss = R.ss.slice();
-    xs[0] = xa;
-    ss[0] = a;
-    const dist = new Array(n).fill(Infinity);
-    const prev = new Array(n).fill(null); // [node, link index or -1 for a walk]
-    const done = new Array(n).fill(false);
-    const links = R.nav.links;
-    dist[0] = 0;
-    const order = [];
-    for (;;) {
-        let u = -1;
-        for (let i = 0; i < n; i++) {
-            if (!done[i] && dist[i] < Infinity && (u < 0 || dist[i] < dist[u])) {
-                u = i;
-            }
-        }
-        if (u < 0) {
-            break;
-        }
-        done[u] = true;
-        order.push(u);
-        const same = R.onSurface[ss[u]];
-        for (let j = 0; j < same.length; j++) {
-            const v = same[j];
-            if (!done[v]) {
-                const d = dist[u] + Math.abs(xs[v] - xs[u]) / RUN_SPEED;
-                if (d < dist[v]) {
-                    dist[v] = d;
-                    prev[v] = [u, -1];
-                }
-            }
-        }
-        if (u % 2 === 1) { // where link k leaves from
-            const k = (u - 1) / 2;
-            const v = u + 1;
-            const d = dist[u] + links[k].time + 0.3;
-            if (d < dist[v]) {
-                dist[v] = d;
-                prev[v] = [u, k];
-            }
-        }
-    }
-    from = { dist: dist, prev: prev, order: order, xs: xs, ss: ss, paths: R.nav.surfaces.map(() => new Map()) };
-    byX.set(xa, from);
     return from;
 }
 
 // Cheapest route from (surface a, x) to (surface b, x): a list of link objects, in order (null
-// when there's none), with `trip`, the time it takes (links, then the walk to x), alongside.
+// when there's none), with `trip`, the time it takes (links, then the way along to x), alongside.
 function routeTrip(R, a, xa, b, xb) {
     const from = routesFrom(R, a, xa);
     let found = from.paths[b].get(xb);
     if (found) {
         return found;
     }
-    let path = [];
-    if (a !== b) {
-        // The last stretch is a walk from whichever node on its surface gets her there soonest
-        // (the first settled, on a tie).
-        let best = Infinity;
-        let last = -1;
-        for (let i = 0; i < from.order.length; i++) {
-            const u = from.order[i];
-            if (from.ss[u] === b) {
-                const d = from.dist[u] + Math.abs(xb - from.xs[u]) / RUN_SPEED;
-                if (d < best) {
-                    best = d;
-                    last = u;
-                }
-            }
-        }
-        if (last < 0) {
-            path = null;
-        } else {
-            for (let v = last; from.prev[v]; v = from.prev[v][0]) {
-                if (from.prev[v][1] >= 0) {
-                    path.unshift(R.nav.links[from.prev[v][1]]);
-                }
-            }
-        }
-    }
+    const path = treePath(R, from.tree, a, xa, b, xb);
+    const speed = R.nav.surfaces[b].water ? SWIM_SPEED : RUN_SPEED;
     const trip = path === null ? 999 : path.reduce((sum, l) => sum + l.time, 0)
-        + Math.abs((path.length ? path[path.length - 1].x1 : xa) - xb) / RUN_SPEED;
+        + Math.abs((path.length ? path[path.length - 1].x1 : xa) - xb) / speed;
     found = { path: path, trip: trip };
     from.paths[b].set(xb, found);
     return found;
 }
 
+// Her ways from (surface a, x) to everywhere with her own preferences: each link costs its time
+// times factors[link index] (what she feels like doing today, and some chance), so that the same
+// trip doesn't always go the same way. { dist, prev, prevLink } per node (routesFor). A day has
+// a few sets of factors (Planner.variants), each trip draws one, and each set's ways from a place
+// are found once (Planner.routeFor).
+function routeTree(R, a, xa, factors) {
+    const n = R.xs.length;
+    const xs = R.xs;
+    const ss = R.ss;
+    const links = R.nav.links;
+    const surfaces = R.nav.surfaces;
+    const dist = new Float64Array(n).fill(Infinity);
+    const prev = new Int32Array(n).fill(-1);
+    const prevLink = new Int32Array(n).fill(-1);
+    if (!R.heap) {
+        R.heap = { d: new Float64Array(4 * n + 8), v: new Int32Array(4 * n + 8) };
+    }
+    const heapD = R.heap.d;
+    const heapV = R.heap.v;
+    let size = 0;
+    const pushHeap = (d, v) => {
+        let i = size++;
+        while (i > 0) {
+            const up = (i - 1) >> 1;
+            if (heapD[up] <= d) {
+                break;
+            }
+            heapD[i] = heapD[up];
+            heapV[i] = heapV[up];
+            i = up;
+        }
+        heapD[i] = d;
+        heapV[i] = v;
+    };
+    const popHeap = () => { // the cheapest node; its distance is left in heapD[size]
+        const v = heapV[0];
+        const d0 = heapD[0];
+        size--;
+        const d = heapD[size];
+        const last = heapV[size];
+        let i = 0;
+        for (;;) {
+            const l = 2 * i + 1;
+            if (l >= size) {
+                break;
+            }
+            const r = l + 1 < size && heapD[l + 1] < heapD[l] ? l + 1 : l;
+            if (heapD[r] >= d) {
+                break;
+            }
+            heapD[i] = heapD[r];
+            heapV[i] = heapV[r];
+            i = r;
+        }
+        heapD[i] = d;
+        heapV[i] = last;
+        heapD[size] = d0;
+        return v;
+    };
+    dist[0] = 0;
+    pushHeap(0, 0);
+    while (size > 0) {
+        const u = popHeap();
+        const du = heapD[size];
+        if (du > dist[u]) {
+            continue;
+        }
+        const su = u === 0 ? a : ss[u];
+        const xu = u === 0 ? xa : xs[u];
+        const speed = surfaces[su].water ? SWIM_SPEED : RUN_SPEED;
+        // Walking along: from the start to every node of its surface, from a node to its
+        // neighbours along it (walking further passes them).
+        const along = R.along[su];
+        const k = R.place[u];
+        const from = u === 0 ? 0 : Math.max(0, k - 1);
+        const to = u === 0 ? along.length - 1 : Math.min(along.length - 1, k + 1);
+        for (let j = from; j <= to; j++) {
+            const v = along[j];
+            if (v === u) {
+                continue;
+            }
+            const d = du + Math.abs(xs[v] - xu) / speed;
+            if (d < dist[v]) {
+                dist[v] = d;
+                prev[v] = u;
+                prevLink[v] = -1;
+                pushHeap(d, v);
+            }
+        }
+        if (u % 2 === 1) { // where link l leaves from
+            const l = (u - 1) / 2;
+            const d = du + links[l].time * factors[l] + 0.3;
+            if (d < dist[u + 1]) {
+                dist[u + 1] = d;
+                prev[u + 1] = u;
+                prevLink[u + 1] = l;
+                pushHeap(d, u + 1);
+            }
+        }
+    }
+    return { dist: dist, prev: prev, prevLink: prevLink };
+}
+
+// The way to (surface b, x) by a route tree from (surface a, x): a list of links (null when there's
+// none). On her own surface she just goes along it.
+function treePath(R, tree, a, xa, b, xb) {
+    if (a === b) {
+        return [];
+    }
+    const surfaces = R.nav.surfaces;
+    const speed = surfaces[b].water ? SWIM_SPEED : RUN_SPEED;
+    const on = R.onSurface[b];
+    let best = Infinity;
+    let last = -1;
+    for (let j = 0; j < on.length; j++) {
+        const u = on[j];
+        const d = tree.dist[u] + Math.abs(xb - R.xs[u]) / speed;
+        if (d < best) {
+            best = d;
+            last = u;
+        }
+    }
+    if (last < 0 || best === Infinity) {
+        return null;
+    }
+    const path = [];
+    for (let v = last; v > 0; v = tree.prev[v]) {
+        if (tree.prevLink[v] >= 0) {
+            path.unshift(R.nav.links[tree.prevLink[v]]);
+        }
+    }
+    return path;
+}
+
 // ------------------------------------------------------------------ building the day
+
+// How she moves along the ground and the water, at the game's speeds: what she plays doing it,
+// setting off, stopping (from standing still), turning on the move, landing into it.
+const GAITS = {
+    walk: { speed: WALK_SPEED, clip: "Walk", stop: "Walk To Idle", turn: "TurnWalk", land: "Land To Walk" },
+    run: { speed: RUN_SPEED, clip: "Run", start: "Idle To Run", startShort: "Idle To Run Short", stop: "Run To Idle",
+           turn: "Turn", land: "Land To Run" },
+    sprint: { speed: SPRINT_SPEED, clip: "Sprint", start: "Idle To Run Short", stop: "Sprint Skid To Run",
+              turn: "Sprint Turn", land: "Land to Sprint" },
+    map: { speed: MAP_WALK_SPEED, clip: "Map Walk", open: "Map Open", stop: "Map Away", turn: "Map Turn" },
+    swim: { speed: SWIM_SPEED, clip: "Surface IdleToSwim", turn: "Surface TurnToSwim" },
+    dash: { speed: SWIM_DASH_SPEED, clip: "Swim Dash", turn: "Swim Dash Turn" },
+};
+
+// What she plays landing, going on running (or walking) from there, or standing.
+const LANDING = { walk: "Land To Walk", run: "Land To Run", sprint: "Land to Sprint", stand: "Land" };
+const MANTLED = { walk: "Mantle Land To Run", run: "Mantle Land To Run", sprint: "Mantle Land To Run", stand: "Mantle Land To Idle" };
+const HARD = { walk: "HardLand", run: "HardLand", sprint: "HardLand", stand: "HardLand" };
 
 // Segments: { t0, t1, kind, clip, ... }. Poses are computed from them when sampling.
 function Planner(world, clips, seed) {
@@ -343,7 +492,56 @@ function Planner(world, clips, seed) {
     this.surface = 0;
     this.x = 0;
     this.facingRight = true;
+    this.moving = null;  // her gait while she's on the move (facing her way), else null
+    this.landing = null; // just landed: what she plays going on from there (LANDING), else null
+    this.prefs = null;   // what she feels like doing today: a factor on each kind of link's cost
+    this.style = { float: 0, double: 0, slide: 0 }; // how often she floats down a drop, double jumps for the
+    // joy of it, slides down a wall rather than drops beside it
+    this.slides = {}; // the slides down a wall, by the surfaces they join: "from:to" -> link
+    world.nav.links.forEach(l => {
+        if (l.kind === "slide") {
+            this.slides[l.from + ":" + l.to] = l;
+        }
+    });
+    this.variants = [];  // a few sets of factors on each link's cost, drawn from those (routeTree)
+    this.trees = new Map(); // their route trees from where she set off: "variant:surface:x" -> tree
 }
+
+Planner.prototype.inWater = function () {
+    return !!this.nav.surfaces[this.surface].water;
+};
+
+// Her way there for this trip: by one of the day's sets of preferences (routeTree), drawn.
+Planner.prototype.routeFor = function (surface, x) {
+    if (!this.variants.length) {
+        return this.route(surface, x);
+    }
+    const v = Math.floor(this.r() * this.variants.length);
+    const key = v + ":" + this.surface + ":" + this.x;
+    let tree = this.trees.get(key);
+    if (!tree) {
+        tree = routeTree(this.routes, this.surface, this.x, this.variants[v]);
+        this.trees.set(key, tree);
+    }
+    return treePath(this.routes, tree, this.surface, this.x, surface, x);
+};
+
+// What she feels like doing today (a factor on each kind of link), and from it VARIANTS sets of
+// factors on each link, each with some chance of its own.
+const VARIANTS = 3;
+Planner.prototype.prefer = function (prefs) {
+    this.prefs = prefs;
+    const links = this.nav.links;
+    this.variants = [];
+    for (let v = 0; v < VARIANTS; v++) {
+        const f = new Float64Array(links.length);
+        for (let l = 0; l < links.length; l++) {
+            f[l] = (prefs[links[l].kind] || 1) * between(this.r, 0.7, 1.3);
+        }
+        this.variants.push(f);
+    }
+    this.trees = new Map();
+};
 
 Planner.prototype.route = function (surface, x) {
     return routeTrip(this.routes, this.surface, this.x, surface, x).path;
@@ -354,7 +552,35 @@ Planner.prototype.trip = function (surface, x) {
     return routeTrip(this.routes, this.surface, this.x, surface, x).trip;
 };
 
+// The clips she plays with an older tools/extract.py (without the moves it extracts now): the
+// nearest it has, so that she's never missing.
+const STAND_IN = {
+    "Idle To Run Short": "Idle To Run", "Run To Walk": "Walk", "Land To Run": "Run", "Land To Walk": "Walk",
+    "Land to Sprint": "Run", "Sprint": "Run", "Sprint To Run": "Run", "Sprint Skid To Run": "Run To Idle", "Sprint Turn": "Turn",
+    "Map Walk": "Walk", "Map Turn": "TurnWalk", "HardLand": "Land", "Wall Slide": "Wall Cling",
+    "Mantle Land To Run": "Run", "Mantle Land To Idle": "Land", "Mantle Cling": "Wall Scramble Mantle",
+    "Umbrella Float": "Fall", "Umbrella Inflate Antic": "Fall", "Umbrella Inflate": "Fall", "Umbrella Deflate": "Fall",
+    "Surface In": "Land", "Surface InToIdle": "Idle", "Surface Idle": "Idle", "Surface IdleToSwim": "Walk",
+    "Surface TurnToSwim": "TurnWalk", "Swim Dash": "Walk", "Swim Dash Turn": "TurnWalk",
+};
+
+function clipOr(clips, name) {
+    let n = name;
+    for (let i = 0; i < 3 && n && !clips[n] && STAND_IN[n]; i++) {
+        n = STAND_IN[n];
+    }
+    return n;
+}
+
 Planner.prototype.push = function (seg, duration) {
+    for (const k of ["clip", "second", "fall", "antic"]) {
+        if (seg[k]) {
+            seg[k] = clipOr(this.clips, seg[k]);
+        }
+    }
+    if (seg.also) {
+        seg.also = seg.also.map(n => clipOr(this.clips, n));
+    }
     seg.t0 = this.t;
     seg.t1 = this.t + duration;
     this.segments.push(seg);
@@ -366,8 +592,14 @@ Planner.prototype.y = function (surface, x) {
     return height(this.nav.surfaces[surface], x, this.nav.step) + this.world.heroFeet;
 };
 
+// Standing (stopping first if she's moving), turning to face that way.
 Planner.prototype.face = function (right) {
+    this.stop();
     if (right === this.facingRight) {
+        return;
+    }
+    if (this.inWater()) {
+        this.facingRight = right; // treading water she just turns about
         return;
     }
     // Turn is drawn going from right-facing to left-facing; mirrored, the other way.
@@ -376,7 +608,14 @@ Planner.prototype.face = function (right) {
     this.facingRight = right;
 };
 
+// In the water, standing is treading water, and there's no looking up.
+const IN_WATER = { "Idle": "Surface Idle", "LookUp": "Surface Idle", "LookingUp": "Surface Idle", "LookUpEnd": "Surface Idle" };
+
 Planner.prototype.hold = function (clip, duration, extra) {
+    this.stop();
+    if (this.inWater() && IN_WATER[clip]) {
+        clip = IN_WATER[clip];
+    }
     const seg = { kind: "clip", clip: clip, x: this.x, y: this.y(this.surface, this.x), facingRight: this.facingRight };
     if (extra) {
         for (const k in extra) {
@@ -386,20 +625,143 @@ Planner.prototype.hold = function (clip, duration, extra) {
     return this.push(seg, duration === undefined ? clipLength(this.clips, clip) : duration);
 };
 
-Planner.prototype.walkTo = function (x) {
+// Coming to a standstill: her gait's stop (or the landing she was going on from).
+Planner.prototype.stop = function () {
+    if (this.landing) {
+        const clip = this.landing.stand;
+        this.landing = null;
+        this.push({ kind: "clip", clip: clip, x: this.x, y: this.y(this.surface, this.x), facingRight: this.facingRight },
+            clipLength(this.clips, clip));
+    }
+    const gait = this.moving;
+    this.moving = null;
+    if (!gait || !GAITS[gait].stop) {
+        return;
+    }
+    const at = { kind: "clip", x: this.x, y: this.y(this.surface, this.x), facingRight: this.facingRight };
+    if (gait === "sprint") {
+        this.push(Object.assign({ clip: "Sprint Skid To Run" }, at), clipLength(this.clips, "Sprint Skid To Run"));
+        this.push(Object.assign({ clip: "Run To Idle" }, at), clipLength(this.clips, "Run To Idle"));
+    } else if (gait === "map") {
+        this.push(Object.assign({ clip: "Map Idle" }, at), between(this.r, 1, 3));
+        this.push(Object.assign({ clip: "Map Away" }, at), clipLength(this.clips, "Map Away"));
+    } else {
+        this.push(Object.assign({ clip: GAITS[gait].stop }, at), clipLength(this.clips, GAITS[gait].stop));
+    }
+};
+
+// Along her surface to x at a gait (swimming on the water), without stopping there; runUp: walking,
+// she breaks into a run for the last of the way, up to a jump.
+Planner.prototype.travel = function (x, gait, runUp) {
+    if (Math.abs(x - this.x) < 0.05) {
+        return;
+    }
+    if (runUp && gait === "walk" && Math.abs(x - this.x) > 3) {
+        this.stretch(x - (x > this.x ? 2.5 : -2.5), "walk");
+        gait = "run";
+    }
+    this.stretch(x, gait);
+};
+
+// One stretch of a travel, at one gait: setting off from standing still (or from where she
+// landed), changing gait or turning on the move.
+Planner.prototype.stretch = function (x, gait) {
     const dx = x - this.x;
     if (Math.abs(dx) < 0.05) {
         return;
     }
-    this.face(dx > 0);
-    const run = Math.abs(dx) > RUN_FROM;
-    const speed = run ? RUN_SPEED : WALK_SPEED;
-    this.push({ kind: "walk", clip: run ? "Run" : "Walk", surface: this.surface, x0: this.x, x1: x, facingRight: dx > 0 },
-        Math.abs(dx) / speed);
-    this.x = x;
-    if (run) {
-        this.hold("Run To Idle");
+    const right = dx > 0;
+    if (this.inWater()) {
+        gait = gait === "dash" ? "dash" : "swim";
+    } else if (gait === "swim" || gait === "dash") {
+        gait = "run";
     }
+    if (this.moving === "map" && gait !== "map") {
+        this.stop(); // her map put away first
+    }
+    const g = GAITS[gait];
+    let left = Math.abs(dx);
+    const go = (clip, d, speed) => {
+        d = Math.min(d, left);
+        if (d <= 0.001) {
+            return;
+        }
+        const x1 = this.x + (right ? d : -d);
+        this.push({ kind: "walk", clip: clip, surface: this.surface, x0: this.x, x1: x1, facingRight: right }, d / (speed || g.speed));
+        this.x = x1;
+        left -= d;
+    };
+    const over = (clip, speed) => clipLength(this.clips, clip) * (speed || g.speed); // how far a clip takes her
+    if (this.landing) {
+        const landing = this.landing;
+        this.landing = null;
+        if (this.facingRight === right && landing[gait]) {
+            // (at most her run's speed, but into a sprint)
+            const v = landing[gait] === "Land to Sprint" ? g.speed : Math.min(g.speed, RUN_SPEED);
+            this.moving = gait;
+            go(landing[gait], over(landing[gait], v), v);
+        } else {
+            this.landing = landing;
+            this.face(right);
+        }
+    }
+    if (this.moving && this.facingRight !== right) {
+        this.facingRight = right; // turning on the move
+        go(g.turn, over(g.turn));
+    } else if (!this.moving) {
+        if (this.facingRight !== right) {
+            if (g.turn && this.inWater()) {
+                this.facingRight = right; // a turn into a stroke
+                go(g.turn, over(g.turn));
+            } else {
+                this.face(right);
+            }
+        }
+        if (g.open) {
+            this.push({ kind: "clip", clip: g.open, x: this.x, y: this.y(this.surface, this.x), facingRight: right },
+                clipLength(this.clips, g.open));
+        } else if (g.start) {
+            // (into a sprint from a run's start, at run speed)
+            const v = gait === "sprint" ? RUN_SPEED : g.speed;
+            go(left < over(g.start, v) && g.startShort ? g.startShort : g.start, over(g.start, v), v);
+        }
+    } else if (this.moving !== gait) {
+        if (this.moving === "run" && gait === "walk") {
+            go("Run To Walk", over("Run To Walk"));
+        } else if (this.moving === "sprint") {
+            go("Sprint To Run", over("Sprint To Run"));
+        }
+    }
+    this.moving = gait;
+    go(g.clip, left);
+};
+
+// After a link she lands on her new surface: into the water, or with what she plays going on
+// from there (or standing, if she doesn't): the next travel or stop decides.
+Planner.prototype.land = function (link, landing) {
+    this.surface = link.to;
+    this.x = link.x1;
+    this.moving = null;
+    if (this.inWater()) {
+        this.landing = null;
+        this.hold("Surface In");
+        this.hold("Surface InToIdle");
+        return;
+    }
+    this.landing = landing || LANDING;
+};
+
+// Setting off into the air at x0 towards `right`: on the move if she's going that way (from a
+// landing, straight on), else from standing, turned that way.
+Planner.prototype.takeOff = function (right) {
+    if (this.landing && this.facingRight === right) {
+        this.landing = null; // jumping again as she lands
+    }
+    if (!(this.moving && this.facingRight === right)) {
+        this.face(right);
+    }
+    this.moving = null;
+    this.facingRight = right;
 };
 
 // A ballistic move from (x0, y0) to (x1, y1), y being her pivot; `clips` names what she
@@ -412,17 +774,21 @@ Planner.prototype.leap = function (x0, y0, x1, y1, opts) {
         opts = Object.assign({}, opts, { double: true });
         p = jumpPlan(y0, y1, true, opts.speed, opts.hold, opts.minT);
     }
+    // The game plays Airborne all the way, from her take-off to its falling frames; after a
+    // double jump, from those.
+    const fall = opts.fall !== undefined ? opts.fall : opts.double ? "Airborne" : "";
     return this.push({ kind: "jump", plan: p, x0: x0, y0: y0, x1: x1, y1: y1, facingRight: this.facingRight,
-                       clip: opts.rise || "Airborne", fall: opts.fall || "Fall", second: opts.double ? "Double Jump" : "",
-                       antic: opts.antic || "" }, p.T);
+                       clip: opts.rise || "Airborne", fall: fall, fallFrom: opts.fallFrom !== undefined ? opts.fallFrom : fall === "Airborne" ? 7 : 0,
+                       second: opts.double ? "Double Jump" : "", antic: opts.antic || "" }, p.T);
 };
 
-// On the ground at the end of a link: where she is is updated before anything else is drawn
-// there (a pose held at the old spot would show her back where she took off for a moment).
-Planner.prototype.arrive = function (link, clip, duration) {
-    this.surface = link.to;
-    this.x = link.x1;
-    this.hold(clip, duration);
+// Under the Drifter's Cloak from (x0, y0) to (x1, y1): a moment's fall while it opens, then a slow
+// sink, drifting across.
+Planner.prototype.glide = function (x0, y0, x1, y1) {
+    const h0 = 0.5 * GRAVITY * FLOAT_OPEN * FLOAT_OPEN;
+    const T = FLOAT_OPEN + Math.max(0, y0 - y1 - h0) / FLOAT_SPEED;
+    this.push({ kind: "glide", clip: "Umbrella Float", x0: x0, y0: y0, x1: x1, y1: y1, facingRight: this.facingRight,
+                also: ["Umbrella Inflate Antic", "Umbrella Inflate", "Umbrella Deflate"] }, T);
 };
 
 // Turning in the air: no Turn animation (it stands on the ground), she just faces the other way.
@@ -430,34 +796,146 @@ Planner.prototype.faceInAir = function (right) {
     this.facingRight = right;
 };
 
-Planner.prototype.follow = function (link) {
-    this.walkTo(link.x0);
+// A link, on the move: she runs up to it at her gait and takes it without stopping where she
+// can, and lands into her run (Planner.land; the next travel or stop plays it).
+Planner.prototype.follow = function (link, gait) {
     const right = link.x1 > link.x0 ? true : link.x1 < link.x0 ? false : this.facingRight;
     const feet = this.world.heroFeet;
     const y0 = link.y0 + feet;
     const y1 = link.y1 + feet;
-    if (link.kind === "walk") {
-        this.face(right);
-        this.push({ kind: "line", clip: "Walk", x0: link.x0, y0: y0, x1: link.x1, y1: y1, facingRight: right },
-            Math.max(0.15, Math.abs(link.x1 - link.x0) / WALK_SPEED));
-    } else if (link.kind === "drop") {
-        this.face(right);
-        this.push({ kind: "fall", clip: "Fall", x0: link.x0, y0: y0, x1: link.x1, y1: y1, facingRight: right },
-            Math.max(0.2, fallTime(y0 - y1)));
-        this.arrive(link, "Land", 0.25);
-    } else if (link.kind === "jump" || link.kind === "jump2") {
-        this.face(right);
-        // (a double jump as long as she needs to cover the way at run speed: tools/nav.py jump2_time)
-        this.leap(link.x0, y0, link.x1, y1, { double: link.kind === "jump2",
-                                              minT: link.kind === "jump2" ? Math.abs(link.x1 - link.x0) / RUN_SPEED : 0 });
-        this.arrive(link, "Land", 0.25);
-    } else if (link.kind === "climb") {
-        this.climb(link, y0, y1);
-    } else if (link.kind === "harpoon") {
+    const toWater = !!this.nav.surfaces[link.to].water;
+    const leap = link.kind === "jump" || link.kind === "jump2" || link.kind === "mantle" || link.kind === "mantle2";
+    if (link.kind !== "harpoon" && link.kind !== "bounce" && link.kind !== "climb" && link.kind !== "slide") {
+        this.travel(link.x0, gait, leap);
+    }
+    switch (link.kind) {
+    case "walk": {
+        // Over a small bump without breaking her stride.
+        this.landing = null;
+        this.moving = this.moving || (gait === "map" ? "walk" : gait);
+        const g = GAITS[this.moving] || GAITS.run;
+        this.facingRight = right;
+        this.push({ kind: "line", clip: g.clip, x0: link.x0, y0: y0, x1: link.x1, y1: y1, facingRight: right },
+            Math.max(0.1, Math.abs(link.x1 - link.x0) / g.speed));
+        this.surface = link.to;
+        this.x = link.x1;
+        return;
+    }
+    case "wade": {
+        if (toWater) {
+            // Walking (running) out into the water until it's deep enough to swim.
+            const g = GAITS[this.moving] || GAITS.walk;
+            this.facingRight = right;
+            this.push({ kind: "line", clip: this.moving ? g.clip : "Walk", x0: link.x0, y0: y0, x1: link.x1, y1: y1,
+                        facingRight: right }, Math.max(0.3, Math.abs(link.x1 - link.x0) / (this.moving ? g.speed : WALK_SPEED)));
+            this.surface = link.to;
+            this.x = link.x1;
+            this.moving = null;
+            this.landing = null;
+        } else {
+            // Out of the water: walking up the shore.
+            this.facingRight = right;
+            this.moving = null;
+            this.push({ kind: "line", clip: "Walk", x0: link.x0, y0: y0, x1: link.x1, y1: y1, facingRight: right },
+                Math.max(0.3, Math.abs(link.x1 - link.x0) / WALK_SPEED));
+            this.surface = link.to;
+            this.x = link.x1;
+            this.moving = "walk";
+        }
+        return;
+    }
+    case "drop": {
+        // Off the edge: falling, as the game shows it (Airborne's falling frames), on as fast as
+        // she was going; a long way at full speed, she lands hard. A long way down, now and then
+        // she opens her cloak instead, or slides down the wall beside her.
+        const slide = this.slides[link.from + ":" + link.to];
+        if (slide && Math.abs(slide.x0 - link.x0) < 1.5 && this.r() < this.style.slide) {
+            this.follow(slide, gait);
+            return;
+        }
+        this.takeOff(right);
+        if (y0 - y1 >= FLOAT_MIN && this.r() < this.style.float) {
+            this.glide(link.x0, y0, link.x1, y1);
+            this.land(link);
+            return;
+        }
+        const T = Math.max(0.2, fallTime(y0 - y1));
+        this.push({ kind: "fall", clip: "Airborne", from: 7, x0: link.x0, y0: y0, x1: link.x1, y1: y1, facingRight: right }, T);
+        this.land(link, T - MAX_FALL / GRAVITY > BIG_FALL_TIME ? HARD : LANDING);
+        return;
+    }
+    case "jump":
+    case "jump2": {
+        // (as long as she needs to go the whole way at run speed: tools/nav.py jump_reach, jump2_time)
+        this.takeOff(right);
+        const dx = Math.abs(link.x1 - link.x0);
+        if (link.kind === "jump" && y0 - y1 >= FLOAT_MIN + 1 && this.r() < this.style.float) {
+            // Down across a gap, her cloak opened at the top of the jump.
+            const p = jumpPlan(y0, y0, false);
+            const top = y0 + JUMP_SPEED * p.hold1 + JUMP_SPEED * JUMP_SPEED / (2 * GRAVITY);
+            const glide = FLOAT_OPEN + Math.max(0, top - y1 - 0.5 * GRAVITY * FLOAT_OPEN * FLOAT_OPEN) / FLOAT_SPEED;
+            const xa = link.x0 + (link.x1 - link.x0) * p.tA / (p.tA + glide);
+            this.push({ kind: "jump", plan: p, x0: link.x0, y0: y0, x1: xa, y1: top, facingRight: right, clip: "Airborne",
+                        fall: "", fallFrom: 0, second: "", antic: "" }, p.tA);
+            this.glide(xa, top, link.x1, y1);
+        } else {
+            // Now and then a double jump where one would do, for the joy of it.
+            const double = link.kind === "jump2" || y1 > y0 + 0.3 && y1 - y0 < 4 && dx < 5 && this.r() < this.style.double;
+            this.leap(link.x0, y0, link.x1, y1, { double: double, minT: dx / RUN_SPEED });
+        }
+        this.land(link);
+        return;
+    }
+    case "mantle":
+    case "mantle2": {
+        // Up at the ledge: her hands catch its edge at the top of her jump (or double jump), she
+        // pulls herself up and over.
+        this.takeOff(right);
+        const dir = right ? 1 : -1;
+        const hx = link.x1 - dir * 0.45;
+        const hy = y1 - 1.45;
+        const p = jumpPlan(y0, hy + 2, link.kind === "mantle2");
+        const T = riseTime(p, y0, hy);
+        this.push({ kind: "jump", plan: p, x0: link.x0, y0: y0, x1: hx, y1: hy, facingRight: right, clip: "Airborne",
+                    fall: "Airborne", fallFrom: 7, second: link.kind === "mantle2" ? "Double Jump" : "", antic: "" }, T);
+        this.push({ kind: "line", clip: "Mantle Cling", x0: hx, y0: hy, x1: hx + dir * 0.2, y1: y1 + 0.15, facingRight: right },
+            clipLength(this.clips, "Mantle Cling"));
+        this.push({ kind: "line", clip: "Mantle Land", x0: hx + dir * 0.2, y0: y1 + 0.15, x1: link.x1, y1: y1, facingRight: right },
+            clipLength(this.clips, "Mantle Land"));
+        this.land(link, MANTLED);
+        return;
+    }
+    case "float":
+        // The Drifter's Cloak: off the edge, drifting out to where she lands.
+        this.takeOff(right);
+        this.glide(link.x0, y0, link.x1, y1);
+        this.land(link);
+        return;
+    case "climb":
+        this.climb(link, y0, y1, gait);
+        return;
+    case "slide": {
+        // Off the top's edge, onto the wall's face below it, and down it.
+        this.travel(link.x0, gait);
+        const wall = link.x0 > link.x1 ? 1 : -1; // which side of her the wall is, sliding
+        const px = link.x1 - wall * 0.24;
+        this.takeOff(wall < 0);
+        this.push({ kind: "fall", clip: "Airborne", from: 7, x0: link.x0, y0: y0, x1: px, y1: y0 - 0.5, facingRight: wall < 0 },
+            fallTime(0.5));
+        this.faceInAir(wall > 0);
+        const drop = Math.max(0, y0 - 0.5 - y1);
+        this.push({ kind: "wallslide", clip: "Wall Slide", x0: px, y0: y0 - 0.5, x1: px, y1: y1, facingRight: wall > 0 },
+            WALLSLIDE_STICK + Math.sqrt(2 * drop / WALLSLIDE_ACCEL));
+        this.land(link);
+        this.x = px; // (where she slid down, beside the wall)
+        return;
+    }
+    case "harpoon": {
         // The Clawline: her needle thrown to the ring on its silk, then she's pulled after it,
         // catches it and lets go above where she lands.
         const rx = link.ring[0];
         const ry = link.ring[1];
+        this.travel(link.x0, gait);
         this.face(rx > link.x0 ? true : rx < link.x0 ? false : right);
         const hand = [link.x0 + (this.facingRight ? 0.5 : -0.5), y0 + 0.4];
         this.hold("Harpoon Antic");
@@ -475,27 +953,32 @@ Planner.prototype.follow = function (link) {
         // Then she jumps off the ring towards where she's going.
         this.faceInAir(link.x1 > hx ? true : link.x1 < hx ? false : this.facingRight);
         this.leap(hx, hy, link.x1, y1);
-        this.arrive(link, "Land", 0.25);
-    } else if (link.kind === "bounce") {
+        this.land(link);
+        return;
+    }
+    case "bounce": {
         // Up and down onto the pod with her needle pointing down; it throws her high.
         const px = link.pod[0];
         const py = link.pod[1] + feet - 0.4;
-        this.face(px >= link.x0);
+        this.travel(link.x0, gait);
+        this.takeOff(px >= link.x0);
         this.leap(link.x0, y0, px, py, { antic: "DownSpike Antic", fall: "DownSpike" });
         this.faceInAir(link.x1 >= px);
-        this.leap(px, py, link.x1, y1, { speed: POD_SPEED, hold: 0, rise: "DownSpikeBounce 1" });
-        this.arrive(link, "Land", 0.25);
+        this.leap(px, py, link.x1, y1, { speed: POD_SPEED, hold: 0, rise: "DownSpikeBounce 1", fall: "Airborne", fallFrom: 7 });
+        this.land(link);
+        return;
     }
-    this.surface = link.to;
-    this.x = link.x1;
+    }
 };
 
-// Up a wall the way she does it in the game: a jump against it, a catch, walljumps out and
-// back in (each one higher), then the last stretch scrambling up and over the edge.
-Planner.prototype.climb = function (link, y0, y1) {
+// Up a wall the way she does it in the game: a jump against it (on the move if she's coming
+// that way), a catch, walljumps out and back in (each one higher), then the last stretch
+// scrambling up and over the edge.
+Planner.prototype.climb = function (link, y0, y1, gait) {
     const dir = link.x1 >= link.x0 ? 1 : -1; // the wall's side
+    this.travel(link.x0, gait);
     // Facing the wall (the climbing sprites have it on their left; mirrored, on the right).
-    this.face(dir > 0);
+    this.takeOff(dir > 0);
     const px = link.x0 - dir * 0.24; // her pivot against the wall: hands and feet on it
     const top = y1 - 0.5;            // where the scramble reaches the edge
     let y = Math.min(y0 + 4.3, top); // where she catches the wall from her jump
@@ -519,18 +1002,55 @@ Planner.prototype.climb = function (link, y0, y1) {
                 facingRight: this.facingRight }, 0.12);
     this.push({ kind: "line", clip: "Mantle Land", x0: px + dir * 0.5, y0: y1 + 0.2, x1: link.x1, y1: y1,
                 facingRight: this.facingRight }, 0.14);
-    this.arrive(link, "Land", 0.2);
+    this.land(link, MANTLED);
 };
 
-Planner.prototype.goTo = function (surface, x) {
-    const path = this.route(surface, x);
+// Her gait for a stretch from x0 to x1 on her surface, ending at `link` (or where she's going):
+// the trip's (`base`), but sprinting only where there's room for it; on the water, swimming (a
+// sprint now and then on a long way).
+Planner.prototype.gaitFor = function (x0, x1, link, base) {
+    const d = Math.abs(x1 - x0);
+    if (this.inWater()) {
+        return base === "sprint" && d > 10 ? "dash" : "swim";
+    }
+    const leap = link && (link.kind === "jump" || link.kind === "jump2" || link.kind === "mantle" || link.kind === "mantle2");
+    if (base === "map") {
+        return link ? (leap ? "run" : "walk") : "map";
+    }
+    if (base === "walk") {
+        return "walk"; // (breaking into a run up to a jump: travel)
+    }
+    if (base === "sprint") {
+        return d > 12 ? "sprint" : "run";
+    }
+    return "run";
+};
+
+// There, by her way for this trip, at a gait she chooses for it (a stroll with her map open, a
+// walk, a run, a sprint: by how far, the hour's energy and chance), stopping there unless
+// `keepMoving`.
+Planner.prototype.goTo = function (surface, x, opts) {
+    opts = opts || {};
+    const path = this.routeFor(surface, x);
     if (path === null) {
         return false;
     }
-    for (const link of path) {
-        this.follow(link);
+    let base = opts.gait;
+    if (!base) {
+        const far = this.trip(surface, x) * RUN_SPEED; // about how far
+        const pick = this.r();
+        const energy = this.energy === undefined ? 1 : this.energy;
+        const sprint = far > 25 ? 0.3 * energy : 0;
+        const walk = (far < 10 ? 0.45 : far < 30 ? 0.2 : 0.08) / energy;
+        base = pick < sprint ? "sprint" : pick < sprint + walk ? "walk" : "run";
     }
-    this.walkTo(x);
+    for (let i = 0; i < path.length; i++) {
+        this.follow(path[i], this.gaitFor(this.x, path[i].x0, path[i], base));
+    }
+    this.travel(x, this.gaitFor(this.x, x, null, base));
+    if (!opts.keepMoving) {
+        this.stop();
+    }
     return true;
 };
 
@@ -590,6 +1110,19 @@ Planner.prototype.activity = function (poi) {
             }
         }
         this.hold("Sit", undefined, { y: seat.y, reverse: true });
+        break;
+    }
+    case "swim": {
+        // Out on the water a while: treading it, looking about, swimming a little way and back.
+        const end = this.t + between(r, 15, 35);
+        const sf = this.nav.surfaces[this.surface];
+        while (this.t < end) {
+            this.hold("Surface Idle", between(r, 3, 8));
+            if (r() < 0.6) {
+                this.travel(Math.min(sf.x1 - 0.5, Math.max(sf.x0 + 0.5, this.x + between(r, -6, 6))), r() < 0.25 ? "dash" : "swim");
+                this.stop();
+            }
+        }
         break;
     }
     case "visit":
@@ -684,6 +1217,13 @@ function planDay(world, clips, day0, dateKey) {
     p.surface = bed.surface;
     p.x = bed.x;
     p.facingRight = !bed.mirror;
+    // What she feels like doing today: some days she floats down rather than drops, swims rather
+    // than goes round, catches ledges rather than double jumps...
+    // (the slow ways, the cloak and the slide down a wall, cost her less than their time: she likes them)
+    const like = () => between(r, 0.6, 1.5);
+    p.prefer({ walk: 1, drop: like(), jump: like(), jump2: like(), mantle: like(), mantle2: like(), float: between(r, 0.6, 1.2),
+               climb: like(), slide: between(r, 0.2, 0.7), wade: like(), harpoon: like(), bounce: like() });
+    p.style = { float: between(r, 0.04, 0.15), double: between(r, 0.05, 0.25), slide: between(r, 0.2, 0.6) };
     p.sleep(bed, wake, false, true); // asleep since last night: the day starts with her lying there
 
     // Spots she can wander to: along every surface she can reach, away from its ends.
@@ -697,16 +1237,19 @@ function planDay(world, clips, day0, dateKey) {
     // Needs grow with time and are met by activities.
     const needs = { rest: 0.3, music: 0.5, curiosity: 0.8 };
     const meets = { desk: "rest", sleep: "rest", bench: "rest", listen: "music", needolin: "music", needolin_sit: "music",
-                    lookup: "curiosity", map: "curiosity", visit: "curiosity", kneel: "rest" };
+                    lookup: "curiosity", map: "curiosity", visit: "curiosity", kneel: "rest", swim: "curiosity" };
     const recent = [bed.id];
     let stuck = 0;
     // One thing she does: a wander, or an activity somewhere.
     const step = () => {
         const hour = ((p.t - day0) / 3600 + 4) % 24;
+        // Lively in the morning, calmer by evening: how likely she is to sprint, or walk.
+        p.energy = (hour < 12 ? 1.3 : hour < 18 ? 1.0 : 0.7) * between(r, 0.8, 1.2);
         if (r() < 0.35 && spots.length) {
-            // Wandering: somewhere else for a moment, a look around, and on.
+            // Wandering: somewhere else for a moment (now and then strolling with her map open),
+            // a look around, and on.
             const spot = spots[Math.floor(r() * spots.length)];
-            if (p.goTo(spot.surface, spot.x)) {
+            if (p.goTo(spot.surface, spot.x, { gait: r() < 0.3 ? "map" : r() < 0.3 ? "walk" : undefined })) {
                 const look = r();
                 if (look < 0.3) {
                     p.hold("LookUp");
@@ -997,24 +1540,8 @@ function idNumber(id) {
 // pose() puts her (the same arithmetic, without the rest of the pose).
 function startles(world, seg, t, perch) {
     const local = t - seg.t0;
-    const s = Math.min(1, Math.max(0, local / Math.max(1e-6, seg.t1 - seg.t0)));
-    const x = lerp(seg.x0, seg.x1, s);
-    let y;
-    switch (seg.kind) {
-    case "walk":
-        y = height(world.nav.surfaces[seg.surface], x, world.nav.step) + world.heroFeet;
-        break;
-    case "line":
-        y = lerp(seg.y0, seg.y1, s);
-        break;
-    case "fall":
-        y = Math.max(seg.y1, seg.y0 - fallDistance(local));
-        break;
-    default: // jump
-        y = jumpY(seg.plan, seg.y0, local);
-    }
-    const feet = y - world.heroFeet;
-    return Math.abs(x - perch[0]) < STARTLE && Math.abs(feet - perch[1]) < 1.6;
+    const at = placeOn(world, seg, local, Math.min(1, Math.max(0, local / Math.max(1e-6, seg.t1 - seg.t0))));
+    return at !== null && Math.abs(at[0] - perch[0]) < STARTLE && Math.abs(at[1] - world.heroFeet - perch[1]) < 1.6;
 }
 
 // The first entry of a perch's list (move indices, in order) at or after move `pos` that ends at
@@ -1048,7 +1575,8 @@ function planCritters(world, clips, segs) {
             }
             return;
         }
-        if (!(seg.kind === "walk" || seg.kind === "line" || seg.kind === "fall" || seg.kind === "jump")) {
+        if (!(seg.kind === "walk" || seg.kind === "line" || seg.kind === "fall" || seg.kind === "jump" || seg.kind === "glide"
+              || seg.kind === "wallslide" || seg.kind === "wallhop")) {
             return;
         }
         const i = moves.length;
@@ -1320,6 +1848,37 @@ function lerp(a, b, t) {
     return a + (b - a) * t;
 }
 
+// Where a segment she moves along has her `local` seconds into it (s: the share of it gone by):
+// [x, y], y her pivot; null for a pose held in one place.
+function placeOn(world, seg, local, s) {
+    switch (seg.kind) {
+    case "walk": {
+        const x = lerp(seg.x0, seg.x1, s);
+        return [x, height(world.nav.surfaces[seg.surface], x, world.nav.step) + world.heroFeet];
+    }
+    case "line":
+        return [lerp(seg.x0, seg.x1, s), lerp(seg.y0, seg.y1, s)];
+    case "fall":
+        return [lerp(seg.x0, seg.x1, s), Math.max(seg.y1, seg.y0 - fallDistance(local))];
+    case "glide": {
+        // A moment's fall while the cloak opens, then the slow sink under it.
+        const dy = local < FLOAT_OPEN ? 0.5 * GRAVITY * local * local
+            : 0.5 * GRAVITY * FLOAT_OPEN * FLOAT_OPEN + (local - FLOAT_OPEN) * FLOAT_SPEED;
+        return [lerp(seg.x0, seg.x1, s), Math.max(seg.y1, seg.y0 - dy)];
+    }
+    case "wallslide": {
+        const u = Math.max(0, local - WALLSLIDE_STICK);
+        return [seg.x0, Math.max(seg.y1, seg.y0 - 0.5 * WALLSLIDE_ACCEL * u * u)];
+    }
+    case "wallhop":
+        // Kicked off the wall and back onto it, higher: out and in, up with an arc.
+        return [seg.x0 + seg.out * Math.sin(Math.PI * s), lerp(seg.y0, seg.y1, s) + 4 * s * (1 - s) * seg.lift];
+    case "jump":
+        return [lerp(seg.x0, seg.x1, s), jumpY(seg.plan, seg.y0, local)];
+    }
+    return null;
+}
+
 // Pose at time t: { clip, frame, x, y, facingRight, scale, angle, needle, thread }.
 // needle: { x, y, angle } of her thrown needle; thread: [x0, y0, x1, y1] of its silk.
 function pose(world, clips, seg, t) {
@@ -1328,43 +1887,69 @@ function pose(world, clips, seg, t) {
     const out = { clip: seg.clip, frame: 0, x: 0, y: 0, facingRight: seg.facingRight, scale: 1, angle: 0,
                   needle: null, thread: null };
     let tc = local; // time into the clip shown
+    const fps = name => clips[name] ? clips[name].fps : 15;
+    const at = placeOn(world, seg, local, s);
+    if (at) {
+        out.x = at[0];
+        out.y = at[1];
+    }
     switch (seg.kind) {
     case "walk":
-        out.x = lerp(seg.x0, seg.x1, s);
-        out.y = height(world.nav.surfaces[seg.surface], out.x, world.nav.step) + world.heroFeet;
+    case "wallslide":
         break;
     case "line":
-        out.x = lerp(seg.x0, seg.x1, s);
-        out.y = lerp(seg.y0, seg.y1, s);
         if (seg.tilt) {
             const a = Math.atan2(seg.y1 - seg.y0, Math.abs(seg.x1 - seg.x0)) * 180 / Math.PI;
             out.angle = Math.max(-60, Math.min(60, a));
         }
         break;
     case "fall":
-        out.x = lerp(seg.x0, seg.x1, s);
-        out.y = Math.max(seg.y1, seg.y0 - fallDistance(local));
+        tc = local + (seg.from || 0) / fps(seg.clip); // (Airborne from its falling frames)
         break;
     case "wallhop":
-        // Kicked off the wall and back onto it, higher: out and in, up with an arc.
-        out.x = seg.x0 + seg.out * Math.sin(Math.PI * s);
-        out.y = lerp(seg.y0, seg.y1, s) + 4 * s * (1 - s) * seg.lift;
         if (s > 0.5) {
             out.clip = seg.second; // turning back towards the wall
             tc = local - 0.5 * (seg.t1 - seg.t0);
         }
         break;
+    case "glide": {
+        // The cloak opening, held open, folded away just before she lands.
+        if (!clips["Umbrella Float"]) {
+            break; // (an older extract.py: she just falls)
+        }
+        const antic = clipLength(clips, "Umbrella Inflate Antic");
+        const inflate = clipLength(clips, "Umbrella Inflate");
+        const deflate = clipLength(clips, "Umbrella Deflate");
+        const T = seg.t1 - seg.t0;
+        if (local < antic) {
+            out.clip = "Umbrella Inflate Antic";
+        } else if (local < antic + inflate) {
+            out.clip = "Umbrella Inflate";
+            tc = local - antic;
+        } else if (local >= T - deflate) {
+            out.clip = "Umbrella Deflate";
+            tc = local - (T - deflate);
+        } else {
+            tc = local - antic - inflate;
+        }
+        break;
+    }
     case "jump": {
         const p = seg.plan;
-        out.x = lerp(seg.x0, seg.x1, s);
-        out.y = jumpY(p, seg.y0, local);
         const top = seg.second ? p.tB : p.tA;
-        if (seg.second && local >= p.tA && local < p.tA + clipLength(clips, seg.second)) {
-            out.clip = seg.second; // the double jump: her wings at the top of the first
-            tc = local - p.tA;
-        } else if (local >= top) {
+        if (seg.second && local >= p.tA) {
+            // The double jump: her wings at the top of the first, then falling.
+            const len = clipLength(clips, seg.second);
+            if (local < p.tA + len) {
+                out.clip = seg.second;
+                tc = local - p.tA;
+            } else {
+                out.clip = seg.fall || seg.clip;
+                tc = local - p.tA - len + (seg.fallFrom || 0) / fps(out.clip);
+            }
+        } else if (seg.fall && local >= top) {
             out.clip = seg.fall;
-            tc = local - top;
+            tc = local - top + (seg.fallFrom || 0) / fps(seg.fall);
         } else if (seg.antic && local >= top - clipLength(clips, seg.antic)) {
             out.clip = seg.antic;
             tc = local - (top - clipLength(clips, seg.antic));
@@ -1525,7 +2110,7 @@ function clipsAhead(world, clips, t, horizon) {
     const names = {};
     for (let i = segmentIndex(segs, t); i < segs.length && segs[i].t0 < t + horizon; i++) {
         const seg = segs[i];
-        for (const n of [seg.clip, seg.second, seg.fall, seg.antic]) {
+        for (const n of [seg.clip, seg.second, seg.fall, seg.antic].concat(seg.also || [])) {
             if (n) {
                 names[n] = true;
             }

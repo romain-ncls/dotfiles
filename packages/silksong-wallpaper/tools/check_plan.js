@@ -27,7 +27,7 @@ const grab = (file, prop) => {
 const world = grab(path.join(data, "world/World.qml"), "property var world");
 const clips = grab(path.join(data, "Sprites.qml"), "property var clips");
 const days = Number(process.argv[2] || 3);
-const moving = ["walk", "line", "fall", "jump", "wallhop"];
+const moving = ["walk", "line", "fall", "jump", "wallhop", "glide", "wallslide"];
 
 let teleports = 0;
 const fastest = {};

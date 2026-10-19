@@ -33,10 +33,17 @@ DEFAULT_OUT = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")
 LIBRARIES = [
     # Her own moves. Hornet's tk2dSpriteAnimation still carries Hollow Knight's name.
     ("Knight", ["herodynamic_assets_all.bundle", "herocollections_assets_shared.bundle"], False, [
-        "Idle", "Walk", "Turn", "TurnWalk", "Walk To Idle", "Run", "Run To Idle", "Idle To Run",
-        "Airborne", "Fall", "Land", "Land To Walk", "Double Jump", "Hop", "Hop Land",
-        "Wall Cling", "Wall Scramble", "Wall Scramble Repeat", "Wall Scramble Mantle", "Walljump",
-        "Mantle Cling", "Mantle Land",
+        "Idle", "Walk", "Turn", "TurnWalk", "Walk To Idle", "Run", "Run To Idle", "Idle To Run", "Idle To Run Short",
+        "Run To Walk", "Airborne", "Fall", "Land", "Land To Walk", "Land To Run", "HardLand", "Double Jump", "Hop", "Hop Land",
+        "Wall Cling", "Wall Scramble", "Wall Scramble Repeat", "Wall Scramble Mantle", "Walljump", "Wall Slide",
+        "Mantle Cling", "Mantle Land", "Mantle Land To Run", "Mantle Land To Idle",
+        # Sprinting a long way; the Drifter's Cloak opened on the way down; walking with her map
+        # open; swimming at the surface (and sprinting there).
+        "Sprint", "Sprint To Run", "Sprint Skid To Run", "Sprint Turn", "Land to Sprint",
+        "Umbrella Inflate Antic", "Umbrella Inflate", "Umbrella Float", "Umbrella Deflate",
+        "Map Walk", "Map Turn",
+        "Surface In", "Surface InToIdle", "Surface Idle", "Surface IdleToSwim", "Surface TurnToSwim", "Swim Dash",
+        "Swim Dash Turn",
         "Sit", "Sit Idle", "Wake To Sit",
         "SitLook 1", "SitLook 2", "SitLook 3", "SitLook 4",
         "NeedolinSit Start", "NeedolinSit Play", "NeedolinSit End",

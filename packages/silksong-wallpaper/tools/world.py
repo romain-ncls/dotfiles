@@ -57,7 +57,7 @@ from PIL import Image, ImageFilter
 import nav
 import terrain
 
-DATA = Path.home() / ".local/share/silksong-wallpaper"
+DATA = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "silksong-wallpaper"  # as tools/extract.py
 CACHE = Path.home() / ".cache/silksong-wallpaper/zones"
 OUT = DATA / "world"
 
@@ -576,8 +576,8 @@ FURNITURE = [
 # Pieces from other rooms standing in the world: Mosshome's urns, lamp and fences in the
 # village, Verdania's statue on the shrine island. Each stands on the ground under (x, near).
 PROPS = [
-    {"kit": "mosstown_01", "piece": "Bone_house_breakable_very_large", "x": 4.6, "near": 2.0, "sink": 0.25},
-    {"kit": "mosstown_01", "piece": "Bone_house_pieces_post", "x": 7.6, "near": 2.0, "sink": 0.3, "light": True},
+    {"kit": "mosstown_01", "piece": "Bone_house_breakable_very_large", "x": 6.0, "near": 2.0, "sink": 0.12},  # (clear of the step's wall)
+    {"kit": "mosstown_01", "piece": "Bone_house_pieces_post", "x": 8.1, "near": 2.0, "sink": 0.3, "light": True},
     {"kit": "mosstown_01", "piece": "Bone_house_pieces_squat", "x": 11.2, "near": 2.0, "sink": 0.2},
     {"kit": "mosstown_01", "piece": "Bone_house_breakable_point@1.55", "x": 13.0, "near": 2.0, "sink": 0.2},
     {"kit": "mosstown_01", "piece": "Bone_house_pieces_0007_3_thin@2.88", "x": 16.2, "near": 2.6, "sink": 0.5},
@@ -596,6 +596,7 @@ POIS = [
     {"id": "bell_beast", "zone": "bell_beast", "x": 60.6, "near": 0.7, "activity": "visit", "face": 1},
     {"id": "clock", "zone": "great_tree", "x": 64.0, "near": 12.4, "activity": "lookup"},
     {"id": "lake", "zone": "verdania", "x": 97.4, "near": 3.6, "activity": "needolin_sit", "face": 1},
+    {"id": "swim", "zone": "verdania", "x": 108.0, "near": LAKE["level"] - nav.SWIM_SINK, "activity": "swim"},
     {"id": "island", "zone": "verdania", "x": 105.5, "near": 9.6, "activity": "lookup"},
     {"id": "shrine", "zone": "verdania", "x": 125.6, "near": CLIFF_TOP, "activity": "kneel", "face": -1},
     {"id": "waterfall bench", "zone": "verdania", "x": 123.3, "near": 3.9, "activity": "bench", "face": -1, "seat": 0.3},
@@ -1686,6 +1687,11 @@ def place_pois(nav_map, zones_out, pois):
     return placed
 
 
+NAV_COLORS = {"walk": (255, 255, 255), "drop": (80, 160, 255), "jump": (255, 200, 0), "jump2": (255, 120, 0),
+              "mantle": (255, 90, 200), "mantle2": (200, 60, 255), "float": (150, 255, 255), "climb": (0, 255, 120),
+              "slide": (0, 160, 90), "wade": (60, 120, 255), "harpoon": (240, 240, 255), "bounce": (120, 255, 60)}
+
+
 def draw_nav(img, nav_map):
     """Debug view: surfaces in magenta, links coloured by kind, on the world preview."""
     from PIL import ImageDraw
@@ -1699,8 +1705,7 @@ def draw_nav(img, nav_map):
     for s in nav_map["surfaces"]:
         pts = [p(s["x0"] + i * nav_map["step"], y) for i, y in enumerate(s["y"])]
         d.line(pts, fill=(255, 0, 255), width=4)
-    colors = {"walk": (255, 255, 255), "drop": (80, 160, 255), "jump": (255, 200, 0), "jump2": (255, 120, 0),
-              "climb": (0, 255, 120), "harpoon": (240, 240, 255), "bounce": (120, 255, 60)}
+    colors = NAV_COLORS
     for e in nav_map["links"]:
         a, b = p(e["x0"], e["y0"] + 0.4), p(e["x1"], e["y1"] + 0.4)
         d.line([a, b], fill=colors[e["kind"]], width=3)
@@ -2231,8 +2236,7 @@ def layout_preview(path):
     nav_map, _ = nav.build(WORLD, [r.points for r in rocks + room_ground() if r.solid], water=[(LAKE["x0"], LAKE["x1"], LAKE["level"])],
                          moves=MOVES)
     nav_map["pois"] = place_pois(nav_map, [], [dict(q) for q in POIS])
-    colors = {"walk": (255, 255, 255), "drop": (80, 160, 255), "jump": (255, 200, 0), "jump2": (255, 120, 0),
-              "climb": (0, 255, 120), "harpoon": (240, 240, 255), "bounce": (120, 255, 60)}
+    colors = NAV_COLORS
     for sf in nav_map["surfaces"]:
         d.line([p(sf["x0"] + i * nav_map["step"], y) for i, y in enumerate(sf["y"])], fill=(255, 0, 255), width=3)
     for e in nav_map["links"]:

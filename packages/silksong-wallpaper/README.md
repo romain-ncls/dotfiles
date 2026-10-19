@@ -61,9 +61,11 @@ settings say when it stands still there (see Runtime).
   drips, low smoke and falling dust, and dust drifting in the shafts. The small life of our
   rooms (`CRITTERS`): the grotto's moss flies behind the rock, dragonflies over the meadow and
   the lake that hold still while Hornet plays her needolin, and Verdania's lilypad flies, which
-  sing along to it and fly to their next perch when she comes close (`life.js crittersAt`). Navigation (walk, drop,
-  jump, double jump, climb) comes from the same rock, so nothing she stands on is hidden (her
-  bell's floor and walls are rock that isn't drawn, laid where the bell's art has them).
+  sing along to it and fly to their next perch when she comes close (`life.js crittersAt`). Navigation comes
+  from the same rock, so nothing she stands on is hidden (her bell's floor and walls are rock that
+  isn't drawn, laid where the bell's art has them): the ways the game gives her, a drop, a jump or a
+  double jump, a ledge caught at the top of a jump and climbed onto, the Drifter's Cloak opened on a
+  long way down, a wall climbed or slid down, the lake swum and waded into.
   `world.py --layout IMAGE` draws just the rock and her ways, quickly.
 - `derive.py`: what the wallpaper reads in place of the world's own images, so that each screen
   shows sooner and holds less, and `Derived.qml`, which lists it for the world's build: QOI twins
@@ -83,8 +85,9 @@ settings say when it stands still there (see Runtime).
   room's particle systems (`kit.py particles ROOM`) as templates the world places.
 - `terrain.py`: rock shapes and the dressing (silhouettes, moss masses, edge pieces by the
   way a surface faces, plants in front).
-- `nav.py`: surfaces and links sized with Hornet's real movement; a double jump carries her as
-  far as she runs while she's up (`life.js` plays it that long).
+- `nav.py`: surfaces (and the water's, where it's deep enough to swim) and links sized with
+  Hornet's real movement (HeroController, its Sprint and Umbrella Float FSMs, HeroWaterController):
+  a jump carries her as far as she runs while she's up.
 - `bake.py`: a single scene from one room (the first version, `SceneId` other than `world`).
 - `room.py`, `game.py`: reading Unity scene data and reproducing the game's look.
 - `explore.py`: a room's map with a unit grid and its terrain, to choose zones.
@@ -159,7 +162,8 @@ It applies from the next login (KWin's next start). `lockscreen.sh uninstall` ta
 ## Runtime
 
 A running desktop wallpaper reloads the world by itself when `world.py` writes a new one, and
-Hornet's clips when `extract.py` does (her day is then planned again with them), even where it
+Hornet's clips when `extract.py` does (her day is then planned again with them; with an older
+extract she plays the nearest clips it has), even where it
 started without them, if their folder was there (the lock screen, which lives for minutes, doesn't
 watch for them); changes to the QML itself need plasmashell restarted
 (`systemctl --user restart plasma-plasmashell`), the lock screen picks them up at the next lock.
