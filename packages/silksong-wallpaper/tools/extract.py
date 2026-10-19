@@ -69,13 +69,21 @@ LIBRARIES = [
         "Idle Left", "Idle Right", "Turn Left", "Turn Right", "Sleep", "Wake", "Shake",
         "Sing", "Sing End", "Sing Right", "Sing End Right",
     ]),
+    # The beastlings, the Bell Beast's children, who now and then come to their mother's station
+    # (their clips are prefixed "Beastling ").
+    ("Bell Beast Child Anim", ["tk2danimations_assets_areabellway.bundle"], True, [
+        "Idle", "Turn", "Leap Antic", "Leap", "Land", "LandToIdle", "Stamp", "Recover", "Antic", "Growl",
+        "Sing", "Sing End", "TurnToSing", "Sing 2", "TurnToSing 2", "Sleep 1", "Sleep 2",
+        "Insta Roll", "Roll", "RollToDive", "Dive", "Skid", "Dig Away",
+    ]),
     # The small life of our rooms: the grotto's moss flies and dragonflies, Verdania's lilypad
     # flies (their clips are prefixed "Moss Fly ", "Dragonfly ", "Lilypad Fly ").
     ("Tiny Moss Fly Anim", ["tk2danimations_assets_areatutorial.bundle"], True, ["Fly"]),
     ("Tiny Dragonfly Anim", ["tk2danimations_assets_areaclover.bundle"], True, ["Idle"]),
     ("Lilypad Fly Anim", ["tk2danimations_assets_areaclover.bundle"], True, ["Idle 01", "Idle 02", "Idle 03", "Sing", "Fly"]),
 ]
-PREFIX = {"Bone Beast NPC Anim": "Bell Beast ", "Tiny Moss Fly Anim": "Moss Fly ", "Tiny Dragonfly Anim": "Dragonfly ",
+PREFIX = {"Bone Beast NPC Anim": "Bell Beast ", "Bell Beast Child Anim": "Beastling ", "Tiny Moss Fly Anim": "Moss Fly ",
+          "Tiny Dragonfly Anim": "Dragonfly ",
           "Lilypad Fly Anim": "Lilypad Fly "}
 # Transparent border around each cell: keeps smooth scaling from bleeding a neighbour in, and
 # leaves room for the bloom halo bake.py adds around Hornet (about 10 sheet pixels of sigma).

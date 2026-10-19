@@ -224,7 +224,7 @@ Item {
         // on the grass's frames, which change half way between fifteenths (it's rounded), at 30 on
         // and between those. On the Bell Beast's screen they keep to its frames: a twelfth of a
         // second after the last tick, or with its next frame if that comes first.
-        const beastNext = showsBeast ? Life.beastNext(world, clips, t) : Infinity;
+        const beastNext = showsBeast ? Math.min(Life.beastNext(world, clips, t), Life.beastlingsNext(world, clips, t)) : Infinity;
         const rate = hornetSeen && nearHz > ambientRate ? nearHz : ambientRate;
         const phase = rate === 15 ? 0.5 : 0;
         const step = showsBeast && rate === 12 ? Math.min(t + 1 / 12, beastNext) : (Math.floor(t * rate - phase) + 1 + phase) / rate;
@@ -294,6 +294,10 @@ Item {
         }
         if (showsBeast) {
             want.push(Life.beastAt(world, clips, t)?.clip);
+            const lings = Life.beastlingsAt(world, clips, t);
+            for (let i = 0; i < lings.length; i++) {
+                want.push(lings[i].clip);
+            }
         }
         return want.every(n => !clips[n] || sheets[n] !== undefined);
     }
@@ -892,8 +896,10 @@ Item {
         ? (clips ? Life.critterClips(clips, crittersHere) : [])
             .concat(hornetNear ? Life.clipsAhead(world, clips, firstAt, 4.5) : [])
             .concat(showsBeast ? Life.beastClipsAhead(world, clips, firstAt, 4.5) : [])
+            .concat(showsBeast ? Life.beastlingClipsAhead(world, clips, firstAt, 4.5) : [])
         : (hornetNear ? Life.clipsAhead(world, clips, lookahead * 5, 45) : [])
             .concat(showsBeast ? Life.beastClipsAhead(world, clips, lookahead * 5, 45) : [])
+            .concat(showsBeast ? Life.beastlingClipsAhead(world, clips, lookahead * 5, 45) : [])
             .concat(clips ? Life.critterClips(clips, crittersHere) : []))
         .filter((n, i, all) => all.indexOf(n) === i)
     readonly property real sheetScale: Math.min(1, pxPerUnit / 64)
@@ -1049,6 +1055,8 @@ Item {
         && (beast.x - 5) * unitMm < me.x + me.w && (beast.x + 5) * unitMm > me.x
     readonly property var beastPose: showsBeast && clips ? Life.beastAt(world, clips, time) : null
     readonly property var beastZone: beast ? world.zones.find(z => z.id === beast.zone) ?? null : null
+    // Her children, the beastlings, when they're there (life.js planBeastlings).
+    readonly property var beastlingPoses: showsBeast && clips ? Life.beastlingsAt(world, clips, time) : none
 
     HornetSprite {
         readonly property string clip: root.beastPose?.clip ?? ""
@@ -1066,6 +1074,32 @@ Item {
         pixelScale: root.pxPerUnit / sheet.pixelsPerUnit
         x: root.beast ? Math.round(root.toX(root.beast.x * root.unitMm)) : 0
         y: root.beast ? Math.round(root.toY(root.beast.y * root.unitMm)) : 0
+    }
+
+    // The beastlings, among the floor bells (the front layer) like Hornet, coloured as their mother.
+    Repeater {
+        model: 3 // at most three come (the game spawns two or three)
+
+        HornetSprite {
+            required property int index
+            readonly property var pose: root.beastlingPoses.find(p => p.id === index) ?? null
+            readonly property string clip: pose?.clip ?? ""
+
+            visible: pose !== null && root.sheets[clip] !== undefined && root.beastZone !== null
+                && root.luts[root.beastZone.id] !== undefined
+            sheet: root.clips && root.clips[clip] ? root.clips[clip]
+                : { sequence: [0], frames: 1, columns: 1, cellWidth: 1, cellHeight: 1, anchorX: 0, anchorY: 0, pixelsPerUnit: 64 }
+            texture: root.sheets[clip] ?? null
+            grade: root.beastZone ? { ambient: root.beastZone.grade.ambient, heroSaturation: 1.0,
+                                      saturation: root.beastZone.grade.saturation }
+                                  : { ambient: [0.5, 0.5, 0.5], heroSaturation: 1, saturation: 1 }
+            lut: root.beastZone ? root.luts[root.beastZone.id] ?? null : null
+            frame: pose?.frame ?? 0
+            mirrored: !(pose?.facingRight ?? true) // (drawn facing right)
+            pixelScale: root.pxPerUnit / sheet.pixelsPerUnit
+            x: pose ? Math.round(root.toX(pose.x * root.unitMm)) : 0
+            y: pose ? Math.round(root.toY(pose.y * root.unitMm)) : 0
+        }
     }
 
     Critters {
@@ -1164,6 +1198,7 @@ Item {
             readonly property bool stirred: (root.hornetHere && root.hornetMoving && root.hornet.x > a.x && root.hornet.x < a.x + a.w
                     && root.heroFeetY > a.y - 1.0 && root.heroFeetY < a.y + a.h + 0.4)
                 || (root.stirring !== null && Math.abs(a.x + a.w / 2 - root.stirring) < 4.5)
+                || root.beastlingPoses.some(p => /Land|Stamp|Leap|Dive|Roll|Dig/.test(p.clip) && p.x > a.x - 0.5 && p.x < a.x + a.w + 0.5)
             readonly property real cycle: a.frames / a.fps
             property real startedAt: -1e9
             property real endsAt: -1e9 // the end of the shake it's in: whole cycles from its start

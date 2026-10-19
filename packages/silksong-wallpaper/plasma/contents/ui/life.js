@@ -1134,6 +1134,15 @@ Planner.prototype.activity = function (poi) {
         break;
     }
     case "visit":
+        if (r() < 0.3) {
+            // At the Bell Beast's: now and then her needolin, which it sings along to (and its
+            // children, if they're there).
+            this.hold("Needolin Start");
+            this.hold("Needolin Play", between(r, 10, 25));
+            this.hold("Needolin End");
+            break;
+        }
+    // falls through: else standing about
     case "listen":
     default: {
         // Stand around, now and then looking up.
@@ -1388,10 +1397,98 @@ function leave() {
 
 // ------------------------------------------------------------------ the Bell Beast
 
+// How the Bell Beast is with Hornet, from the game (its tk2dLookAnimNPC and Interaction FSM):
+// while she's within its look detector (BEAST_LOOK_X to either side, BEAST_LOOK_Y up or down) it
+// faces her, turning a moment after she crosses its middle, and shakes every so often; back
+// after a while away, she's greeted with a song; her needolin nearby, it sings along. Without her
+// it faces its own way, left.
+const BEAST_LOOK_X = 14;
+const BEAST_LOOK_Y = 5;
+const BEAST_REACT = [0.1, 0.3];      // its turn, this long after she crosses its middle
+const BEAST_SHAKE = [5, 15];         // with her near, a shake now and then (its Idle's WaitRandom)
+const BEAST_SING_REACT = [1.5, 3];   // her needolin: it sings along this long after she starts...
+const BEAST_SING_STOP = [0.4, 0.6];  // ...and stops this long after she does (a second at least)
+const BEAST_GREET_AFTER = 300;       // back after this long away, a song for her
+
+// When Hornet is near the Bell Beast (in its look detector), on which side, and whether she's
+// playing her needolin there: [{ t, near, left, perf, x }] at each change through her day (x:
+// where she was then).
+function hornetNear(world, segs, beast) {
+    const out = [];
+    let last = null;
+    const x0 = beast.x - BEAST_LOOK_X;
+    const x1 = beast.x + BEAST_LOOK_X;
+    const y0 = beast.y - BEAST_LOOK_Y - 1;
+    const y1 = beast.y + BEAST_LOOK_Y + 1;
+    // Where she is to it: 0 out of its reach, 1 in it on its left, 2 on its right (and her x).
+    const side = (x, y) => x >= x0 && x <= x1 && y >= y0 && y <= y1 ? (x < beast.x ? 1 : 2) : 0;
+    let x = 0;
+    const sideOn = (seg, local, T) => {
+        const at = placeOn(world, seg, local, local / Math.max(1e-6, T));
+        x = at[0];
+        return side(at[0], at[1]);
+    };
+    const note = (t, s, perf, at) => {
+        if (!last || last.side !== s || s && last.perf !== perf) {
+            last = { t: t, near: s > 0, left: s === 1, perf: perf, x: at, side: s };
+            out.push(last);
+        }
+    };
+    for (let i = 0; i < segs.length; i++) {
+        const seg = segs[i];
+        if (seg.kind === "clip") {
+            const at = seg.pivot ? seg.pivot[0] : seg.x;
+            const s = side(at, seg.pivot ? seg.pivot[1] : seg.y);
+            note(seg.t0, s, s > 0 && (seg.clip.indexOf("Needolin Play") >= 0 || seg.clip.indexOf("NeedolinSit Play") >= 0), at);
+            continue;
+        }
+        if (Math.max(seg.x0, seg.x1) < x0 - 1 || Math.min(seg.x0, seg.x1) > x1 + 1) {
+            note(seg.t0, 0, false, seg.x0);
+            continue;
+        }
+        // Where she is every half second, and to a twentieth of a second where that changes
+        // (coming in, going out, passing it).
+        const T = seg.t1 - seg.t0;
+        let prev = sideOn(seg, 0, T);
+        note(seg.t0, prev, false, x);
+        const n = Math.max(1, Math.ceil(T / 0.5));
+        for (let k = 1; k <= n; k++) {
+            const local = k * T / n;
+            const cur = sideOn(seg, local, T);
+            const curX = x;
+            if (cur !== prev) {
+                let lo = (k - 1) * T / n;
+                let hi = local;
+                let then = cur;
+                let thenX = curX;
+                while (hi - lo > 0.05) {
+                    const mid = (lo + hi) / 2;
+                    const s = sideOn(seg, mid, T);
+                    if (s === prev) {
+                        lo = mid;
+                    } else {
+                        hi = mid;
+                        then = s;
+                        thenX = x;
+                    }
+                }
+                if (hi < T) { // (else the next segment tells)
+                    note(seg.t0 + hi, then, false, thenX);
+                    if (then !== cur && local < T) {
+                        note(seg.t0 + local, cur, false, curX);
+                    }
+                }
+            }
+            prev = cur;
+        }
+    }
+    return out;
+}
+
 // The Bell Beast's day in its station, from Hornet's: it wakes a little after her, sings the
-// hours, looks about, turns to her and shakes happily when she visits, and lies down to sleep
-// in the evening. Clips are its own ("Bell Beast ..."); it doesn't move from its spot.
-function planBeast(world, clips, day0, dateKey, hornet) {
+// hours, is with her as the game has it while she's near (above), and lies down to sleep in the
+// evening. Clips are its own ("Bell Beast ..."); it doesn't move from its spot.
+function planBeast(world, clips, day0, dateKey, hornet, nearby) {
     const r = rng(dateKey * 7 + 3);
     const segs = [];
     let t = day0;
@@ -1417,58 +1514,103 @@ function planBeast(world, clips, day0, dateKey, hornet) {
             right = toRight;
         }
     };
+    const sing = until => {
+        push(right ? "Sing Right" : "Sing", Math.max(0.1, until - t));
+        once(right ? "Sing End Right" : "Sing End");
+    };
 
     const wake = hornet.wake + between(r, 600, 1500);
     const asleep = day0 + (17.5 + between(r, 0, 0.6)) * 3600; // 21:30-22:06
     push("Sleep", wake - t);
     once("Wake");
-    // Things that happen at set times: the hourly songs, Hornet's visits.
-    const events = [];
+    // The hours it sings, 9 to 21.
+    const songs = [];
     for (let h = 9; h <= 21; h++) {
         const at = day0 + (h - 4) * 3600;
         if (at > t && at < asleep - 60) {
-            events.push({ t: at, kind: "sing" });
+            songs.push(at);
         }
     }
-    for (const v of hornet.log) {
-        if (v.id === "bell_beast" && v.t0 > t && v.t1 < asleep) {
-            events.push({ t: v.t0 + 1.0, kind: "visit", until: v.t1 });
+    let si = 0;
+    // Hornet near it, through the day.
+    const track = nearby || (world.beast && hornet.segments ? hornetNear(world, hornet.segments, world.beast) : []);
+    let ti = 0;
+    let near = false;
+    let left = true;
+    let perf = false;
+    let away = -Infinity; // when she last went out of its range
+    let turnDue = Infinity;
+    let greetDue = Infinity;
+    let singDue = Infinity;
+    let shakeDue = Infinity;
+    const catchUp = upTo => {
+        while (ti < track.length && track[ti].t <= upTo) {
+            const e = track[ti++];
+            if (e.near && !near) {
+                if (e.t - away > BEAST_GREET_AFTER) {
+                    greetDue = e.t;
+                }
+                shakeDue = e.t + between(r, BEAST_SHAKE[0], BEAST_SHAKE[1]);
+            } else if (!e.near && near) {
+                away = e.t;
+                greetDue = singDue = shakeDue = Infinity;
+            }
+            if (e.near && e.perf && !(near && perf)) {
+                singDue = e.t + between(r, BEAST_SING_REACT[0], BEAST_SING_REACT[1]);
+            } else if (!(e.near && e.perf)) {
+                singDue = Infinity;
+            }
+            near = e.near;
+            left = e.left;
+            perf = e.perf;
         }
-    }
-    events.sort((a, b) => a.t - b.t);
-    let next = 0;
-    let greeted = -Infinity;
+    };
+    // When the needolin she's playing (from now) ends: the first change that ends it.
+    const perfEnds = () => {
+        for (let k = ti; k < track.length; k++) {
+            if (!(track[k].near && track[k].perf)) {
+                return track[k].t;
+            }
+        }
+        return asleep;
+    };
     while (t < asleep) {
-        const e = events[next];
-        // Until the next event, idle, now and then looking the other way or shaking.
-        const wander = t + between(r, 25, 90);
-        if (!e || wander < e.t - 3) {
-            idle(Math.min(wander, asleep));
-            if (t >= asleep) {
-                break;
-            }
-            if (r() < 0.3 && !right) {
-                once("Shake");
-            } else {
-                turn(!right);
-            }
-            continue;
+        catchUp(t);
+        const want = near && !left; // facing right only for her, on its right
+        if (want === right) {
+            turnDue = Infinity;
+        } else if (turnDue === Infinity) {
+            turnDue = t + between(r, BEAST_REACT[0], BEAST_REACT[1]);
         }
-        idle(e.t);
-        next++;
-        if (e.kind === "sing") {
-            // The hour: a song, some seconds long.
-            push(right ? "Sing Right" : "Sing", between(r, 5, 9));
-            once(right ? "Sing End Right" : "Sing End");
-        } else {
-            // Hornet came to see it: it looks at her, and shakes for joy (not every time).
+        const nextE = ti < track.length ? track[ti].t : Infinity;
+        const song = si < songs.length ? songs[si] : Infinity;
+        const next = Math.min(nextE, turnDue, greetDue, singDue, shakeDue, song, asleep);
+        idle(next);
+        t = Math.max(t, next);
+        if (next >= asleep) {
+            break;
+        }
+        if (next === song) {
+            si++;
+            sing(t + between(r, 5, 9));
+        } else if (next === turnDue) {
+            turnDue = Infinity;
+            turn(near && !left);
+        } else if (next === greetDue) {
+            greetDue = Infinity;
+            turn(near && !left); // (its look turned it as she came)
+            sing(t + 1.0 + between(r, BEAST_SING_STOP[0], BEAST_SING_STOP[1]));
+            shakeDue = t + between(r, BEAST_SHAKE[0], BEAST_SHAKE[1]);
+        } else if (next === singDue) {
+            singDue = Infinity;
+            turn(near && !left);
+            sing(Math.min(asleep - 30, Math.max(t + 1.0, perfEnds() + between(r, BEAST_SING_STOP[0], BEAST_SING_STOP[1]))));
+            shakeDue = t + between(r, BEAST_SHAKE[0], BEAST_SHAKE[1]);
+        } else if (next === shakeDue) {
+            // (its shake is drawn looking left: it turns to its own way for it)
             turn(false);
-            if (t - greeted > 1800) {
-                idle(t + 1.2);
-                once("Shake");
-                greeted = t;
-            }
-            idle(Math.max(t, Math.min(e.until, asleep)));
+            once("Shake");
+            shakeDue = t + between(r, BEAST_SHAKE[0], BEAST_SHAKE[1]);
         }
     }
     // Lying down: waking played backwards, from looking left.
@@ -1476,6 +1618,305 @@ function planBeast(world, clips, day0, dateKey, hornet) {
     push("Wake", clipLength(clips, clip("Wake")), { reverse: true });
     push("Sleep", day0 + 24 * 3600 + 1 - t);
     return segs;
+}
+
+// ------------------------------------------------------------------ the beastlings
+
+// The Bell Beast's children, the beastlings, who now and then come to their mother's station:
+// two or three pop out of the station's floor (the game spawns 2-3, at its nodes) and play as
+// the game has them (their Control FSM): idle a moment, then turn, leap about (towards their
+// mother when they're far from her, away from each other when too close), stamp, or call; a
+// beastling too far from her digs into the ground and pops out again by its node; they sing
+// along to Hornet's needolin, sleep when their mother sleeps, wake with her, and dig away when
+// they leave. Some days they don't come; some nights they stay, asleep by her.
+const LING_G = 120;               // their gravity (Rigidbody2D gravity scale 2)
+const LING_LEAP = [7, 15, 18];    // a leap: across, and up between these (their Leap state)
+const LING_HOP = [1, 5];          // waking: a little hop
+const LING_ROLL = [30, 35];       // popping out of the ground: up between these
+const LING_FEET = 1.25;           // their pivot above the floor (as their nodes stand)
+const LING_TOO_FAR = 15;          // from their mother: they dig back to her
+const LING_CLOSE = 2;             // to each other: one leaps away
+const LING_LINGER = 60;           // after a visit: the longest they may still be finishing a song
+
+// A beastling's segment at time t: { clip, frame, x, y, facingRight }, or null where it's not out.
+function lingPose(clips, floorY, seg, t) {
+    const local = Math.max(0, t - seg.t0);
+    let clip = seg.clip;
+    let tc = local;
+    let x = seg.x0;
+    let y = floorY(seg.x0);
+    if (seg.kind === "hop") {
+        const s = Math.min(1, local / Math.max(1e-6, seg.t1 - seg.t0));
+        x = lerp(seg.x0, seg.x1, s);
+        y = lerp(floorY(seg.x0), floorY(seg.x1), s) + seg.vy * local - 0.5 * LING_G * local * local;
+    } else if (seg.kind === "pop") {
+        // Out of the ground curled up, unrolling at the top, diving down onto the floor.
+        y = Math.max(floorY(seg.x0), seg.y0 + seg.vy * local - 0.5 * LING_G * local * local);
+        const top = seg.vy / LING_G;
+        if (local >= top) {
+            const unroll = clipLength(clips, "Beastling RollToDive");
+            clip = local - top < unroll ? "Beastling RollToDive" : "Beastling Dive";
+            tc = local - top < unroll ? local - top : local - top - unroll;
+        } else {
+            clip = "Beastling Insta Roll";
+        }
+    } else if (seg.kind === "dig") {
+        const s = Math.min(1, local / Math.max(1e-6, seg.t1 - seg.t0));
+        y = floorY(seg.x0) - 2.2 * s * s; // curling up and diving into the ground
+    }
+    const c = clips[clip];
+    if (!c) {
+        return null;
+    }
+    return { clip: clip, frame: seg.hold ? Math.max(0, Math.min(c.frames - 1, frameAt(c, tc))) : frameAt(c, tc), x: x, y: y,
+             facingRight: seg.facingRight };
+}
+
+// The beastlings' visits for the day: [{ t0, t1, kids: [[segment]] }], from their mother's day
+// (when she sleeps) and Hornet's (when she plays her needolin near them).
+function planBeastlings(world, clips, day0, dateKey, beastSegs, track) {
+    const nodes = world.beastlings && world.beastlings.nodes;
+    const beast = world.beast;
+    if (!nodes || !nodes.length || !beast || !clips["Beastling Idle"]) {
+        return [];
+    }
+    const r = rng(dateKey * 31 + 17);
+    const nav = world.nav;
+    // The station's floor they play on, and how far along it they go.
+    const floor = nav.surfaces.find(sf => sf.x0 <= beast.x && beast.x <= sf.x1 && height(sf, beast.x, nav.step) < beast.y);
+    if (!floor) {
+        return [];
+    }
+    const lo = Math.max(floor.x0 + 1, beast.x - LING_TOO_FAR + 1);
+    const hi = Math.min(floor.x1 - 1, beast.x + LING_TOO_FAR - 1);
+    const floorY = x => height(floor, Math.min(Math.max(x, floor.x0), floor.x1), nav.step) + LING_FEET;
+    // Their mother: when she's lying asleep (her first sleep, and from lying down at night).
+    const woke = beastSegs.length > 1 ? beastSegs[0].t1 : day0;
+    const lie = beastSegs.find(sg => sg.reverse);
+    const liesDown = lie ? lie.t0 : day0 + 24 * 3600;
+    const motherAsleep = t => t < woke || t >= liesDown;
+    // Hornet playing her needolin near them: [t0, t1] stretches.
+    const songs = []; // [t0, t1, where she plays]
+    for (let k = 0; k < track.length; k++) {
+        if (track[k].near && track[k].perf) {
+            songs.push([track[k].t, k + 1 < track.length ? track[k + 1].t : day0 + 24 * 3600, track[k].x]);
+        }
+    }
+    const songAt = t => {
+        for (let k = 0; k < songs.length && songs[k][0] <= t + 1e-6; k++) {
+            if (t < songs[k][1]) {
+                return songs[k];
+            }
+        }
+        return null;
+    };
+    const songFrom = t => {
+        for (let k = 0; k < songs.length; k++) {
+            if (songs[k][0] > t) {
+                return songs[k];
+            }
+        }
+        return null;
+    };
+
+    // When they come: some days not at all, else once or twice for a while; some nights they stay.
+    const visits = [];
+    const awakeFrom = woke + 600;
+    const awakeTo = liesDown - 1800;
+    const count = r() < 0.35 ? 0 : r() < 0.6 ? 1 : 2;
+    for (let k = 0; k < count && awakeTo - awakeFrom > 3600; k++) {
+        const t0 = between(r, awakeFrom, awakeTo - 1200);
+        const t1 = Math.min(awakeTo, t0 + between(r, 1200, 5400));
+        if (!visits.some(v => t0 < v.t1 + 600 && v.t0 < t1 + 600)) {
+            visits.push({ t0: t0, t1: t1 });
+        }
+    }
+    if (r() < 0.25 && lie) {
+        // Over the night: they come in the evening and sleep by her, leaving before 04:00.
+        const t0 = liesDown - between(r, 1800, 5400);
+        if (!visits.some(v => t0 < v.t1 + 600)) {
+            visits.push({ t0: t0, t1: day0 + 24 * 3600 - between(r, 1800, 3600) });
+        }
+    }
+    visits.sort((a, b) => a.t0 - b.t0);
+    visits.forEach((v, k) => {
+        v.n = r() < 0.5 ? 2 : 3;
+        v.seed = dateKey * 53 + 977 * (k + 1);
+    });
+
+    // What they do on a visit, worked out the first time it's needed (most visits are never on a
+    // lock screen), from its own draw.
+    const play = v => {
+        const r = rng(v.seed);
+        const n = v.n;
+        // Their spots in a random order (shuffled the same in every JS engine, as a sort isn't).
+        const order = nodes.map((nd, i) => i);
+        for (let i = order.length - 1; i > 0; i--) {
+            const j = Math.floor(r() * (i + 1));
+            const swap = order[i];
+            order[i] = order[j];
+            order[j] = swap;
+        }
+        const kids = [];
+        for (let i = 0; i < n; i++) {
+            const node = nodes[order[i % nodes.length]];
+            kids.push({ home: node[0], x: node[0], right: r() < 0.5, t: v.t0 + (i ? between(r, 1, 2) : 0), segs: [], asleep: false,
+                        done: false });
+        }
+        const stay = (kid, clip, duration, hold) => {
+            kid.segs.push({ kind: "stay", clip: "Beastling " + clip, t0: kid.t, t1: kid.t + duration, x0: kid.x,
+                            facingRight: kid.right, hold: !!hold });
+            kid.t += duration;
+        };
+        const once = (kid, clip) => stay(kid, clip, clipLength(clips, "Beastling " + clip));
+        const hop = (kid, dx, vy, clip) => {
+            const T = 2 * vy / LING_G;
+            const x1 = Math.min(hi, Math.max(lo, kid.x + dx));
+            kid.segs.push({ kind: "hop", clip: "Beastling " + clip, t0: kid.t, t1: kid.t + T, x0: kid.x, x1: x1, vy: vy,
+                            facingRight: kid.right });
+            kid.t += T;
+            kid.x = x1;
+        };
+        const turn = (kid, right) => {
+            if (right !== kid.right) {
+                kid.right = right;
+                once(kid, "Turn");
+            }
+        };
+        // Out of the ground at its node: curled up, high, then down onto the floor.
+        const popOut = kid => {
+            kid.x = kid.home;
+            const vy = between(r, LING_ROLL[0], LING_ROLL[1]);
+            const y0 = floorY(kid.x) - 1;
+            const T = (vy + Math.sqrt(vy * vy + 2 * LING_G * (y0 - floorY(kid.x)))) / LING_G;
+            kid.segs.push({ kind: "pop", clip: "Beastling Insta Roll", t0: kid.t, t1: kid.t + T, x0: kid.x, y0: y0, vy: vy,
+                            facingRight: kid.right });
+            kid.t += T;
+            once(kid, "Land");
+        };
+        const digAway = kid => {
+            kid.segs.push({ kind: "dig", clip: "Beastling Dig Away", t0: kid.t, t1: kid.t + clipLength(clips, "Beastling Dig Away"),
+                            x0: kid.x, facingRight: kid.right });
+            kid.t += clipLength(clips, "Beastling Dig Away");
+        };
+        const othersNear = kid => {
+            for (let k = 0; k < kids.length; k++) {
+                const o = kids[k];
+                if (o !== kid && !o.done && Math.abs(o.x - kid.x) < LING_CLOSE) {
+                    return o;
+                }
+            }
+            return null;
+        };
+        const leap = (kid, dir) => {
+            if (kid.x + dir * 2.5 > hi || kid.x + dir * 2.5 < lo) {
+                dir = -dir; // a wall that way
+            }
+            turn(kid, dir > 0);
+            once(kid, "Leap Antic");
+            const vy = between(r, LING_LEAP[1], LING_LEAP[2]);
+            hop(kid, dir * LING_LEAP[0] * 2 * vy / LING_G, vy, "Leap");
+            once(kid, "Land");
+        };
+        for (const kid of kids) {
+            kid.right = r() < 0.5;
+            popOut(kid);
+        }
+        v.kids = kids.map(k => k.segs);
+        // Then on, one move at a time (the one due first), only as far as asked: a lock screen
+        // shows a visit from wherever it is in it.
+        v.upTo = until => {
+            for (;;) {
+                let kid = null;
+                for (let k = 0; k < kids.length; k++) {
+                    if (!kids[k].done && (!kid || kids[k].t < kid.t)) {
+                        kid = kids[k];
+                    }
+                }
+                if (!kid || kid.t > until) {
+                    break;
+                }
+                const t = kid.t;
+                if (t >= v.t1) {
+                    // Leaving: digging away (waking first, if asleep).
+                    if (kid.asleep) {
+                        once(kid, "Antic");
+                    }
+                    digAway(kid);
+                    kid.done = true;
+                    continue;
+                }
+                if (motherAsleep(t)) {
+                    // Asleep by her until she wakes (or they go).
+                    const until = Math.min(v.t1, t < woke ? woke : day0 + 24 * 3600);
+                    if (!kid.asleep) {
+                        kid.asleep = true;
+                        stay(kid, r() < 0.5 ? "Sleep 1" : "Sleep 2", Math.max(0.3, until - t), true);
+                    } else {
+                        stay(kid, kid.segs[kid.segs.length - 1].clip.replace("Beastling ", ""), Math.max(0.3, until - t), true);
+                    }
+                    continue;
+                }
+                if (kid.asleep) {
+                    // Waking with their mother: a start, and a little hop.
+                    kid.asleep = false;
+                    stay(kid, "Idle", between(r, 0.2, 0.5));
+                    once(kid, "Antic");
+                    hop(kid, (kid.right ? 1 : -1) * LING_HOP[0] * 2 * LING_HOP[1] / LING_G, LING_HOP[1], "Leap");
+                    once(kid, "Land");
+                    continue;
+                }
+                const song = songAt(t);
+                if (song) {
+                    // Singing along to her needolin, turned to her.
+                    stay(kid, "Idle", between(r, 0.75, 1.0));
+                    const second = r() < 0.5 ? " 2" : "";
+                    if ((song[2] > kid.x) !== kid.right) {
+                        kid.right = song[2] > kid.x;
+                        once(kid, "TurnToSing" + second);
+                    }
+                    stay(kid, "Sing" + second, Math.max(0.5, song[1] + between(r, 0.5, 1.0) - kid.t));
+                    once(kid, "Sing End");
+                    continue;
+                }
+                // A moment idle (cut short if she starts playing), then something.
+                const next = songFrom(t);
+                stay(kid, "Idle", Math.max(0.2, Math.min(between(r, 0.5, 2.0), next ? next[0] + 0.75 - t : Infinity, v.t1 - t)));
+                if (kid.t >= v.t1 || songAt(kid.t)) {
+                    continue;
+                }
+                const close = othersNear(kid);
+                if (close) {
+                    leap(kid, kid.x >= close.x ? 1 : -1); // away from it
+                } else if (Math.abs(kid.x - beast.x) > LING_TOO_FAR || r() < 0.05) {
+                    digAway(kid); // back to her, by its node
+                    kid.t += 0.4 + between(r, 0.5, 1.0);
+                    popOut(kid);
+                } else {
+                    const pick = r() * 2.5; // turn 0.5, leap 1, stamp 0.5, call 0.5
+                    if (pick < 0.5) {
+                        turn(kid, !kid.right);
+                    } else if (pick < 1.5) {
+                        // Towards their mother when they're away from her, else either way; once or a
+                        // few times.
+                        let leaps = 1 + (r() < 0.5 ? 1 : 0) + (r() < 0.25 ? 1 : 0);
+                        while (leaps-- > 0 && kid.t < v.t1) {
+                            const dir = Math.abs(kid.x - beast.x) > 7 ? (beast.x > kid.x ? 1 : -1) : r() < 0.5 ? 1 : -1;
+                            leap(kid, dir);
+                        }
+                    } else if (pick < 2.0) {
+                        stay(kid, "Stamp", between(r, 1.0, 1.5));
+                        once(kid, "Recover");
+                    } else {
+                        stay(kid, "Sing", 0.5); // a call
+                        stay(kid, "Sing", 0.5, true);
+                        once(kid, "Sing End");
+                    }
+                }
+            }
+        };
+    };
+    return { visits: visits, floorY: floorY, floor: floor, play: play };
 }
 
 // The Bell Beast at time t: { clip, frame }.
@@ -1519,6 +1960,120 @@ function beastClipsAhead(world, clips, t, horizon) {
         names[segs[i].clip] = true;
     }
     return Object.keys(names).sort();
+}
+
+// A visit's beastlings, worked out up to time until if they aren't yet: [segments] for each.
+function kidsOn(plan, v, until) {
+    if (!v.kids) {
+        plan.play(v);
+    }
+    v.upTo(until);
+    return v.kids;
+}
+
+// The beastlings out at time t: [{ clip, frame, x, y, facingRight }] (none on most of the day).
+function beastlingsAt(world, clips, t) {
+    if (!world || !world.nav || !clips) {
+        return [];
+    }
+    daySegments(world, clips, t);
+    const plan = cache.beastlings;
+    const out = [];
+    if (!plan || !plan.visits) {
+        return out;
+    }
+    for (let i = 0; i < plan.visits.length; i++) {
+        const v = plan.visits[i];
+        if (t < v.t0 || t > v.t1 + LING_LINGER) {
+            continue;
+        }
+        const kids = kidsOn(plan, v, t + 1);
+        for (let k = 0; k < kids.length; k++) {
+            const segs = kids[k];
+            if (!segs.length || t < segs[0].t0 || t >= segs[segs.length - 1].t1) {
+                continue;
+            }
+            const seg = segs[segmentIndex(segs, t)];
+            const pose = t < seg.t1 ? lingPose(clips, plan.floorY, seg, t) : null; // (between digging in and out: underground)
+            if (pose) {
+                pose.id = k; // the same beastling from one moment to the next
+                out.push(pose);
+            }
+        }
+    }
+    return out;
+}
+
+// When what beastlingsAt() shows next changes after t: t while one moves through the air or the
+// ground, else its clip's next cell, or the next visit.
+function beastlingsNext(world, clips, t) {
+    if (!world || !world.nav || !clips) {
+        return Infinity;
+    }
+    daySegments(world, clips, t);
+    const plan = cache.beastlings;
+    if (!plan || !plan.visits) {
+        return Infinity;
+    }
+    let next = Infinity;
+    for (let i = 0; i < plan.visits.length; i++) {
+        const v = plan.visits[i];
+        if (t < v.t0) {
+            next = Math.min(next, v.t0);
+            continue;
+        }
+        if (t > v.t1 + LING_LINGER) {
+            continue;
+        }
+        const kids = kidsOn(plan, v, t + 1);
+        for (let k = 0; k < kids.length; k++) {
+            const segs = kids[k];
+            if (!segs.length || t >= segs[segs.length - 1].t1) {
+                continue;
+            }
+            if (t < segs[0].t0) {
+                next = Math.min(next, segs[0].t0);
+                continue;
+            }
+            const at = segmentIndex(segs, t);
+            const seg = segs[at];
+            if (t >= seg.t1 && at + 1 < segs.length) {
+                next = Math.min(next, segs[at + 1].t0); // underground until it pops out again
+                continue;
+            }
+            if (seg.kind !== "stay") {
+                return t;
+            }
+            next = Math.min(next, seg.hold ? Math.min(seg.t1, nextCellChange(clips, seg, t, seg.t1)) : nextCellChange(clips, seg, t, seg.t1));
+        }
+    }
+    return next;
+}
+
+// The beastlings' clips from t to t + horizon seconds.
+function beastlingClipsAhead(world, clips, t, horizon) {
+    if (!world || !world.nav || !clips) {
+        return [];
+    }
+    daySegments(world, clips, t);
+    const plan = cache.beastlings;
+    const names = {};
+    if (plan && plan.visits) {
+        for (const v of plan.visits) {
+            if (v.t1 + LING_LINGER < t || v.t0 > t + horizon) {
+                continue;
+            }
+            for (const segs of kidsOn(plan, v, t + horizon)) {
+                for (let i = segs.length && t > segs[0].t0 ? segmentIndex(segs, t) : 0; i < segs.length && segs[i].t0 < t + horizon; i++) {
+                    names[segs[i].clip] = true;
+                    if (segs[i].kind === "pop") {
+                        names["Beastling RollToDive"] = names["Beastling Dive"] = true;
+                    }
+                }
+            }
+        }
+    }
+    return Object.keys(names).filter(n => clips[n] !== undefined).sort();
 }
 
 // ------------------------------------------------------------------ small life
@@ -2039,7 +2594,10 @@ function daySegments(world, clips, t) {
         + ":" + signature;
     if (cache.key !== key) {
         const plan = planDay(world, clips, start.getTime() / 1000, dateKey);
-        cache = { key: key, segments: plan.segments, beast: planBeast(world, clips, start.getTime() / 1000, dateKey, plan),
+        const track = world.beast ? hornetNear(world, plan.segments, world.beast) : [];
+        const beast = planBeast(world, clips, start.getTime() / 1000, dateKey, plan, track);
+        cache = { key: key, segments: plan.segments, beast: beast,
+                  beastlings: planBeastlings(world, clips, start.getTime() / 1000, dateKey, beast, track),
                   critters: planCritters(world, clips, plan.segments) };
     }
     cache.from = start.getTime();

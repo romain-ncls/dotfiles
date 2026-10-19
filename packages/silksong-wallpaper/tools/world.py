@@ -585,6 +585,18 @@ PROPS = [
     {"kit": "bellway_city", "piece": "RestBench", "x": 123.3, "near": 3.9, "sink": 0.05},
 ]
 
+# Where the beastlings (the Bell Beast's children) come out in its station: its room's three
+# "Bellbeast Child Node"s, in room units (life.js planBeastlings).
+BEASTLING_NODES = [(44.56, 8.25), (52.59, 8.25), (55.32, 8.25)]
+
+
+def room_to_world(zone, meta, x, y):
+    """A point of a zone's room where the world shows it (as render_zone's to_world)."""
+    src, at = meta["src"], meta["at"]
+    wx = at[0] + ((src[2] - x) if zone.flip else (x - src[0]))
+    return [round(wx, 3), round(at[1] + zone.squeeze(y) - zone.squeeze(src[1]), 3)]
+
+
 # Places Hornet spends time, in world units, at about height `near`. Home spots are filled in
 # from the furniture.
 POIS = [
@@ -1576,6 +1588,8 @@ def compose():
         "beast": ({"x": metas["bell_beast"]["anchors"]["bell_beast"][0],
                    "y": metas["bell_beast"]["anchors"]["bell_beast"][1], "zone": "bell_beast"}
                   if "bell_beast" in metas["bell_beast"].get("anchors", {}) else None),
+        "beastlings": {"nodes": [room_to_world(next(z for z in ZONES if z.id == "bell_beast"), metas["bell_beast"], x, y)
+                                 for x, y in BEASTLING_NODES], "zone": "bell_beast"},
     }
     # Replaced in one step, so the running wallpapers' folder watch sees a new file and reloads;
     # once what the wallpaper reads in place of its images is made for it (derive.py: the QOI

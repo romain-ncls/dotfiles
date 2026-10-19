@@ -10,7 +10,7 @@ write everything to `~/.local/share/silksong-wallpaper` (caches in `~/.cache/sil
 
 ```sh
 cap="systemd-run --user --scope -p MemoryMax=6G -p MemorySwapMax=0"
-tools/extract.py                    # Hornet's animations (and the Bell Beast's, the small creatures'), from the Steam install
+tools/extract.py                    # Hornet's animations (and the Bell Beast's and its beastlings', the small creatures'), from the Steam install
 for room in tut_02 clover_02c bellway_city belltown mosstown_01; do $cap tools/kit.py harvest $room; done
 $cap tools/kit.py atlas ring           # the Clawline rings and poles
 $cap tools/kit.py atlas cog            # Cogwork Core parts: the clock's marks, hands and gears
@@ -61,7 +61,12 @@ settings say when it stands still there (see Runtime).
   drips, low smoke and falling dust, and dust drifting in the shafts. The small life of our
   rooms (`CRITTERS`): the grotto's moss flies behind the rock, dragonflies over the meadow and
   the lake that hold still while Hornet plays her needolin, and Verdania's lilypad flies, which
-  sing along to it and fly to their next perch when she comes close (`life.js crittersAt`). Navigation comes
+  sing along to it and fly to their next perch when she comes close (`life.js crittersAt`). The
+  Bell Beast watches her from its station as the game has it (its look detector and interaction
+  FSM): it turns to her a moment after she comes within its reach, shakes while she's there,
+  greets her when she comes back after a while and sings along to her needolin. Its beastlings
+  (`BEASTLING_NODES`, the game's spots) come out of the floor some days to play around it as their
+  FSM has them, and some nights to sleep by it (`life.js planBeast`, `planBeastlings`). Navigation comes
   from the same rock, so nothing she stands on is hidden (her bell's floor and walls are rock that
   isn't drawn, laid where the bell's art has them): the ways the game gives her, a drop, a jump or a
   double jump, a ledge caught at the top of a jump and climbed onto, the Drifter's Cloak opened on a
