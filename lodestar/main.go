@@ -31,6 +31,7 @@ var commands = map[string]command{
 	"apply":  {"make the machine match the repo", cmdApply},
 	"check":  {"validate a host's config without reading the machine", cmdCheck},
 	"drift":  {"list what is on the machine but not in the repo", cmdDrift},
+	"kde":    {"review: keep, ignore or undo KDE changes; watch: show the keys one change sets", cmdKDE},
 	"plan":   {"show what apply would change", cmdPlan},
 	"prune":  {"remove the packages the repo doesn't declare", cmdPrune},
 	"schema": {"regenerate the JSON Schemas in schema/", cmdSchema},
@@ -41,6 +42,7 @@ type options struct {
 	repo string
 	host string
 	yes  bool
+	list bool
 }
 
 func usage() {
@@ -79,9 +81,20 @@ func main() {
 	fs.StringVar(&o.repo, "repo", "", "the dotfiles repo (default $LODESTAR_REPO, then ~/dotfiles)")
 	fs.StringVar(&o.host, "host", "", "the host to use (default: this machine's hostname)")
 	fs.BoolVar(&o.yes, "yes", false, "apply without asking")
-	fs.Parse(os.Args[2:])
+	fs.BoolVar(&o.list, "list", false, "kde review: print the changes as YAML instead of asking")
+	// Flags may come after the arguments too: lodestar kde review --list.
+	var args []string
+	rest := os.Args[2:]
+	for {
+		fs.Parse(rest)
+		if fs.NArg() == 0 {
+			break
+		}
+		args = append(args, fs.Arg(0))
+		rest = fs.Args()[1:]
+	}
 
-	if err := cmd.run(o, fs.Args()); err != nil {
+	if err := cmd.run(o, args); err != nil {
 		var exit exitError
 		if errors.As(err, &exit) {
 			os.Exit(int(exit))

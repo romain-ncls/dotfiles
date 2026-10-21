@@ -51,10 +51,10 @@ func setup(t *testing.T, repo map[string]string) (*config.Config, string, *machi
 func compute(t *testing.T, c *config.Config, root string, m *machine.Fake, sys, home *state.State) *Plan {
 	t.Helper()
 	if sys == nil {
-		sys = &state.State{Files: map[string]state.File{}}
+		sys = state.New()
 	}
 	if home == nil {
-		home = &state.State{Files: map[string]state.File{}}
+		home = state.New()
 	}
 	p, err := Compute(Input{Config: c, Machine: m, Root: root, System: sys, HomeSt: home, IDs: testIDs})
 	if err != nil {
@@ -184,12 +184,10 @@ user:
 		"remove /etc/old.conf no longer declared",
 		"restore-package /etc/pacman.conf no longer declared: pacman's version comes back",
 		"remove ~/.dropped no longer declared",
+		"forget ~/.edited no longer declared, but changed on the machine since lodestar wrote it: left as it is",
 	}
 	if got := summary(p); !slices.Equal(got, want) {
 		t.Errorf("plan:\n  %s\nwant:\n  %s", strings.Join(got, "\n  "), strings.Join(want, "\n  "))
-	}
-	if len(p.Notes) != 1 || !strings.Contains(p.Notes[0], "~/.edited") {
-		t.Errorf("notes = %q", p.Notes)
 	}
 	for _, a := range p.Actions {
 		if a.Display == "/etc/sudoers" && (a.Mode != 0o440 || string(a.Old) != "old\n") {
@@ -207,7 +205,7 @@ func TestPlanRefusals(t *testing.T) {
 	os.MkdirAll(filepath.Join(root, "home/romain/.config/mpv"), 0o755)
 	m.System["masked.service"] = machine.Unit{State: "masked"}
 	m.System["static.service"] = machine.Unit{State: "static"}
-	_, err := Compute(Input{Config: c, Machine: m, Root: root, System: &state.State{Files: map[string]state.File{}}, HomeSt: &state.State{Files: map[string]state.File{}}})
+	_, err := Compute(Input{Config: c, Machine: m, Root: root, System: state.New(), HomeSt: state.New()})
 	if err == nil {
 		t.Fatal("expected errors")
 	}

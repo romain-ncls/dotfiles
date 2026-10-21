@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/romain-ncls/dotfiles/lodestar/internal/kdesnap"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/plan"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/state"
 )
@@ -60,7 +61,7 @@ func Apply(p *plan.Plan, out io.Writer) error {
 		pre = res.PreNumber
 	}
 	if aur := byPhase[plan.PhaseAUR]; len(aur) > 0 {
-		e := &env{root: p.Root, st: &state.State{Files: map[string]state.File{}}, out: out}
+		e := &env{root: p.Root, st: state.New(), out: out}
 		for _, a := range aur {
 			fmt.Fprintf(out, "==> yay -S %s\n", strings.Join(a.Names, " "))
 			if err := e.do(a); err != nil {
@@ -86,7 +87,7 @@ func runHome(p *plan.Plan, actions []*plan.Action, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	e := &env{root: p.Root, st: st, out: out}
+	e := &env{root: p.Root, home: p.Home, st: st, out: out}
 	if os.Geteuid() == 0 { // install, or a container: home files go to the user
 		u, err := user.Lookup(p.User)
 		if err != nil {
@@ -99,6 +100,13 @@ func runHome(p *plan.Plan, actions []*plan.Action, out io.Writer) error {
 	runErr := runAll(e, actions, out)
 	if err := st.Save(path); err != nil {
 		return errors.Join(runErr, err)
+	}
+	// The KDE snapshot kde review compares with.
+	snapPath := p.Root + filepath.Join(p.Home, kdesnap.Path)
+	if snap, err := kdesnap.Take(p.Root + filepath.Join(p.Home, ".config")); err == nil {
+		if err := snap.Save(snapPath); err == nil && e.owner != nil {
+			os.Chown(snapPath, e.owner.uid, e.owner.gid)
+		}
 	}
 	if e.owner != nil {
 		for d := filepath.Dir(path); strings.HasPrefix(d, p.Root+p.Home+"/"); d = filepath.Dir(d) {

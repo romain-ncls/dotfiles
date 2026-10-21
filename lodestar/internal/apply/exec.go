@@ -21,6 +21,7 @@ import (
 
 // env is what executing an action needs to know about where it runs.
 type env struct {
+	home  string       // the user's home
 	root  string       // filesystem prefix, "" on a running system
 	st    *state.State // updated as actions succeed
 	out   io.Writer    // progress
@@ -69,6 +70,22 @@ func (e *env) do(a *plan.Action) error {
 		}
 		e.record(a)
 	case plan.OpAdopt:
+		e.record(a)
+	case plan.OpForget:
+		if a.KDEID != "" {
+			delete(e.st.KDE, a.KDEID)
+		} else {
+			delete(e.st.Files, a.Path)
+		}
+	case plan.OpKDE:
+		if err := e.kde(a); err != nil {
+			return err
+		}
+		e.record(a)
+	case plan.OpKDEList:
+		if err := e.kdeList(a); err != nil {
+			return err
+		}
 		e.record(a)
 	case plan.OpRemove:
 		if ok, err := e.unchanged(a); !ok || err != nil {
@@ -146,6 +163,17 @@ func (e *env) do(a *plan.Action) error {
 }
 
 func (e *env) record(a *plan.Action) {
+	switch {
+	case a.List != "":
+		e.st.SetList(a.KDEFile, len(a.Entries) > 0)
+		return
+	case a.KDEID != "" && a.Delete:
+		delete(e.st.KDE, a.KDEID)
+		return
+	case a.KDEID != "":
+		e.st.KDE[a.KDEID] = state.KDEKey{File: a.KDEFile, Group: a.KDEGroup, Key: a.KDEKey, Value: a.Value}
+		return
+	}
 	rec := a.Record
 	if prev, ok := e.st.Files[a.Path]; ok && prev.Original {
 		rec.Original = true

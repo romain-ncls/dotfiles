@@ -31,6 +31,68 @@ type Config struct {
 	UserServices  []Item
 	Files         []*File // sorted by target
 	Ignore        []string
+
+	Firewall         *FirewallSpec // nil: no firewall
+	KDE              []KDEKey      // sorted by file, group, key
+	KDEIgnore        []string
+	BreezeExceptions []KDEEntry
+	WindowRules      []KDEEntry
+	Shortcuts        []ShortcutItem
+	JSON             []JSONTarget
+	Hooks            []HookItem
+	Limine           string // the hand-written part of limine.conf, or ""
+}
+
+// KDEKey is one key of a KDE config file.
+type KDEKey struct {
+	File  string
+	Group []string // nested groups
+	Key   string
+	Value string
+	From  string
+}
+
+// ID identifies the key: file/group/…/key.
+func (k KDEKey) ID() string {
+	return k.File + "/" + strings.Join(k.Group, "/") + "/" + k.Key
+}
+
+// KDEEntry is one entry of a KDE list (a Breeze exception, a window rule).
+type KDEEntry struct {
+	Keys map[string]string
+	From string
+}
+
+// ShortcutItem is a declared shortcut.
+type ShortcutItem struct {
+	Shortcut
+	From string
+}
+
+// DesktopFile is the .desktop file KDE uses for a command shortcut.
+func (s ShortcutItem) DesktopFile() string {
+	return "net.local.lodestar-" + slug(s.Name) + ".desktop"
+}
+
+// JSONTarget is a JSON file of $HOME and the files merged into it, in order.
+type JSONTarget struct {
+	Path          string   // ~/…
+	Sources       []string // absolute paths in the repo
+	UnlessRunning string
+	From          string
+}
+
+// HookItem is a declared hook and where it runs.
+type HookItem struct {
+	Hook
+	Dir  string // the module or host folder
+	From string
+}
+
+// FirewallSpec is the merged firewall: the ports to open.
+type FirewallSpec struct {
+	TCP []string
+	UDP []string
 }
 
 // Item is a declared name and the module (or host) that declared it first.
@@ -39,11 +101,18 @@ type Item struct {
 	From string
 }
 
-// LocalPackage is a module's pkg/ folder.
+// LocalPackage is a module's pkg/ folder, or a PKGBUILD in another repo.
 type LocalPackage struct {
-	Names []string // pkgname from the PKGBUILD (several for split packages)
-	Dir   string
+	Names []string // pkgname from pkg/PKGBUILD; unknown for a git source until built
+	Dir   string   // pkg/ folder; empty for a git source
+	Watch []string // more folders whose changes rebuild it
+	Git   string   // repo URL or local checkout (~/…)
+	Ref   string
+	Path  string // folder of the PKGBUILD in the git repo
 	From  string
+	// Module is the module's name (or the host's), naming a git source's
+	// build folder.
+	Module string
 }
 
 // Scope tells where a file goes.
@@ -64,6 +133,7 @@ type File struct {
 	Executable bool   // Source is executable in git
 	Opts       FileOptions
 	From       string
+	Generated  []byte // content made by lodestar (a shortcut's .desktop file)
 }
 
 // Mode returns the file's mode: the declared one, or 0644/0755.
@@ -112,7 +182,7 @@ func Load(repo, host string) (*Config, error) {
 		Vars:    h.Vars,
 		Install: h.Install,
 	}
-	m := &merger{c: c, repo: repo, files: map[string]*File{}, seen: map[string]map[string]bool{}}
+	m := &merger{c: c, repo: repo, files: map[string]*File{}, seen: map[string]map[string]bool{}, kde: map[string]int{}}
 
 	for i, name := range h.Modules {
 		if !nameRE.MatchString(name) {
@@ -136,6 +206,13 @@ func Load(repo, host string) (*Config, error) {
 	if err := m.add("host "+host, hostDir, &h.Module, true); err != nil {
 		return nil, err
 	}
+	if h.Boot != nil && h.Boot.Limine != "" {
+		c.Limine = filepath.Join(hostDir, filepath.FromSlash(h.Boot.Limine))
+		if _, err := os.Stat(c.Limine); err != nil {
+			return nil, fmt.Errorf("host %s: boot.limine: %w", host, err)
+		}
+	}
+	sort.Slice(c.KDE, func(i, j int) bool { return c.KDE[i].ID() < c.KDE[j].ID() })
 
 	for _, f := range m.files {
 		c.Files = append(c.Files, f)
@@ -149,6 +226,7 @@ type merger struct {
 	repo  string
 	files map[string]*File
 	seen  map[string]map[string]bool // list name -> item -> declared
+	kde   map[string]int             // KDEKey.ID -> index in c.KDE
 }
 
 func (m *merger) union(list string, dst *[]Item, names []string, from string, valid func(string) bool, what string) error {
@@ -189,10 +267,11 @@ func (m *merger) add(from, dir string, mod *Module, isHost bool) error {
 		c.Ignore = append(c.Ignore, g)
 	}
 
-	if names, err := pkgbuildNames(filepath.Join(dir, "pkg", "PKGBUILD")); err == nil {
-		c.LocalPackages = append(c.LocalPackages, LocalPackage{Names: names, Dir: filepath.Join(dir, "pkg"), From: from})
-	} else if !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("%s: %v", from, err)
+	if err := m.localPackage(from, dir, mod.Pkg); err != nil {
+		return err
+	}
+	if err := m.rest(from, dir, mod); err != nil {
+		return err
 	}
 
 	// Files from the system/ and home/ trees.
@@ -358,4 +437,203 @@ func rel(repo, p string) string {
 		return r
 	}
 	return p
+}
+
+var portRE = regexp.MustCompile(`^([0-9]{1,5})(-([0-9]{1,5}))?$`)
+
+func (m *merger) localPackage(from, dir string, pkg *Pkg) error {
+	c := m.c
+	module := strings.TrimPrefix(from, "host ")
+	names, err := pkgbuildNames(filepath.Join(dir, "pkg", "PKGBUILD"))
+	hasDir := err == nil
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("%s: %v", from, err)
+	}
+	var watch []string
+	if pkg != nil {
+		for _, w := range pkg.Watch {
+			abs := filepath.Join(dir, filepath.FromSlash(w))
+			if _, err := os.Stat(abs); err != nil {
+				return fmt.Errorf("%s: pkg.watch: %w", from, err)
+			}
+			watch = append(watch, abs)
+		}
+	}
+	switch {
+	case pkg != nil && pkg.Git != "":
+		if hasDir {
+			return fmt.Errorf("%s: has both pkg/ and pkg.git; keep one", from)
+		}
+		if pkg.Ref == "" && !strings.HasPrefix(pkg.Git, "~/") && !strings.HasPrefix(pkg.Git, "/") {
+			return fmt.Errorf("%s: pkg.ref is required with a remote pkg.git", from)
+		}
+		c.LocalPackages = append(c.LocalPackages, LocalPackage{Git: pkg.Git, Ref: pkg.Ref, Path: pkg.Path, Watch: watch, From: from, Module: module})
+	case hasDir:
+		c.LocalPackages = append(c.LocalPackages, LocalPackage{Names: names, Dir: filepath.Join(dir, "pkg"), Watch: watch, From: from, Module: module})
+	case pkg != nil:
+		return fmt.Errorf("%s: pkg: needs git:, or a pkg/ folder for watch:", from)
+	}
+	return nil
+}
+
+// rest merges the KDE settings, shortcuts, JSON keys, hooks and firewall.
+func (m *merger) rest(from, dir string, mod *Module) error {
+	c := m.c
+	if mod.Firewall != nil {
+		if c.Firewall == nil {
+			c.Firewall = &FirewallSpec{}
+		}
+		for _, l := range []struct {
+			name string
+			in   []Value
+			out  *[]string
+		}{{"tcp", mod.Firewall.TCP, &c.Firewall.TCP}, {"udp", mod.Firewall.UDP, &c.Firewall.UDP}} {
+			for _, v := range l.in {
+				port := string(v)
+				mm := portRE.FindStringSubmatch(port)
+				if mm == nil || !validPort(mm[1]) || (mm[3] != "" && (!validPort(mm[3]) || atoi(mm[3]) <= atoi(mm[1]))) {
+					return fmt.Errorf("%s: firewall.%s: %q is not a port or a range like 1714-1764", from, l.name, port)
+				}
+				if !slices.Contains(*l.out, port) {
+					*l.out = append(*l.out, port)
+				}
+			}
+		}
+	}
+
+	files := make([]string, 0, len(mod.KDE))
+	for f := range mod.KDE {
+		files = append(files, f)
+	}
+	sort.Strings(files)
+	for _, file := range files {
+		if file == "" || strings.Contains(file, "/") {
+			return fmt.Errorf("%s: kde: %q must be a file name in ~/.config", from, file)
+		}
+		for group, keys := range mod.KDE[file] {
+			path := strings.Split(group, "/")
+			if slices.Contains(path, "") {
+				return fmt.Errorf("%s: kde: %s: group %q has an empty part", from, file, group)
+			}
+			for key, val := range keys {
+				if key == "" {
+					return fmt.Errorf("%s: kde: %s: %s: empty key", from, file, group)
+				}
+				k := KDEKey{File: file, Group: path, Key: key, Value: string(val), From: from}
+				if i, ok := m.kde[k.ID()]; ok {
+					c.KDE[i] = k // a later module, or the host, wins
+					continue
+				}
+				m.kde[k.ID()] = len(c.KDE)
+				c.KDE = append(c.KDE, k)
+			}
+		}
+	}
+	c.KDEIgnore = append(c.KDEIgnore, mod.KDEIgnore...)
+
+	for name, list := range map[string]struct {
+		in  []map[string]Value
+		out *[]KDEEntry
+	}{"breeze-exceptions": {mod.BreezeExceptions, &c.BreezeExceptions}, "window-rules": {mod.WindowRules, &c.WindowRules}} {
+		for i, e := range list.in {
+			if len(e) == 0 {
+				return fmt.Errorf("%s: %s[%d] is empty", from, name, i)
+			}
+			keys := map[string]string{}
+			for k, v := range e {
+				keys[k] = string(v)
+			}
+			*list.out = append(*list.out, KDEEntry{Keys: keys, From: from})
+		}
+	}
+
+	for i, s := range mod.Shortcuts {
+		where := fmt.Sprintf("%s: shortcuts[%d]", from, i)
+		switch {
+		case s.Run != "" && s.Name != "" && s.Component == "" && s.Action == "":
+			if len(s.Keys) == 0 {
+				return fmt.Errorf("%s: a command needs keys", where)
+			}
+			for _, other := range c.Shortcuts {
+				if other.Run != "" && other.DesktopFile() == (ShortcutItem{Shortcut: s}).DesktopFile() {
+					return fmt.Errorf("%s: the name %q is too close to %q (%s)", where, s.Name, other.Name, other.From)
+				}
+			}
+		case s.Component != "" && s.Action != "" && s.Run == "" && s.Name == "":
+		default:
+			return fmt.Errorf("%s: write either name, keys and run (a command), or component, action and keys (a KDE action)", where)
+		}
+		c.Shortcuts = append(c.Shortcuts, ShortcutItem{Shortcut: s, From: from})
+	}
+
+	for i, j := range mod.JSON {
+		where := fmt.Sprintf("%s: json[%d]", from, i)
+		if !strings.HasPrefix(j.Path, "~/") {
+			return fmt.Errorf("%s: path must start with ~/", where)
+		}
+		src := filepath.Join(dir, filepath.FromSlash(j.Merge))
+		if _, err := os.Stat(src); err != nil {
+			return fmt.Errorf("%s: merge: %w", where, err)
+		}
+		found := false
+		for k := range c.JSON {
+			if c.JSON[k].Path == j.Path {
+				c.JSON[k].Sources = append(c.JSON[k].Sources, src)
+				if j.UnlessRunning != "" {
+					c.JSON[k].UnlessRunning = j.UnlessRunning
+				}
+				found = true
+			}
+		}
+		if !found {
+			c.JSON = append(c.JSON, JSONTarget{Path: j.Path, Sources: []string{src}, UnlessRunning: j.UnlessRunning, From: from})
+		}
+	}
+
+	for i, h := range mod.Hooks {
+		where := fmt.Sprintf("%s: hooks[%d]", from, i)
+		if h.Run == "" {
+			return fmt.Errorf("%s: run is required", where)
+		}
+		if h.As == "" {
+			h.As = "user"
+		}
+		if h.When == "" {
+			h.When = "changed"
+		}
+		if h.As != "user" && h.As != "root" {
+			return fmt.Errorf("%s: as must be user or root", where)
+		}
+		if h.When != "changed" && h.When != "always" {
+			return fmt.Errorf("%s: when must be changed or always", where)
+		}
+		c.Hooks = append(c.Hooks, HookItem{Hook: h, Dir: dir, From: from})
+	}
+	return nil
+}
+
+func validPort(s string) bool { n := atoi(s); return n >= 1 && n <= 65535 }
+
+func atoi(s string) int {
+	n := 0
+	for _, ch := range s {
+		n = n*10 + int(ch-'0')
+	}
+	return n
+}
+
+// slug turns a shortcut name into a file-name part.
+func slug(name string) string {
+	var sb strings.Builder
+	dash := false
+	for _, r := range strings.ToLower(name) {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			sb.WriteRune(r)
+			dash = false
+		} else if !dash && sb.Len() > 0 {
+			sb.WriteByte('-')
+			dash = true
+		}
+	}
+	return strings.TrimSuffix(sb.String(), "-")
 }

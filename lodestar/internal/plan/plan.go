@@ -54,6 +54,9 @@ const (
 	OpSetShell        Op = "shell"            // User's Shell
 	OpAddGroups       Op = "groups"           // User's Names (groups)
 	OpAdopt           Op = "adopt"            // the file already matches: only record it
+	OpForget          Op = "forget"           // stop managing Path or KDEID, changed on the machine
+	OpKDE             Op = "kde"              // set (or Delete) KDEFile/KDEGroup/KDEKey to Value
+	OpKDEList         Op = "kde-list"         // rewrite the list of List in KDEFile as Entries
 )
 
 // Action is one change. It travels as JSON to the root process.
@@ -81,6 +84,16 @@ type Action struct {
 	User    string   `json:"user,omitempty"`
 	Shell   string   `json:"shell,omitempty"`
 	Command string   `json:"command,omitempty"`
+
+	KDEFile  string              `json:"kde_file,omitempty"`
+	KDEGroup []string            `json:"kde_group,omitempty"`
+	KDEKey   string              `json:"kde_key,omitempty"`
+	KDEID    string              `json:"kde_id,omitempty"`
+	Value    string              `json:"value,omitempty"`
+	OldValue *string             `json:"old_value,omitempty"` // nil: the key was not set
+	Delete   bool                `json:"delete,omitempty"`
+	List     string              `json:"list,omitempty"` // breeze or kwinrules
+	Entries  []map[string]string `json:"entries,omitempty"`
 
 	From   string `json:"from,omitempty"`
 	Why    string `json:"why,omitempty"`
@@ -151,11 +164,13 @@ func Compute(in Input) (*Plan, error) {
 	p.followUps(in, PhaseSystem)
 	errs = append(errs, p.units(in, false), p.units(in, true))
 	p.user(in, u)
-	for _, f := range c.Files {
+	home := append(slices.Clone(c.Files), shortcutFiles(c)...)
+	for _, f := range home {
 		if f.Scope == config.Home {
 			errs = append(errs, p.file(in, r, f))
 		}
 	}
+	errs = append(errs, p.kde(in))
 	errs = append(errs, p.removals(in, in.HomeSt, config.Home))
 	p.followUps(in, PhaseHome)
 	p.startUserUnits(in)
@@ -312,7 +327,9 @@ func (p *Plan) file(in Input, r *render.Renderer, f *config.File) error {
 	}
 
 	var content []byte
-	if f.Template {
+	if f.Generated != nil {
+		content = f.Generated
+	} else if f.Template {
 		content, a.Secret, err = r.Render(f.Source)
 		if errors.Is(err, render.ErrLocked) {
 			// Not comparable now; keep it declared so it isn't removed.
@@ -420,7 +437,7 @@ func (p *Plan) removals(in Input, st *state.State, scope config.Scope) error {
 		}
 		a := &Action{Phase: phase, Path: path, Display: display, From: rec.From, ExpectHash: rec.Hash, ExpectLink: rec.Link}
 		if !hidden && changedSince(in.Root+path, live, rec) {
-			p.note("%s: no longer declared, but changed on the machine since lodestar wrote it: left as it is", display)
+			p.add(&Action{Op: OpForget, Phase: phase, Path: path, Display: display, Why: "no longer declared, but changed on the machine since lodestar wrote it: left as it is"})
 			continue
 		}
 		switch {

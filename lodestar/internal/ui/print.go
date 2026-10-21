@@ -50,23 +50,31 @@ func PrintPlan(w io.Writer, p *plan.Plan, s Style) {
 		}},
 		{"Units", func(a *plan.Action) bool { return a.Phase == plan.PhaseSystem && a.Unit != "" }},
 		{"User " + p.User, func(a *plan.Action) bool { return a.User != "" }},
-		{"Home", func(a *plan.Action) bool { return a.Phase == plan.PhaseHome }},
+		{"Home", func(a *plan.Action) bool { return a.Phase == plan.PhaseHome && a.KDEFile == "" }},
+		{"KDE", func(a *plan.Action) bool { return a.Phase == plan.PhaseHome && a.KDEFile != "" }},
 	}
 	for _, sec := range sections {
 		var lines []string
-		adopted := 0
+		adopted, forgotten := 0, 0
 		for _, a := range p.Actions {
 			if !sec.match(a) {
 				continue
 			}
-			if a.Op == plan.OpAdopt {
+			switch {
+			case a.Op == plan.OpAdopt:
 				adopted++
+				continue
+			case a.Op == plan.OpForget && a.Why == "":
+				forgotten++
 				continue
 			}
 			lines = append(lines, describe(a, s)...)
 		}
 		if adopted > 0 {
-			lines = append(lines, s.Dim(fmt.Sprintf("= %d files already match: recorded as managed", adopted)))
+			lines = append(lines, s.Dim(fmt.Sprintf("= %d already match: recorded as managed", adopted)))
+		}
+		if forgotten > 0 {
+			lines = append(lines, s.Dim(fmt.Sprintf("= %d records of things already gone are dropped", forgotten)))
 		}
 		if len(lines) == 0 {
 			continue
@@ -123,6 +131,25 @@ func describe(a *plan.Action, s Style) []string {
 		return []string{fmt.Sprintf("%s run %s %s", s.Cyan(">"), a.Command, detail(a.Why))}
 	case plan.OpRemove, plan.OpRestorePackage, plan.OpRestoreOriginal:
 		return []string{fmt.Sprintf("%s %s %s", remove, a.Display, detail(a.Why))}
+	case plan.OpForget:
+		target := a.Display
+		if a.KDEID != "" {
+			target = a.KDEID
+		}
+		return []string{fmt.Sprintf("%s %s %s", s.Yellow("!"), target, detail(a.Why))}
+	case plan.OpKDE:
+		id := a.KDEFile + " [" + strings.Join(a.KDEGroup, "][") + "] " + a.KDEKey
+		switch {
+		case a.Delete:
+			return []string{fmt.Sprintf("%s %s %s", remove, id, detail(a.Why))}
+		case a.OldValue == nil:
+			return []string{fmt.Sprintf("%s %s = %s %s", add, id, quoteKDE(a.Value), detail(a.From))}
+		default:
+			return []string{fmt.Sprintf("%s %s = %s → %s %s", change, id, quoteKDE(*a.OldValue), quoteKDE(a.Value), detail(a.From))}
+		}
+	case plan.OpKDEList:
+		out := []string{fmt.Sprintf("%s %s %s", change, a.Display, detail(a.Why, a.From))}
+		return append(out, diffLines(a.Old, a.Content, s)...)
 	case plan.OpLink:
 		sym := change
 		if a.Why == "new" {
@@ -147,6 +174,14 @@ func describe(a *plan.Action, s Style) []string {
 	return []string{fmt.Sprintf("? %s %s", a.Op, a.Display)}
 }
 
+// quoteKDE shows a KDE value; tabs separate several shortcuts.
+func quoteKDE(v string) string {
+	if v == "" {
+		return `""`
+	}
+	return strings.ReplaceAll(v, "\t", " | ")
+}
+
 func diffLines(old, new []byte, s Style) []string {
 	var out []string
 	lines := strings.Split(strings.TrimSuffix(Diff(old, new), "\n"), "\n")
@@ -166,6 +201,18 @@ func diffLines(old, new []byte, s Style) []string {
 		out = append(out, "    "+l)
 	}
 	return out
+}
+
+// Ask reads one line from the terminal after showing prompt.
+func Ask(prompt string) string {
+	tty, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
+	if err != nil {
+		return ""
+	}
+	defer tty.Close()
+	fmt.Fprint(tty, prompt)
+	answer, _ := bufio.NewReader(tty).ReadString('\n')
+	return strings.TrimSpace(answer)
 }
 
 // Confirm asks a yes/no question on the terminal; no is the default.

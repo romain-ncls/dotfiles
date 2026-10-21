@@ -7,12 +7,12 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"sort"
 	"strings"
 
 	"github.com/romain-ncls/dotfiles/lodestar/internal/config"
+	"github.com/romain-ncls/dotfiles/lodestar/internal/glob"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/machine"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/plan"
 )
@@ -75,7 +75,7 @@ func Find(c *config.Config, m machine.Machine, p *plan.Plan, root string) (*Repo
 	}
 	sort.Strings(r.UndeclaredPackages)
 
-	ignore := compileGlobs(append(slices.Clone(builtinIgnores), c.Ignore...))
+	ignore := glob.New(builtinIgnores, c.Ignore)
 	if err := r.files(c, m, p, root, ignore); err != nil {
 		return nil, err
 	}
@@ -98,14 +98,12 @@ func Find(c *config.Config, m machine.Machine, p *plan.Plan, root string) (*Repo
 	return r, nil
 }
 
-func (r *Report) files(c *config.Config, m machine.Machine, p *plan.Plan, root string, ignore []*regexp.Regexp) error {
+func (r *Report) files(c *config.Config, m machine.Machine, p *plan.Plan, root string, ignore glob.Matcher) error {
 	owned, err := m.OwnedFiles()
 	if err != nil {
 		return err
 	}
-	ignored := func(path string) bool {
-		return slices.ContainsFunc(ignore, func(re *regexp.Regexp) bool { return re.MatchString(path) })
-	}
+	ignored := ignore.Match
 	err = filepath.WalkDir(root+"/etc", func(phys string, d fs.DirEntry, err error) error {
 		path := strings.TrimPrefix(phys, root)
 		if err != nil {
@@ -201,29 +199,6 @@ func alsoUnits(path string) []string {
 		if v, ok := strings.CutPrefix(strings.TrimSpace(sc.Text()), "Also="); ok {
 			out = append(out, strings.Fields(v)...)
 		}
-	}
-	return out
-}
-
-// compileGlobs turns shell-style globs into regexps. As in aconfmgr's
-// IgnorePath, * also matches across slashes.
-func compileGlobs(globs []string) []*regexp.Regexp {
-	var out []*regexp.Regexp
-	for _, g := range globs {
-		var sb strings.Builder
-		sb.WriteString("^")
-		for _, ch := range g {
-			switch ch {
-			case '*':
-				sb.WriteString(".*")
-			case '?':
-				sb.WriteString(".")
-			default:
-				sb.WriteString(regexp.QuoteMeta(string(ch)))
-			}
-		}
-		sb.WriteString("$")
-		out = append(out, regexp.MustCompile(sb.String()))
 	}
 	return out
 }
