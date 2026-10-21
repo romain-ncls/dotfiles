@@ -467,6 +467,9 @@ Item {
     onWorldChanged: if (revealed) conceal()
     property bool everRevealed: revealed
     onRevealedChanged: everRevealed = true // whichever way it changes, it has been revealed
+    // Whether it waits under black before it's first revealed: not where the world's drawing
+    // (Drawing.qml) is over it then, fading away over it. Read as it's made.
+    property bool coverFirst: true
     readonly property string placing: [me.x, me.w, width, height, pxPerUnit].join()
     onPlacingChanged: {
         if (everRevealed) {
@@ -1337,14 +1340,16 @@ Item {
     // The black the screen waits under until revealed. It fades out rather than the scene fading
     // in, which would show the scene's translucent layers through one another, and is back at once
     // when concealed again. Not in renders (live off). Not an OpacityAnimator, on the render
-    // thread: once one has run, every timer of the process fires late (Qt 6.11), the water then
-    // moving 13 times a second rather than 30.
+    // thread: QML Timers run on the GUI thread's animation clock, which stands still while one
+    // runs (Drawing.qml), and in Qt 6.11 every timer of the process fired late once one had run,
+    // the water then moving 13 times a second rather than 30.
     Rectangle {
         id: black
         anchors.fill: parent
         color: "black"
         opacity: root.live ? 1 : 0
         visible: opacity > 0
+        Component.onCompleted: if (!root.coverFirst) opacity = 0
 
         NumberAnimation {
             id: fade

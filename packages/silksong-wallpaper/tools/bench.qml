@@ -61,6 +61,7 @@ QtObject {
     readonly property real seconds: Number(arg("--seconds", 20))
     readonly property string only: arg("--only", "")
     readonly property bool greeter: flag("--greeter")
+    readonly property bool noDrawing: flag("--no-drawing")
     readonly property bool fader: flag("--fader")
     readonly property real hideAt: Number(arg("--hide-at", -1))
     readonly property real showAt: Number(arg("--show-at", -1))
@@ -189,23 +190,62 @@ QtObject {
                 }
             }
 
-            // Made in its window at its size, as main.qml makes it.
+            // Made in its window at its size, as main.qml makes it: once every screen shows its
+            // drawing, where there's one.
             Loader {
                 id: wallpaper
                 anchors.fill: parent
-                active: win.seated && width > 0 && height > 0
+                active: win.seated && width > 0 && height > 0 && (!(drawing.item?.present ?? false) || drawing.item.up)
+                visible: !(drawing.item?.present ?? false) || drawing.item.uncover
                 sourceComponent: WorldScene {
                     screens: bench.screens
                     gapMm: Desk.gapMm
                     screenName: win.modelData.name
                     dataDir: bench.dataDir
                     timeOffset: bench.offset
+                    coverFirst: !(drawing.item?.present ?? false)
                 }
                 onLoaded: {
                     item.everyFrame = bench.motion === 0;
                     item.nearHz = [60, 60, 30, 0][bench.motion] ?? 60;
                 }
             }
+            // The world drawn in lines meanwhile, over it, as main.qml shows it (--no-drawing: not).
+            property bool drawingGone: false
+            Loader {
+                id: drawing
+                anchors.fill: parent
+                active: win.seated && !bench.noDrawing && !win.drawingGone
+                sourceComponent: Drawing {
+                    screens: bench.screens
+                    gapMm: Desk.gapMm
+                    screenName: win.modelData.name
+                    dataDir: bench.dataDir
+                    revealed: wallpaper.item?.revealed ?? false
+                }
+            }
+            Connections {
+                target: drawing.item
+                function onDrawnChanged() {
+                    console.warn(`DRAWING ${win.modelData.name} ${bench.since()} drawn`);
+                }
+                function onUpChanged() {
+                    console.warn(`DRAWING ${win.modelData.name} ${bench.since()} up`);
+                }
+                function onDoneChanged() {
+                    console.warn(`DRAWING ${win.modelData.name} ${bench.since()} done`);
+                }
+                function onUncoverChanged() {
+                    console.warn(`DRAWING ${win.modelData.name} ${bench.since()} uncover`);
+                }
+                function onLeavingChanged() {
+                    console.warn(`DRAWING ${win.modelData.name} ${bench.since()} fade`);
+                }
+                function onGoneChanged() {
+                    win.drawingGone = true;
+                }
+            }
+
             // The lock screen's fader, made after the wallpaper as in the greeter.
             Loader {
                 anchors.fill: parent

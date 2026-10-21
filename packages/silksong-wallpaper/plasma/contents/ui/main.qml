@@ -52,25 +52,50 @@ WallpaperItem {
     }
     onVisibleChanged: if (visible) released = false
 
+    // On the lock screen, made once every screen shows its drawing (below), hidden under it until
+    // it uncovers the world. Loaded by URL, as Scene.qml below: WorldScene.qml and life.js are
+    // only compiled then, not before the drawing's first frame (the lock screen compiles it all
+    // at every lock). Its properties come with it, bindings included.
     Loader {
         id: view
         anchors.fill: parent
         active: root.seated && root.configuration.SceneId === "world" && !root.released
+            && (!(drawing.item?.present ?? false) || drawing.item.up)
+        visible: !(drawing.item?.present ?? false) || drawing.item.uncover
 
-        sourceComponent: WorldScene {
+        Component.onCompleted: setSource(Qt.resolvedUrl("WorldScene.qml"), {
+            coverFirst: Qt.binding(() => !(drawing.item?.present ?? false)),
+            screens: Qt.binding(() => Qt.application.screens),
+            screenName: Qt.binding(() => root.Screen.name),
+            dataDir: root.dataDir,
+            gapMm: Qt.binding(() => root.configuration.GapMm),
+            latitude: Qt.binding(() => root.configuration.Latitude),
+            longitude: Qt.binding(() => root.configuration.Longitude),
+            dayHours: Qt.binding(() => [root.configuration.NightUntil ?? "", root.configuration.DayFrom ?? "",
+                                        root.configuration.DayUntil ?? "", root.configuration.NightFrom ?? ""]),
+            debug: Qt.binding(() => root.configuration.Debug),
+            everyFrame: Qt.binding(() => (root.configuration.Motion ?? 0) === 0),
+            nearHz: Qt.binding(() => [60, 60, 30, 0][root.configuration.Motion ?? 0] ?? 60),
+            watchFiles: root.desktop,
+            paused: Qt.binding(() => pauser.item?.paused ?? false)
+        })
+    }
+    // On the lock screen, the world drawn in lines (Drawing.qml) in the first frame while the world
+    // is made, fading away over it once it's in; then let go. Not on the desktop, where Plasma's
+    // splash screen covers the wallpaper until the world shows.
+    property bool drawingGone: false
+    Loader {
+        id: drawing
+        anchors.fill: parent
+        active: root.seated && !root.desktop && root.configuration.SceneId === "world" && !root.drawingGone
+
+        sourceComponent: Drawing {
             screens: Qt.application.screens
             screenName: root.Screen.name
             dataDir: root.dataDir
             gapMm: root.configuration.GapMm
-            latitude: root.configuration.Latitude
-            longitude: root.configuration.Longitude
-            dayHours: [root.configuration.NightUntil ?? "", root.configuration.DayFrom ?? "",
-                       root.configuration.DayUntil ?? "", root.configuration.NightFrom ?? ""]
-            debug: root.configuration.Debug
-            everyFrame: (root.configuration.Motion ?? 0) === 0
-            nearHz: [60, 60, 30, 0][root.configuration.Motion ?? 0] ?? 60
-            watchFiles: root.desktop
-            paused: pauser.item?.paused ?? false
+            revealed: view.item?.revealed ?? false
+            onGoneChanged: if (gone) root.drawingGone = true
         }
     }
     // On the desktop, standing still while windows are in front of it (PauseWhen). Pauser.qml

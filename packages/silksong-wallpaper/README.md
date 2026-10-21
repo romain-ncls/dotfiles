@@ -71,10 +71,17 @@ settings say when it stands still there (see Runtime).
   isn't drawn, laid where the bell's art has them): the ways the game gives her, a drop, a jump or a
   double jump, a ledge caught at the top of a jump and climbed onto, the Drifter's Cloak opened on a
   long way down, a wall climbed or slid down, the lake swum and waded into.
+  The world drawn in lines (`build_drawing`: `drawing_NN.png` beside the tiles, red the line,
+  green when the pen reaches it, and `Drawing.qml`), which the lock screen shows while it makes
+  the world: the outlines of the rock, the buildings, the plants and the floor bells, the long
+  edges painted inside them, the backdrops' long edges, fainter, the lake's surface, the
+  waterfall's edges and the clock's gears (as circles), each a stroke traced from its left end,
+  the rock mostly first; one starts as the ink before it is laid, so the drawing fills in evenly
+  over its time. Hornet and the Bell Beast move, so they aren't in it.
   `world.py --layout IMAGE` draws just the rock and her ways, quickly.
 - `derive.py`: what the wallpaper reads in place of the world's own images, so that each screen
   shows sooner and holds less, and `Derived.qml`, which lists it for the world's build: QOI twins
-  of the big images (the tiles, the air, the sheets), the same pixels read 2-4 times faster than
+  of the big images (the tiles, the drawing, the air, the sheets), the same pixels read 2-4 times faster than
   their PNGs; each screen's own view of the layers (`views/`), the texels it shows of each tile as
   Qt reads them (`derive.qml`), already scaled and cut to the bands that hold anything (about
   half the texels it kept of the tiles); and the sheets at each screen's density (`hornet@40/`,
@@ -122,9 +129,13 @@ settings say when it stands still there (see Runtime).
   `--at 2026-10-12T07:17`, to measure the same moment of her day again): when each screen
   shows (how far apart, and whether it still lacked anything) and has all its images in, how
   often they changed on the way, then CPU, frames and ticks per window, GPU time and memory,
-  and any warning Qt or the QML printed. `--motion` sets `Motion`, and
+  and any warning Qt or the QML printed; when each screen's drawing (below, Runtime) was up,
+  finished, uncovered its world and faded (`drawing_ms`), `--no-drawing` making the scenes at
+  once under black instead. `--motion` sets `Motion`, and
   `--no-system-plugins` leaves KDE's image formats out (the PNGs then); `--fader` draws each
-  screen through the lock screen's WallpaperFader and `--greeter` makes each scene only after
+  screen through Breeze's lock screen WallpaperFader (not the Silksong prompt's: Breeze's live
+  copy of the wallpaper holds the pen back a frame as the world is revealed) and `--greeter`
+  makes each scene only after
   holding the GUI thread a moment, as the greeter does; `--busy-anim` keeps an animation
   running, as a panel does in plasmashell; `--idle`, `--hide-at`/`--show-at`,
   `--pause-at`/`--resume-at` and `--jump-at` time the outputs going idle, the scenes hidden or
@@ -146,7 +157,11 @@ column opens to let them in. While it's up the aquarium behind is darkened and b
 lock screen shows the aquarium alone, as before. Everything it does is Plasma's own
 (`SilksongLockUi.qml` keeps its authenticator calls, messages, timers and keys), and
 `LockScreen.qml` shows Plasma's own prompt when the art is missing or older than the prompt needs
-(`extract_ui.py` not run, or not since an update) or the Silksong one can't be loaded.
+(`extract_ui.py` not run, or not since an update) or the Silksong one can't be loaded. It makes
+the prompt only once every screen has drawn its first frame (`prompts.js`), or half a second on
+for a screen that draws none: the first one made compiles it all, a tenth of a second the screens'
+first frames (the world's drawing, below) would otherwise wait for. A key pressed in the first
+half second after locking can be lost.
 
 The lock screen takes its prompt from a shell package: the one `plasmashellrc` names, else
 `$PLASMA_DEFAULT_SHELL`, else `org.kde.plasma.desktop`, the desktop's. `lockscreen.sh install`
@@ -155,7 +170,7 @@ changes nothing in the system and leaves the desktop alone:
 - `~/.local/share/plasma/shells/com.github.romain-ncls.silksong-lock`, a shell package with only
   `lockscreen/` (Plasma falls back to `org.kde.plasma.desktop` for the rest): `LockScreen.qml`
   copied (Plasma refuses an entry file whose real path leaves its package), the others linked,
-  to `lockscreen/` and to the system's own prompt files. A Plasma env script links it again at
+  to `lockscreen/` (its `.qml` and `.js`) and to the system's own prompt files. A Plasma env script links it again at
   each login, which follows Plasma updates on NixOS and Arch alike; after editing
   `LockScreen.qml`, `lockscreen.sh link`.
 - a drop-in giving KWin, which starts the lock screen, `PLASMA_DEFAULT_SHELL` naming it. Only
@@ -184,10 +199,30 @@ on (or about to reach) loads her sheets (at its density, where a set was made fo
 those of the clips she plays in the next 40 seconds, letting each go 10 seconds after it leaves
 them.
 
-Each screen stays black until it has everything it shows (her sheets for the next few seconds
-included), then fades in, all the screens of a process together (`reveal.js`), or after 4
-seconds with whatever it has; on the desktop, Plasma's splash screen and panels wait for it. It
-goes black again to load anew when the world is rebuilt or the screens change.
+On the lock screen, each screen first shows the world drawn in lines (`Drawing.qml`, made by
+`world.py`; `derive.py` cuts it to one image per screen of this desk, else the screen reads the
+tiles it shows), in its very first frame, and only then makes its world (`WorldScene.qml`, only
+compiled then, loaded by URL), under it, once every screen
+of the process shows its drawing (`drawing.js`): a world is made on the GUI thread all at once,
+and would hold the other screens' first frame back. The pen moves on the render thread (a
+`UniformAnimator`), so it keeps drawing meanwhile, all over the screens at once, for a second
+(`duration`), about what the world then takes to have everything it shows; it always finishes.
+The world stays hidden under it until both are done (its images go to the GPU at its first frame,
+which takes a moment then, unseen under the finished drawing), then the drawings fade away over
+the worlds together. While the pen moves, time is told by the clock at each frame: QML Timers run
+on the GUI thread's animation clock, which stands still while only the render thread animates (a
+second's Timer then takes 1.6). Measured in the real lock screen (`kscreenlocker_greet --testing`
+on a headless compositor, three screens), the screens' first frames come about 0.3 s after it
+starts, one after the other (0.28, 0.32, 0.35 s; 0.40, 0.44, 0.48 with the prompt made first and
+the world compiled with the wallpaper), the drawing finishes a second later and the world fades
+in. Before it starts, KWin shows black.
+
+Elsewhere (the desktop, where Plasma's splash screen covers the wallpaper meanwhile, or a world
+made before the drawing), each screen stays black until it has everything it shows (her sheets
+for the next few seconds included), then fades in, all the screens of a process together
+(`reveal.js`), or after 4 seconds with whatever it has; on the desktop, Plasma's splash screen and
+panels wait for it. It goes black again to load anew when the world is rebuilt or the screens
+change.
 
 Each screen keeps its own clock (`WorldScene.qml`). By default (`Motion`, in its settings) it
 ticks on every frame its window draws, so that everything moves as smoothly as in the game (the

@@ -48,9 +48,10 @@ Window {
         for (const s of Desk.screens) {
             const me = layout.screens[s.name];
             const view = { x: me.x, w: me.w, px: [s.width, s.height], layers: {} };
-            for (const name of ["back", "mid", "front", "lights"]) {
+            // The layers, and the drawing the lock screen shows while it makes the world.
+            for (const name of ["back", "mid", "front", "lights", "drawing"]) {
                 view.layers[name] = [];
-                for (const tile of world.layers[name] ?? []) {
+                for (const tile of (name === "drawing" ? world.drawing : world.layers[name]) ?? []) {
                     const place = World.tilePlace(world, tile, null, me, s.width, s.height);
                     if (place) {
                         const file = `${s.name}_${name}_${view.layers[name].length}.png`;

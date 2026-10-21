@@ -65,7 +65,7 @@ SYSTEM_QT = Path("/run/current-system/sw/lib/qt-6")
 LINE = re.compile(r"^qml: ([A-Z_]+) (.*)$")
 RENDERLOOP = re.compile(r"^qt\.scenegraph\.time\.renderloop: \[window (0x[0-9a-f]+)\]\[(?:render thread [^\]]*|gui thread)\] (.*)$")
 MARKS = ("RUN_START", "SECOND", "HIDE", "SHOW", "PAUSE", "RESUME", "JUMP", "RUN_END")
-TOKENS = ("WINDOW", "FIRST_FRAME", "FRAME", "TICK", "REVEAL", "RESUMED", "LOAD", "READY", "TIMEOUT", "TICKS",
+TOKENS = ("WINDOW", "FIRST_FRAME", "FRAME", "TICK", "REVEAL", "DRAWING", "RESUMED", "LOAD", "READY", "TIMEOUT", "TICKS",
           "FRAME_TRACE") + MARKS
 # What the bench's surroundings print on every run, not the scene: no Adwaita icon theme, and
 # with --fader the Plasma theme's old metadata, KWindowSystem finding no platform outside Plasma
@@ -164,6 +164,7 @@ def main():
     ap.add_argument("--motion", type=int, choices=range(4), help="the scenes' Motion (0 every frame; 1-3 paced)")
     ap.add_argument("--greeter", action="store_true", help="make each scene after the lock screen, as the greeter does")
     ap.add_argument("--fader", action="store_true", help="draw through the lock screen's WallpaperFader")
+    ap.add_argument("--no-drawing", action="store_true", help="make the scenes at once, under black, without the world's drawing")
     ap.add_argument("--busy-anim", action="store_true", help="keep an animation running in the process")
     ap.add_argument("--idle", type=int, default=0, help="seconds without input before Weston goes idle")
     ap.add_argument("--hide-at", type=float, help="hide every scene, seconds into the run")
@@ -233,13 +234,15 @@ def main():
         t0 = int(time.time() * 1000)
         cmd = [str(qml), str(HERE / "bench.qml"), "--", "--t0", str(t0), "--offset", str(offset), "--seconds", str(a.seconds)]
         cmd += [str(x) for k, v in options.items() if v is not None for x in (k, v)]
-        cmd += [f for f, on in (("--greeter", a.greeter), ("--fader", a.fader), ("--busy-anim", a.busy_anim)) if on]
+        cmd += [f for f, on in (("--greeter", a.greeter), ("--fader", a.fader), ("--busy-anim", a.busy_anim),
+                                ("--no-drawing", a.no_drawing)) if on]
         proc = subprocess.Popen(cmd, env=env, stderr=subprocess.PIPE, stdout=subprocess.DEVNULL, text=True)
 
         result = {"offset": round(offset), "seconds": a.seconds}
         if baseline is not None:
             result["gpu_busy_baseline_pct"] = baseline
         loads, ready, first, reveal, revealed, resumed, windows, memory = {}, {}, {}, {}, {}, {}, {}, {}
+        drawing = {}
         samples, ticks, frames_traced = [], [], []
         renders, polish, gpu_frames = [], [], {}
         log = []
@@ -262,6 +265,8 @@ def main():
                 elif what == "REVEAL":
                     reveal[fields[0]] = int(fields[1])
                     revealed[fields[0]] = json.loads(fields[2])
+                elif what == "DRAWING":
+                    drawing.setdefault(fields[0], {})[fields[2]] = int(fields[1])
                 elif what == "RESUMED":
                     resumed[fields[0]] = json.loads(fields[2])
                 elif what == "WINDOW" and (w := re.search(r"\((0x[0-9a-f]+)\)", rest)):
@@ -305,6 +310,8 @@ def main():
             result["reveal_pending"] = {k: v["pending"] for k, v in revealed.items()}
             result["reveal_missing"] = {k: v["missing"] for k, v in revealed.items() if v["missing"]}
         result["ready_ms"] = ready
+        if drawing:
+            result["drawing_ms"] = drawing
         if resumed:
             result["resumed"] = resumed
         result["load_steps"] = {s: len(v) for s, v in loads.items()}

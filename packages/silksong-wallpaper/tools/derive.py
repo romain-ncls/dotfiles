@@ -9,12 +9,14 @@
 
 - QOI twins: the same pixels, in a format Qt reads 2-4 times faster than PNG with KDE's image
   formats (kimageformats, which Plasma has). For each image the wallpaper waits for as it loads
-  (the tiles, the air, the plants' and the floor bells' sheets, the sheets Sprites.qml lists, and
-  the views and sheet sets below), X.qoi beside X.png, made again only once the PNG has changed.
+  (the tiles, the drawing shown meanwhile, the air, the plants' and the floor bells' sheets, the
+  sheets Sprites.qml lists, and the views and sheet sets below), X.qoi beside X.png, made again
+  only once the PNG has changed.
 - Views, in views/: for each screen of this desk (tools/desk.js), the texels each layer shows
   there, as Qt itself reads them from the tiles (tools/derive.qml): already scaled to the screen,
   and cut to the bands of rows that hold anything. A screen then reads those few rather than
-  every tile it shows, whole, and keeps about half as many texels.
+  every tile it shows, whole, and keeps about half as many texels. The world's drawing (which the
+  lock screen shows in its first frame) as one image of each screen's size.
 - Sheet sets, in hornet@<density>/: each sheet Sprites.qml lists at each screen's density, at the
   size the wallpaper asks for it there, scaled by Qt itself: read as it is, rather than read whole
   and scaled down.
@@ -142,6 +144,25 @@ def cut(drawn, out, folder):
     return pieces
 
 
+def drawing_view(drawn, size, out, folder, index):
+    """A screen's view of the world's drawing in one image of its size, views/drawing_<n>.png:
+    the texels it shows of each of the drawing's tiles, where they go. The drawing is opaque, so
+    there's nothing to cut away; one image is read sooner than several."""
+    img = Image.new("RGBA", tuple(size), (0, 255, 0, 255))  # no line, drawn last
+    for texels in drawn:
+        with Image.open(out / texels["file"]) as piece:
+            piece.load()
+        w, h = round(piece.width * texels["sx"]), round(piece.height * texels["sy"])
+        if (w, h) != piece.size:
+            piece = piece.resize((w, h), Image.BILINEAR)
+        img.paste(piece, (round(texels["fx"] + texels["tx"] * texels["sx"]), round(texels["fy"] + texels["ty"] * texels["sy"])))
+    file = f"views/drawing_{index}.png"
+    data = io.BytesIO()
+    img.save(data, format="PNG")
+    put(folder / file, data.getvalue())
+    return file
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("world", nargs="?", type=Path, default=DATA / "world/World.qml",
@@ -164,8 +185,12 @@ def main():
         except (OSError, subprocess.SubprocessError, RuntimeError) as e:
             print(f"No views nor sheet sets: Qt couldn't draw them ({e})")
             drawn = {"views": [], "sheetSets": {}}
-        for view in drawn["views"]:
-            views.append(dict(view, layers={name: cut(texels, out, folder) for name, texels in view["layers"].items()}))
+        for i, view in enumerate(drawn["views"]):
+            layers = dict(view["layers"])
+            sketch = layers.pop("drawing", [])
+            views.append(dict(view, layers={name: cut(texels, out, folder) for name, texels in layers.items()}))
+            if sketch:
+                views[-1]["drawing"] = drawing_view(sketch, view["px"], out, folder, i)
         for set_folder, px_per_unit in drawn["sheetSets"].items():
             sheet_sets[set_folder] = px_per_unit
             for name in dict.fromkeys(Path(clip["file"]).name for clip in clips.values()):
@@ -180,10 +205,12 @@ def main():
 
     files = [tile["file"] for tiles in world["layers"].values() for tile in tiles]
     files += [a["file"] for a in world.get("air", [])]
+    files += [tile["file"] for tile in world.get("drawing", [])]
     files += [world["sway"]["atlas"]] if world.get("sway") else []
     files += [a["sheet"] for a in world.get("animated", [])]
     files += [clip["file"] for clip in clips.values()]
     files += [piece["file"] for view in views for pieces in view["layers"].values() for piece in pieces]
+    files += [view["drawing"] for view in views if "drawing" in view]
     files += sheets
 
     made, twins = 0, {}

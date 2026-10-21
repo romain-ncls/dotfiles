@@ -71,7 +71,7 @@ EOF
         name=${entry##*/}
         [[ $name == LockScreen.qml || $name == config.* ]] || ln -s "$entry" "$lock/$name"
     done
-    for entry in "$here"/lockscreen/*.qml; do
+    for entry in "$here"/lockscreen/*.qml "$here"/lockscreen/*.js; do
         name=${entry##*/}
         [[ $name == LockScreen.qml ]] || ln -sfn "$entry" "$lock/$name"
     done

@@ -9,7 +9,10 @@
 // own (LockScreenUi.qml, linked from the system's shell) without it or if it can't be loaded.
 
 import QtQuick
+import QtQuick.Window
 import QtCore
+
+import "prompts.js" as Prompts
 
 Item {
     id: root
@@ -47,6 +50,32 @@ Item {
         }
     }
 
+    // The prompt is made once every screen has drawn its first frame (the wallpaper's drawing,
+    // prompts.js): it only shows on a key or the mouse, and making it first (the first screen's
+    // compiles it, a tenth of a second) would hold those frames back. Should no frame come (the
+    // screen off), made anyway half a second on.
+    property string prompt: ""
+    property bool drawn: false
+    function makePrompt() {
+        if (prompt !== "" && ui.source.toString() === "") {
+            ui.source = prompt;
+        }
+    }
+    Connections {
+        target: root.Window.window
+        enabled: ui.source.toString() === ""
+
+        function onFrameSwapped() {
+            root.drawn = true;
+            Prompts.shown();
+        }
+    }
+    Timer {
+        interval: 500
+        running: ui.source.toString() === ""
+        onTriggered: root.makePrompt()
+    }
+
     Component.onCompleted: {
         const component = Qt.createComponent(uiDir + "Kit.qml");
         if (component.status === Component.Ready) {
@@ -56,6 +85,8 @@ Item {
             console.warn("Silksong lock screen: the game's art is from an older tools/extract_ui.py; run it again");
             kit = null;
         }
-        ui.source = kit ? "SilksongLockUi.qml" : "LockScreenUi.qml";
+        prompt = kit ? "SilksongLockUi.qml" : "LockScreenUi.qml";
+        Prompts.join(root);
     }
+    Component.onDestruction: Prompts.leave(root)
 }
