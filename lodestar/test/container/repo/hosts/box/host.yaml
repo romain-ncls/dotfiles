@@ -1,6 +1,8 @@
 modules:
   - base
   - shell
+  - desktop
+  - tool
 user:
   name: romain
   shell: /usr/bin/fish

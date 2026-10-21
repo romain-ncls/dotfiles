@@ -12,6 +12,11 @@ pacman-key --init >/dev/null 2>&1
 pacman-key --populate archlinux >/dev/null 2>&1
 pacman -Sy --noconfirm >/dev/null
 cp -a /repo-src /repo
+# the user exists with KDE state lodestar must keep
+useradd -m -s /bin/bash romain
+runuser -u romain -- mkdir -p /home/romain/.config/app
+runuser -u romain -- sh -c "printf '[Common]\nShadowSize=2\n\n[Windeco Exception 0]\nExceptionPattern=konsole\n' >/home/romain/.config/breezerc"
+runuser -u romain -- sh -c "printf '{\"keep\": 1, \"reader\": {\"font\": \"Lato\", \"margin\": 10}}\n' >/home/romain/.config/app/settings.json"
 ln -sf /usr/share/zoneinfo/UTC /etc/localtime   # a file no package owns, replaced then given back
 orig_localtime=$(readlink /etc/localtime)
 
@@ -34,7 +39,7 @@ ok "link"
 grep -q 'managed by lodestar' /etc/bash.bashrc && ok "package file replaced"
 [[ $(getent passwd romain | cut -d: -f7) == /usr/bin/fish ]] || fail "shell"
 id -nG romain | grep -qw wheel || fail "groups: $(id -nG romain)"
-ok "user created with shell and groups"
+ok "user's shell and groups set"
 [[ $(stat -c %U /home/romain/.config/fish/config.fish) == romain ]] || fail "home file owner $(stat -c %U /home/romain/.config/fish/config.fish)"
 [[ $(stat -c %U /home/romain/.config/fish) == romain ]] || fail "home dir owner"
 ok "home file and its folders belong to romain"
@@ -42,6 +47,34 @@ ok "home file and its folders belong to romain"
 ok "unit enabled"
 [[ -s /var/lib/lodestar/state.json && -s /home/romain/.local/state/lodestar/state.json ]] || fail "state files"
 ok "state files written"
+
+say "checks: KDE, shortcuts, JSON, hooks, local package, firewall"
+cfg=/home/romain/.config
+grep -qx 'Placement=Centered' $cfg/kwinrc && grep -qx 'BlurStrength=11' $cfg/kwinrc || fail "kwinrc: $(cat $cfg/kwinrc)"
+grep -q '^\[AC\]\[Display\]' $cfg/powerdevilrc || fail "powerdevilrc nested group: $(cat $cfg/powerdevilrc)"
+[[ $(stat -c %U $cfg/kwinrc) == romain ]] || fail "kwinrc owner"
+ok "KDE keys written with kwriteconfig6, owned by romain"
+grep -q 'ShadowSize=2' $cfg/breezerc && grep -q 'ExceptionPattern=mpv' $cfg/breezerc || fail "breezerc: $(cat $cfg/breezerc)"
+grep -q konsole $cfg/breezerc && fail "the old exception is still there"
+ok "Breeze exceptions replaced, other Breeze settings kept"
+grep -q '^Order=1$' $cfg/kwinrulesrc && grep -q 'wmclass=discord' $cfg/kwinrulesrc || fail "kwinrulesrc: $(cat $cfg/kwinrulesrc)"
+ok "window rules"
+desk=/home/romain/.local/share/applications/net.local.lodestar-mute.desktop
+grep -q 'X-KDE-GlobalAccel-CommandShortcut=true' $desk || fail "shortcut desktop file"
+grep -A1 'net.local.lodestar-mute.desktop' $cfg/kglobalshortcutsrc | grep -qx '_launch=Meta+M' || fail "kglobalshortcutsrc: $(cat $cfg/kglobalshortcutsrc)"
+grep -qx 'Window Maximize=Meta+Up,none,Window Maximize' $cfg/kglobalshortcutsrc || fail "action shortcut: $(cat $cfg/kglobalshortcutsrc)"
+ok "shortcuts: command and action"
+s=$cfg/app/settings.json
+[[ $(jq -c . $s) == '{"keep":1,"reader":{"font":"Literata","margin":10,"size":40},"theme":"contrast"}' ]] || fail "json: $(jq -c . $s)"
+ok "JSON keys merged, others kept"
+[[ $(cat /home/romain/hook-ran) == romain && $(cat /root/root-hook-ran) == root ]] || fail "hooks"
+ok "user hook ran as romain, root hook as root"
+pacman -Q lodestar-test-tool >/dev/null && [[ $(lodestar-test-tool) == tool ]] || fail "local package"
+[[ ! -e /etc/sudoers.d/00-lodestar-build ]] || fail "the temporary sudo rule is still there"
+ok "local package built and installed; temporary sudo rule removed"
+grep -q 'tcp dport { 1714-1764 } accept' /etc/nftables.conf && grep -q 'udp dport { 1714-1764, 5353 } accept' /etc/nftables.conf || fail "nftables.conf: $(cat /etc/nftables.conf)"
+[[ -L /etc/systemd/system/multi-user.target.wants/nftables.service ]] || fail "nftables.service not enabled"
+ok "firewall ruleset written (checked by nft) and enabled"
 
 say "second plan: nothing to do"
 out=$(ls_ plan)
@@ -76,6 +109,17 @@ su -s /bin/bash romain -c "lodestar apply --yes --repo /repo --host box"
 grep -q '"/etc/issue"' /var/lib/lodestar/state.json || fail "system state not updated by the root process"
 ok "root part through sudo, home part as the user"
 rm /repo/modules/base/system/etc/issue /repo/modules/shell/home/.config/test/x
+
+say "drop a KDE key and a shortcut"
+sed -i '/BlurStrength/d; /Effect-blur/d' /repo/modules/desktop/module.yaml
+sed -i '/- name: Mute/,+2d' /repo/modules/desktop/module.yaml
+ls_ apply --yes
+grep -q BlurStrength $cfg/kwinrc && fail "BlurStrength still set"
+[[ -e $desk ]] && fail "shortcut desktop file still there"
+grep -q 'lodestar-mute' $cfg/kglobalshortcutsrc && fail "shortcut key still there"
+ok "dropped KDE key deleted, dropped shortcut removed"
+out=$(ls_ plan)
+[[ $out == "Nothing to do"* ]] || { echo "$out"; fail "plan after KDE removals is not empty"; }
 
 say "drop files from the repo"
 rm /repo/modules/base/system/etc/bash.bashrc /repo/modules/base/system/etc/localtime

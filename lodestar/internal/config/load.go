@@ -214,6 +214,11 @@ func Load(repo, host string) (*Config, error) {
 	}
 	sort.Slice(c.KDE, func(i, j int) bool { return c.KDE[i].ID() < c.KDE[j].ID() })
 
+	if c.Firewall != nil {
+		if err := m.firewall(); err != nil {
+			return nil, err
+		}
+	}
 	for _, f := range m.files {
 		c.Files = append(c.Files, f)
 	}
@@ -636,4 +641,63 @@ func slug(name string) string {
 		}
 	}
 	return strings.TrimSuffix(sb.String(), "-")
+}
+
+// FirewallFile is the ruleset lodestar writes when a module declares firewall:.
+const FirewallFile = "/etc/nftables.conf"
+
+// firewall adds what the firewall needs: nftables, its unit, and the
+// ruleset made from the declared ports.
+func (m *merger) firewall() error {
+	c := m.c
+	const from = "firewall"
+	if prev, ok := m.files[FirewallFile]; ok {
+		return fmt.Errorf("%s: written by lodestar from the firewall: entries, so %s can't provide it", FirewallFile, prev.From)
+	}
+	m.union("packages", &c.Packages, []string{"nftables"}, from, nameRE.MatchString, "package name")
+	m.union("services", &c.Services, []string{"nftables.service"}, from, unitRE.MatchString, "unit name")
+	m.files[FirewallFile] = &File{
+		Target:    FirewallFile,
+		Scope:     System,
+		Generated: []byte(Ruleset(c.Firewall)),
+		From:      from,
+		Opts: FileOptions{
+			Check: "nft --check --file {}",
+			Then:  "[ ! -d /run/systemd/system ] || nft --file " + FirewallFile,
+		},
+	}
+	return nil
+}
+
+// Ruleset writes the nftables ruleset: incoming traffic is dropped except
+// replies, loopback, ICMP, DHCPv6 replies, Docker's bridges and the ports.
+func Ruleset(f *FirewallSpec) string {
+	var sb strings.Builder
+	sb.WriteString(`#!/usr/bin/nft -f
+# Written by lodestar from the firewall: entries of this host's modules.
+# Only this table is replaced; other tables (Docker's) are left alone.
+
+destroy table inet lodestar
+table inet lodestar {
+	chain input {
+		type filter hook input priority filter; policy drop;
+
+		ct state established,related accept
+		ct state invalid drop
+		iif lo accept
+		meta l4proto { icmp, ipv6-icmp } accept
+		ip6 saddr fe80::/10 udp dport 546 accept comment "DHCPv6 replies"
+		iifname "docker0" accept
+		iifname "br-*" accept
+`)
+	for _, p := range []struct {
+		proto string
+		ports []string
+	}{{"tcp", f.TCP}, {"udp", f.UDP}} {
+		if len(p.ports) > 0 {
+			fmt.Fprintf(&sb, "\t\t%s dport { %s } accept\n", p.proto, strings.Join(p.ports, ", "))
+		}
+	}
+	sb.WriteString("\t}\n}\n")
+	return sb.String()
 }

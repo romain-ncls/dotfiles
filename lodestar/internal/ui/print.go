@@ -147,6 +147,26 @@ func describe(a *plan.Action, s Style) []string {
 		default:
 			return []string{fmt.Sprintf("%s %s = %s → %s %s", change, id, quoteKDE(*a.OldValue), quoteKDE(a.Value), detail(a.From))}
 		}
+	case plan.OpJSON:
+		out := []string{fmt.Sprintf("%s %s %s", change, a.Display, detail("keys: "+a.Why, a.From))}
+		if a.Old != nil {
+			out = append(out, diffLines(a.Old, a.Content, s)...)
+		}
+		return out
+	case plan.OpHook:
+		return []string{fmt.Sprintf("%s hook %s %s", s.Cyan(">"), a.Command, detail(a.Why, a.From))}
+	case plan.OpBuild:
+		src := "pkg/"
+		if a.Git != "" {
+			src = a.Ref
+		}
+		return []string{fmt.Sprintf("%s build %s %s", add, a.Module, detail(src, a.Why))}
+	case plan.OpLimine:
+		out := []string{fmt.Sprintf("%s /boot/limine.conf %s", change, detail(a.Why, a.From))}
+		if a.Old != nil {
+			out = append(out, diffLines(a.Old, a.Content, s)...)
+		}
+		return out
 	case plan.OpKDEList:
 		out := []string{fmt.Sprintf("%s %s %s", change, a.Display, detail(a.Why, a.From))}
 		return append(out, diffLines(a.Old, a.Content, s)...)

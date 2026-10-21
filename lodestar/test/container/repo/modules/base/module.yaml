@@ -1,7 +1,9 @@
 packages:
   - base
+  - base-devel # explicit in the image
   - sudo
   - fish
+  - jq # used by the test
 services:
   - fstrim.timer
 files:

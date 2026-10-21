@@ -3,14 +3,19 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/romain-ncls/dotfiles/lodestar/internal/apply"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/config"
@@ -28,13 +33,14 @@ type command struct {
 }
 
 var commands = map[string]command{
-	"apply":  {"make the machine match the repo", cmdApply},
-	"check":  {"validate a host's config without reading the machine", cmdCheck},
-	"drift":  {"list what is on the machine but not in the repo", cmdDrift},
-	"kde":    {"review: keep, ignore or undo KDE changes; watch: show the keys one change sets", cmdKDE},
-	"plan":   {"show what apply would change", cmdPlan},
-	"prune":  {"remove the packages the repo doesn't declare", cmdPrune},
-	"schema": {"regenerate the JSON Schemas in schema/", cmdSchema},
+	"apply":   {"make the machine match the repo", cmdApply},
+	"check":   {"validate a host's config without reading the machine", cmdCheck},
+	"drift":   {"list what is on the machine but not in the repo", cmdDrift},
+	"kde":     {"review: keep, ignore or undo KDE changes; watch: show the keys one change sets", cmdKDE},
+	"plan":    {"show what apply would change", cmdPlan},
+	"prune":   {"remove the packages the repo doesn't declare", cmdPrune},
+	"upgrade": {"yay -Syu without the local packages, then rebuild those that need it and apply", cmdUpgrade},
+	"schema":  {"regenerate the JSON Schemas in schema/", cmdSchema},
 }
 
 // options are the flags every command takes.
@@ -159,6 +165,9 @@ func cmdCheck(o *options, args []string) error {
 	if err := checkTemplates(c); err != nil {
 		return err
 	}
+	for _, w := range nameClashes(c) {
+		fmt.Println(style().Yellow("!") + " " + w)
+	}
 	fmt.Printf("%s: %d modules, %d packages, %d local packages, %d files, %d units: OK\n",
 		c.Host, len(c.Modules), len(c.Packages), len(c.LocalPackages), len(c.Files),
 		len(c.Services)+len(c.UserServices))
@@ -175,6 +184,10 @@ func cmdSchema(o *options, args []string) error {
 		return err
 	}
 	for _, p := range written {
+		if strings.HasPrefix(p, "(") {
+			fmt.Println(p)
+			continue
+		}
 		r, _ := filepath.Rel(repo, p)
 		fmt.Println("wrote", r)
 	}
@@ -207,7 +220,12 @@ func (o *options) plan() (*plan.Plan, error) {
 }
 
 func planFor(c *config.Config) (*plan.Plan, error) {
+	return planWith(c, nil)
+}
+
+func planWith(c *config.Config, rebuild map[string]bool) (*plan.Plan, error) {
 	return plan.Compute(plan.Input{
+		Rebuild: rebuild,
 		Config:  c,
 		Machine: machine.Local{},
 		Facts:   &render.MachineFacts{},
@@ -226,6 +244,7 @@ func cmdPlan(o *options, args []string) error {
 	}
 	if p.Empty() {
 		fmt.Println("Nothing to do: the machine matches the repo.")
+		printNotes(p)
 		return nil
 	}
 	ui.PrintPlan(os.Stdout, p, style())
@@ -237,8 +256,16 @@ func cmdApply(o *options, args []string) error {
 	if err != nil {
 		return err
 	}
+	return applyPlan(o, p)
+}
+
+func applyPlan(o *options, p *plan.Plan) error {
 	if p.Empty() {
 		fmt.Println("Nothing to do: the machine matches the repo.")
+		printNotes(p)
+		if len(p.Actions) > 0 { // hooks that run on every apply
+			return apply.Apply(p, os.Stdout)
+		}
 		return nil
 	}
 	ui.PrintPlan(os.Stdout, p, style())
@@ -329,4 +356,92 @@ func sudo(args ...string) error {
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	return cmd.Run()
+}
+
+func printNotes(p *plan.Plan) {
+	for _, n := range p.Notes {
+		fmt.Println(style().Yellow("!") + " " + n)
+	}
+}
+
+// cmdUpgrade updates the system with yay, keeping yay away from the local
+// packages (an AUR package of the same name would replace them), then
+// rebuilds the local packages that need it and applies.
+func cmdUpgrade(o *options, args []string) error {
+	c, err := o.load()
+	if err != nil {
+		return err
+	}
+	before, err := planFor(c)
+	if err != nil {
+		return err
+	}
+	yay := []string{"yay", "-Syu"}
+	if len(before.LocalNames) > 0 {
+		yay = append(yay, "--ignore", strings.Join(before.LocalNames, ","))
+	}
+	cmd := exec.Command(yay[0], yay[1:]...)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("yay: %w", err)
+	}
+
+	// checkrebuild (rebuild-detector) lists packages whose libraries changed.
+	rebuild := map[string]bool{}
+	if out, err := exec.Command("checkrebuild").Output(); err == nil {
+		for _, line := range strings.Split(string(out), "\n") {
+			if f := strings.Fields(line); len(f) > 0 {
+				name := f[len(f)-1]
+				if slices.Contains(before.LocalNames, name) {
+					rebuild[name] = true
+				}
+			}
+		}
+	}
+	p, err := planWith(c, rebuild)
+	if err != nil {
+		return err
+	}
+	return applyPlan(o, p)
+}
+
+// nameClashes warns about local packages named like a repo or AUR package:
+// yay would replace them with that package once its version is higher.
+func nameClashes(c *config.Config) []string {
+	var names []string
+	for _, lp := range c.LocalPackages {
+		names = append(names, lp.Names...)
+	}
+	if len(names) == 0 {
+		return nil
+	}
+	var out []string
+	if repos, err := (machine.Local{}).InRepos(); err == nil {
+		for _, n := range names {
+			if repos[n] {
+				out = append(out, fmt.Sprintf("local package %s has the name of a repo package", n))
+			}
+		}
+	}
+	q := url.Values{}
+	for _, n := range names {
+		q.Add("arg[]", n)
+	}
+	client := http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get("https://aur.archlinux.org/rpc/v5/info?" + q.Encode())
+	if err != nil {
+		return out // offline: no AUR check
+	}
+	defer resp.Body.Close()
+	var info struct {
+		Results []struct {
+			Name, Version, Description string
+		} `json:"results"`
+	}
+	if json.NewDecoder(resp.Body).Decode(&info) == nil {
+		for _, r := range info.Results {
+			out = append(out, fmt.Sprintf("local package %s has the name of an AUR package (%s, %s): yay -Syu would replace it once that version is higher", r.Name, r.Version, r.Description))
+		}
+	}
+	return out
 }

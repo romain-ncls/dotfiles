@@ -46,8 +46,16 @@ func Write(repo string) ([]string, error) {
 		return nil, err
 	}
 	var written []string
+	kde, keys := kdeSchema()
 	for name, v := range map[string]any{"host": &config.Host{}, "module": &config.Module{}} {
 		s := r.Reflect(v)
+		desc := ""
+		if old, ok := s.Properties.Get("kde"); ok {
+			desc = old.Description
+		}
+		k := *kde
+		k.Description = desc
+		s.Properties.Set("kde", &k)
 		s.ID = jsonschema.ID("https://github.com/romain-ncls/dotfiles/schema/" + name + ".json")
 		s.Title = map[string]string{"host": "lodestar host", "module": "lodestar module"}[name]
 		data, err := json.MarshalIndent(s, "", "  ")
@@ -60,11 +68,20 @@ func Write(repo string) ([]string, error) {
 		}
 		written = append(written, p)
 	}
+	if keys > 0 {
+		written = append(written, fmt.Sprintf("(%d KDE keys described from .kcfg files)", keys))
+	}
 	return written, nil
 }
 
 // mapper describes the types that read their YAML in their own way.
 func mapper(t reflect.Type) *jsonschema.Schema {
+	switch t {
+	case reflect.TypeFor[config.Value]():
+		return anyValue()
+	case reflect.TypeFor[config.StringList]():
+		return &jsonschema.Schema{AnyOf: []*jsonschema.Schema{{Type: "string"}, {Type: "array", Items: &jsonschema.Schema{Type: "string"}}}}
+	}
 	if t == reflect.TypeFor[config.Mode]() {
 		return &jsonschema.Schema{
 			Description: "Mode in octal, like 0440. Quotes are optional.",

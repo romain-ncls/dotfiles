@@ -7,8 +7,8 @@ here=$(cd "$(dirname "$0")" && pwd)
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 (cd "$here/.." && CGO_ENABLED=0 go build -o "$tmp/lodestar" .)
-docker run --rm --memory 2g \
+docker run --rm --memory 2g --cap-add NET_ADMIN \
 	-v "$tmp/lodestar:/usr/local/bin/lodestar:ro" \
 	-v "$here/container/repo:/repo-src:ro" \
 	-v "$here/container/inside.sh:/inside.sh:ro" \
-	archlinux:latest bash /inside.sh
+	archlinux:base-devel bash /inside.sh

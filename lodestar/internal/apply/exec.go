@@ -15,12 +15,15 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/romain-ncls/dotfiles/lodestar/internal/limine"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/plan"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/state"
 )
 
 // env is what executing an action needs to know about where it runs.
 type env struct {
+	user  string       // the configured user
+	repo  string       // the repo lodestar reads
 	home  string       // the user's home
 	root  string       // filesystem prefix, "" on a running system
 	st    *state.State // updated as actions succeed
@@ -54,11 +57,20 @@ func (e *env) systemctl(args ...string) []string {
 func (e *env) do(a *plan.Action) error {
 	switch a.Op {
 	case plan.OpInstall:
-		return e.run(append([]string{"pacman", "-S", "--needed", "--noconfirm", "--asexplicit"}, a.Names...)...)
+		// No --asexplicit: it would mark the dependencies explicit too.
+		return e.run(append([]string{"pacman", "-S", "--needed", "--noconfirm"}, a.Names...)...)
 	case plan.OpAsExplicit:
 		return e.run(append([]string{"pacman", "-D", "--asexplicit"}, a.Names...)...)
 	case plan.OpInstallAUR:
-		return e.run(append([]string{"yay", "-S", "--needed", "--noconfirm", "--asexplicit"}, a.Names...)...)
+		return e.asUser(true, append([]string{"yay", "-S", "--needed", "--noconfirm"}, a.Names...)...)
+	case plan.OpBuild:
+		return e.build(a)
+	case plan.OpHook:
+		return e.hook(a)
+	case plan.OpJSON:
+		return e.writeJSON(a)
+	case plan.OpLimine:
+		return e.limine(a)
 	case plan.OpWrite:
 		if err := e.write(a); err != nil {
 			return err
@@ -164,6 +176,9 @@ func (e *env) do(a *plan.Action) error {
 
 func (e *env) record(a *plan.Action) {
 	switch {
+	case a.HookKey != "":
+		e.st.Hooks[a.HookKey] = a.Hash
+		return
 	case a.List != "":
 		e.st.SetList(a.KDEFile, len(a.Entries) > 0)
 		return
@@ -409,3 +424,29 @@ func field(info []byte, name string) string {
 }
 
 func shellQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'" }
+
+// limine merges the repo's part into /boot/limine.conf, keeps the previous
+// file as limine.conf.bak, and re-enrolls the config's hash.
+func (e *env) limine(a *plan.Action) error {
+	path := e.root + "/boot/limine.conf"
+	live, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	merged := limine.Merge(a.Value, string(live))
+	if merged != string(live) {
+		if err := os.WriteFile(path+".bak", live, 0o600); err != nil {
+			return err
+		}
+		if err := os.WriteFile(path, []byte(merged), 0o600); err != nil {
+			return err
+		}
+		if _, err := exec.LookPath("limine-update"); err == nil && e.root == "" {
+			if err := e.run("limine-update"); err != nil {
+				return err
+			}
+		}
+	}
+	e.st.Hooks[a.HookKey] = a.Hash
+	return nil
+}

@@ -25,6 +25,9 @@ const RootCommand = "__root"
 // request is what the user process sends to the root process on stdin.
 type request struct {
 	Root    string         `json:"root"`
+	Repo    string         `json:"repo"`
+	User    string         `json:"user"`
+	Home    string         `json:"home"`
 	Actions []*plan.Action `json:"actions"`
 	// Snapper: "pre" takes the pre snapshot before the actions; a non-zero
 	// PreNumber takes the matching post snapshot after them.
@@ -54,40 +57,39 @@ func Apply(p *plan.Plan, out io.Writer) error {
 	snap := p.HasRoot() && p.Root == "" && snapperConfigured()
 	pre := 0
 	if len(byPhase[plan.PhasePackages]) > 0 || snap {
-		res, err := runRoot(request{Root: p.Root, Actions: byPhase[plan.PhasePackages], Snapper: snap}, out)
+		res, err := runRoot(request{Root: p.Root, Repo: p.Repo, User: p.User, Home: p.Home, Actions: byPhase[plan.PhasePackages], Snapper: snap}, out)
 		if err != nil {
 			return err
 		}
 		pre = res.PreNumber
 	}
+	// AUR packages and local builds, as the user: they record into the home
+	// state, saved at once in case a later phase fails.
 	if aur := byPhase[plan.PhaseAUR]; len(aur) > 0 {
-		e := &env{root: p.Root, st: state.New(), out: out}
-		for _, a := range aur {
-			fmt.Fprintf(out, "==> yay -S %s\n", strings.Join(a.Names, " "))
-			if err := e.do(a); err != nil {
-				return err
-			}
+		if err := runUser(p, aur, out, false); err != nil {
+			return err
 		}
 	}
 	if len(byPhase[plan.PhaseSystem]) > 0 || pre > 0 {
-		if _, err := runRoot(request{Root: p.Root, Actions: byPhase[plan.PhaseSystem], PreNumber: pre}, out); err != nil {
+		if _, err := runRoot(request{Root: p.Root, Repo: p.Repo, User: p.User, Home: p.Home, Actions: byPhase[plan.PhaseSystem], PreNumber: pre}, out); err != nil {
 			return err
 		}
 	}
 	if home := byPhase[plan.PhaseHome]; len(home) > 0 {
-		return runHome(p, home, out)
+		return runUser(p, home, out, true)
 	}
 	return nil
 }
 
-// runHome carries out the home phase as the user, and saves the home state.
-func runHome(p *plan.Plan, actions []*plan.Action, out io.Writer) error {
+// runUser carries out user actions, and saves the home state (and, after
+// the home phase, the KDE snapshot).
+func runUser(p *plan.Plan, actions []*plan.Action, out io.Writer, snapshot bool) error {
 	path := p.Root + filepath.Join(p.Home, state.HomePath)
 	st, err := state.Load(path)
 	if err != nil {
 		return err
 	}
-	e := &env{root: p.Root, home: p.Home, st: st, out: out}
+	e := &env{root: p.Root, user: p.User, repo: p.Repo, home: p.Home, st: st, out: out}
 	if os.Geteuid() == 0 { // install, or a container: home files go to the user
 		u, err := user.Lookup(p.User)
 		if err != nil {
@@ -100,6 +102,9 @@ func runHome(p *plan.Plan, actions []*plan.Action, out io.Writer) error {
 	runErr := runAll(e, actions, out)
 	if err := st.Save(path); err != nil {
 		return errors.Join(runErr, err)
+	}
+	if !snapshot {
+		return runErr
 	}
 	// The KDE snapshot kde review compares with.
 	snapPath := p.Root + filepath.Join(p.Home, kdesnap.Path)
@@ -133,6 +138,8 @@ func label(a *plan.Action) string {
 		return string(a.Op) + " " + a.User
 	case a.Display != "":
 		return string(a.Op) + " " + a.Display
+	case a.Module != "":
+		return string(a.Op) + " " + a.Module
 	case len(a.Names) > 0:
 		return string(a.Op) + " " + strings.Join(a.Names, " ")
 	case a.Unit != "":
@@ -202,7 +209,7 @@ func rootRun(req request, out io.Writer) (*result, error) {
 	if err != nil {
 		return res, err
 	}
-	e := &env{root: req.Root, st: st, out: out}
+	e := &env{root: req.Root, repo: req.Repo, user: req.User, home: req.Home, st: st, out: out}
 	runErr := runAll(e, req.Actions, out)
 	if len(req.Actions) > 0 {
 		if err := st.Save(path); err != nil {

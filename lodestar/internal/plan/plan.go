@@ -16,6 +16,7 @@ import (
 	"syscall"
 
 	"github.com/romain-ncls/dotfiles/lodestar/internal/config"
+	"github.com/romain-ncls/dotfiles/lodestar/internal/limine"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/machine"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/render"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/state"
@@ -57,6 +58,10 @@ const (
 	OpForget          Op = "forget"           // stop managing Path or KDEID, changed on the machine
 	OpKDE             Op = "kde"              // set (or Delete) KDEFile/KDEGroup/KDEKey to Value
 	OpKDEList         Op = "kde-list"         // rewrite the list of List in KDEFile as Entries
+	OpJSON            Op = "json"             // write Content (the merged JSON) to Path
+	OpHook            Op = "hook"             // run Command in Dir; record Hash under HookKey
+	OpBuild           Op = "build"            // build and install the local package of Module
+	OpLimine          Op = "limine"           // merge Value (the repo part) into /boot/limine.conf
 )
 
 // Action is one change. It travels as JSON to the root process.
@@ -95,6 +100,16 @@ type Action struct {
 	List     string              `json:"list,omitempty"` // breeze or kwinrules
 	Entries  []map[string]string `json:"entries,omitempty"`
 
+	Dir     string `json:"dir,omitempty"` // hook: where it runs; build: the PKGBUILD's folder
+	Hash    string `json:"hash,omitempty"`
+	HookKey string `json:"hook_key,omitempty"`
+	Always  bool   `json:"always,omitempty"` // a hook run on every apply
+	Module  string `json:"module,omitempty"`
+	Git     string `json:"git,omitempty"` // build: fetch Ref of Git first
+	Ref     string `json:"ref,omitempty"`
+	PkgPath string `json:"pkg_path,omitempty"`
+	Commit  string `json:"commit,omitempty"`
+
 	From   string `json:"from,omitempty"`
 	Why    string `json:"why,omitempty"`
 	Secret bool   `json:"secret,omitempty"`
@@ -103,6 +118,7 @@ type Action struct {
 
 // Plan is the list of actions, in order.
 type Plan struct {
+	Repo    string // the repo the config comes from
 	Root    string // prefix of the machine's filesystem ("" on a running system)
 	Home    string // the user's home
 	User    string
@@ -110,6 +126,9 @@ type Plan struct {
 	Notes   []string
 	// Desired is every managed path and what lodestar should record for it.
 	Desired map[string]state.File
+	// LocalNames are the names of every local package (drift counts them
+	// as declared, upgrade keeps yay away from them).
+	LocalNames []string
 }
 
 // Input is what a plan is computed from.
@@ -124,12 +143,17 @@ type Input struct {
 	// IDs resolves a user and a group name ("" for none) to ids; -1 when
 	// unknown. Default: the running system's accounts.
 	IDs func(user, group string) (uid, gid int)
+	// Rebuild lists local packages to rebuild whatever their hash says
+	// (lodestar upgrade: a library they use changed).
+	Rebuild map[string]bool
+	// Offline skips what needs the network (git ls-remote).
+	Offline bool
 }
 
 // Compute builds the plan.
 func Compute(in Input) (*Plan, error) {
 	c := in.Config
-	p := &Plan{Root: in.Root, User: c.User.Name, Desired: map[string]state.File{}}
+	p := &Plan{Repo: c.Repo, Root: in.Root, User: c.User.Name, Desired: map[string]state.File{}}
 
 	u, err := in.Machine.User(c.User.Name)
 	if err != nil {
@@ -161,6 +185,7 @@ func Compute(in Input) (*Plan, error) {
 		}
 	}
 	errs = append(errs, p.removals(in, in.System, config.System))
+	errs = append(errs, p.limine(in))
 	p.followUps(in, PhaseSystem)
 	errs = append(errs, p.units(in, false), p.units(in, true))
 	p.user(in, u)
@@ -171,9 +196,11 @@ func Compute(in Input) (*Plan, error) {
 		}
 	}
 	errs = append(errs, p.kde(in))
+	errs = append(errs, p.json(in))
 	errs = append(errs, p.removals(in, in.HomeSt, config.Home))
 	p.followUps(in, PhaseHome)
 	p.startUserUnits(in)
+	errs = append(errs, p.hooks(in))
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
 	}
@@ -188,8 +215,11 @@ func (p *Plan) note(format string, args ...any) {
 	p.Notes = append(p.Notes, fmt.Sprintf(format, args...))
 }
 
-// Empty tells whether there is nothing to do.
-func (p *Plan) Empty() bool { return len(p.Actions) == 0 }
+// Empty tells whether there is nothing to do, apart from the hooks that run
+// on every apply.
+func (p *Plan) Empty() bool {
+	return !slices.ContainsFunc(p.Actions, func(a *Action) bool { return !a.Always })
+}
 
 // HasRoot tells whether some action needs root.
 func (p *Plan) HasRoot() bool {
@@ -209,7 +239,7 @@ func (p *Plan) packages(in Input) error {
 	if err != nil {
 		return err
 	}
-	var repo, aur, explicit, missingLocal []string
+	var repo, aur, explicit []string
 	var repos map[string]bool
 	for _, it := range in.Config.Packages {
 		pkg, ok := installed[it.Name]
@@ -230,12 +260,8 @@ func (p *Plan) packages(in Input) error {
 			}
 		}
 	}
-	for _, lp := range in.Config.LocalPackages {
-		for _, n := range lp.Names {
-			if _, ok := installed[n]; !ok {
-				missingLocal = append(missingLocal, n)
-			}
-		}
+	if err := p.localPackages(in, installed); err != nil {
+		return err
 	}
 	if len(repo) > 0 {
 		p.add(&Action{Op: OpInstall, Phase: PhasePackages, Names: repo})
@@ -245,9 +271,6 @@ func (p *Plan) packages(in Input) error {
 	}
 	if len(aur) > 0 {
 		p.add(&Action{Op: OpInstallAUR, Phase: PhaseAUR, Names: aur})
-	}
-	if len(missingLocal) > 0 {
-		p.note("local packages not built yet (lodestar builds them in a later version): %s", strings.Join(missingLocal, ", "))
 	}
 	return nil
 }
@@ -564,14 +587,17 @@ func (p *Plan) startUserUnits(in Input) {
 	}
 }
 
+// user plans the account. It comes with the packages, before the builds
+// that run as the user (and after the packages that bring its shell and
+// groups).
 func (p *Plan) user(in Input, u *machine.User) {
 	want := in.Config.User
 	if u == nil {
-		p.add(&Action{Op: OpCreateUser, Phase: PhaseSystem, User: want.Name, Shell: want.Shell, Names: want.Groups, Why: "new"})
+		p.add(&Action{Op: OpCreateUser, Phase: PhasePackages, User: want.Name, Shell: want.Shell, Names: want.Groups, Why: "new"})
 		return
 	}
 	if want.Shell != "" && u.Shell != want.Shell {
-		p.add(&Action{Op: OpSetShell, Phase: PhaseSystem, User: want.Name, Shell: want.Shell, Why: u.Shell + " → " + want.Shell})
+		p.add(&Action{Op: OpSetShell, Phase: PhasePackages, User: want.Name, Shell: want.Shell, Why: u.Shell + " → " + want.Shell})
 	}
 	var missing []string
 	for _, g := range want.Groups {
@@ -580,7 +606,7 @@ func (p *Plan) user(in Input, u *machine.User) {
 		}
 	}
 	if len(missing) > 0 {
-		p.add(&Action{Op: OpAddGroups, Phase: PhaseSystem, User: want.Name, Names: missing})
+		p.add(&Action{Op: OpAddGroups, Phase: PhasePackages, User: want.Name, Names: missing})
 	}
 }
 
@@ -603,4 +629,42 @@ func systemIDs(owner, group string) (uid, gid int) {
 		gid, _ = strconv.Atoi(g.Gid)
 	}
 	return uid, gid
+}
+
+// limine plans the merge of the hand-written part of /boot/limine.conf.
+func (p *Plan) limine(in Input) error {
+	if in.Config.Limine == "" {
+		return nil
+	}
+	repo, err := os.ReadFile(in.Config.Limine)
+	if err != nil {
+		return err
+	}
+	a := &Action{Op: OpLimine, Phase: PhaseSystem, Value: string(repo), Hash: state.Hash(repo),
+		HookKey: "limine.conf", From: "host " + in.Config.Host}
+	live, err := os.ReadFile(in.Root + "/boot/limine.conf")
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		p.note("/boot/limine.conf does not exist: boot.limine is left for the installer")
+		return nil
+	case errors.Is(err, fs.ErrPermission):
+		if in.System.Hooks[a.HookKey] == a.Hash {
+			return nil
+		}
+		a.Why = "can't read /boot without root"
+	case err != nil:
+		return err
+	default:
+		merged := limine.Merge(string(repo), string(live))
+		if merged == string(live) {
+			if in.System.Hooks[a.HookKey] != a.Hash {
+				a.Op, a.Why = OpAdopt, "already matches"
+				p.add(a)
+			}
+			return nil
+		}
+		a.Why, a.Old, a.Content = "differs", live, []byte(merged)
+	}
+	p.add(a)
+	return nil
 }

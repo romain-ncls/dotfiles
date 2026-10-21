@@ -124,13 +124,13 @@ services:
 	want := []string{
 		"install htop",
 		"explicit git installed as a dependency, now declared",
+		"shell romain /bin/bash → /usr/bin/fish",
+		"groups docker",
 		"install-aur yay-bin",
 		"adopt /etc/hostname already matches",
 		"write /etc/locale.gen new",
 		"run locale-gen after /etc/locale.gen",
 		"enable bluetooth.service",
-		"shell romain /bin/bash → /usr/bin/fish",
-		"groups docker",
 		"write ~/.config/fish/a.fish new",
 		"write ~/.gitconfig new",
 	}

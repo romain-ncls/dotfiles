@@ -58,7 +58,7 @@ func TestFind(t *testing.T) {
 		Global: map[string]machine.Unit{},
 		Users:  map[string]*machine.User{"romain": {Groups: []string{"romain", "wheel", "video"}, PrimaryGroup: "romain"}},
 	}
-	p := &plan.Plan{Desired: map[string]state.File{"/etc/declared.conf": {}}}
+	p := &plan.Plan{Desired: map[string]state.File{"/etc/declared.conf": {}}, LocalNames: []string{"mytool"}}
 
 	r, err := Find(c, m, p, root)
 	if err != nil {

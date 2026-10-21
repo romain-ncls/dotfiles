@@ -1,0 +1,41 @@
+packages:
+  - kconfig # kwriteconfig6
+kde:
+  kwinrc:
+    Windows:
+      Placement: Centered
+      RollOverDesktops: false
+    Effect-blur:
+      BlurStrength: 11
+  powerdevilrc:
+    AC/Display:
+      DimDisplayWhenIdle: false
+breeze-exceptions:
+  - ExceptionPattern: mpv
+    ExceptionType: 0
+    HideTitleBar: true
+window-rules:
+  - Description: Discord on all activities
+    wmclass: discord
+    wmclassmatch: 1
+shortcuts:
+  - name: Mute
+    keys: Meta+M
+    run: echo mute | logger
+  - component: kwin
+    action: Window Maximize
+    keys:
+      - Meta+Up
+json:
+  - path: ~/.config/app/settings.json
+    merge: app.json
+hooks:
+  - run: hello.sh
+  - run: echo "$(whoami)" > /root/root-hook-ran
+    as: root
+firewall:
+  tcp:
+    - 1714-1764
+  udp:
+    - 1714-1764
+    - 5353

@@ -49,6 +49,9 @@ var builtinIgnores = []string{
 	"/etc/machine-id", "/etc/ld.so.cache", "/etc/adjtime", "/etc/.pwd.lock", "/etc/.updated",
 	"/etc/pacman.d/gnupg/*", "/etc/ssl/certs/*", "/etc/ca-certificates/extracted/*",
 	"/etc/udev/hwdb.bin", "/etc/*.lodestar",
+	"/etc/fonts/conf.d/*",        // links made by fontconfig's pacman hook
+	"/etc/xml/catalog",           // written by package hooks
+	"/etc/mkinitcpio.d/*.preset", // written by mkinitcpio for each kernel
 }
 
 // Find builds the report. p is the plan for the same config and machine.
@@ -63,10 +66,8 @@ func Find(c *config.Config, m machine.Machine, p *plan.Plan, root string) (*Repo
 	for _, it := range c.Packages {
 		declared[it.Name] = true
 	}
-	for _, lp := range c.LocalPackages {
-		for _, n := range lp.Names {
-			declared[n] = true
-		}
+	for _, n := range p.LocalNames {
+		declared[n] = true
 	}
 	for name, pkg := range installed {
 		if pkg.Explicit && !declared[name] {
