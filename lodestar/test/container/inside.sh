@@ -24,7 +24,10 @@ say "first plan"
 ls_ plan
 ls_ check
 
-say "apply"
+say "apply, the system part first as lodestar install does"
+ls_ apply --system --yes
+[[ $(stat -c %U /home/romain/.local/state/lodestar) == romain ]] || fail "home state folder owner after --system"
+ok "home state of the builds belongs to romain"
 ls_ apply --yes
 
 say "checks"

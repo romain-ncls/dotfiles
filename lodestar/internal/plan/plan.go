@@ -106,12 +106,12 @@ type Action struct {
 	Always  bool   `json:"always,omitempty"` // a hook run on every apply
 	// LiveOnly: a command for running daemons (udev, sysctl), skipped in a
 	// chroot during an install.
-	LiveOnly bool `json:"live_only,omitempty"`
-	Module  string `json:"module,omitempty"`
-	Git     string `json:"git,omitempty"` // build: fetch Ref of Git first
-	Ref     string `json:"ref,omitempty"`
-	PkgPath string `json:"pkg_path,omitempty"`
-	Commit  string `json:"commit,omitempty"`
+	LiveOnly bool   `json:"live_only,omitempty"`
+	Module   string `json:"module,omitempty"`
+	Git      string `json:"git,omitempty"` // build: fetch Ref of Git first
+	Ref      string `json:"ref,omitempty"`
+	PkgPath  string `json:"pkg_path,omitempty"`
+	Commit   string `json:"commit,omitempty"`
 
 	From   string `json:"from,omitempty"`
 	Why    string `json:"why,omitempty"`

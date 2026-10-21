@@ -103,23 +103,31 @@ func runUser(p *plan.Plan, actions []*plan.Action, out io.Writer, snapshot bool)
 	if err := st.Save(path); err != nil {
 		return errors.Join(runErr, err)
 	}
+	e.giveTreeToUser(p.Root+p.Home, path)
 	if !snapshot {
 		return runErr
 	}
 	// The KDE snapshot kde review compares with.
 	snapPath := p.Root + filepath.Join(p.Home, kdesnap.Path)
 	if snap, err := kdesnap.Take(p.Root + filepath.Join(p.Home, ".config")); err == nil {
-		if err := snap.Save(snapPath); err == nil && e.owner != nil {
-			os.Chown(snapPath, e.owner.uid, e.owner.gid)
+		if err := snap.Save(snapPath); err == nil {
+			e.giveTreeToUser(p.Root+p.Home, snapPath)
 		}
-	}
-	if e.owner != nil {
-		for d := filepath.Dir(path); strings.HasPrefix(d, p.Root+p.Home+"/"); d = filepath.Dir(d) {
-			os.Chown(d, e.owner.uid, e.owner.gid)
-		}
-		os.Chown(path, e.owner.uid, e.owner.gid)
 	}
 	return runErr
+}
+
+// giveTreeToUser hands a file written as root in the user's home to the
+// user, with the folders between it and the home: the user's next apply
+// writes there.
+func (e *env) giveTreeToUser(home, path string) {
+	if e.owner == nil {
+		return
+	}
+	for d := filepath.Dir(path); strings.HasPrefix(d, home+"/"); d = filepath.Dir(d) {
+		os.Chown(d, e.owner.uid, e.owner.gid)
+	}
+	os.Chown(path, e.owner.uid, e.owner.gid)
 }
 
 func runAll(e *env, actions []*plan.Action, out io.Writer) error {
@@ -134,6 +142,10 @@ func runAll(e *env, actions []*plan.Action, out io.Writer) error {
 
 func label(a *plan.Action) string {
 	switch {
+	case a.Op == plan.OpKDE:
+		return "kde " + a.KDEFile + " [" + strings.Join(a.KDEGroup, "][") + "] " + a.KDEKey
+	case a.Op == plan.OpHook:
+		return "hook " + a.Command
 	case a.User != "":
 		return string(a.Op) + " " + a.User
 	case a.Display != "":
