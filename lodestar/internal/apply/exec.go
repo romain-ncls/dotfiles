@@ -85,13 +85,18 @@ func (e *env) do(a *plan.Action) error {
 		return e.writeJSON(a)
 	case plan.OpLimine:
 		return e.limine(a)
-	case plan.OpWrite:
-		if err := e.write(a); err != nil {
-			return err
+	case plan.OpWrite, plan.OpLink:
+		write := e.write
+		if a.Op == plan.OpLink {
+			write = e.link
 		}
-		e.record(a)
-	case plan.OpLink:
-		if err := e.link(a); err != nil {
+		err := write(a)
+		if errors.Is(err, syscall.EBUSY) {
+			// arch-chroot bind-mounts the live system's /etc/resolv.conf
+			fmt.Fprintf(e.out, "    %s is a mount point here: left as it is (the installer writes it afterwards)\n", a.Display)
+			return nil
+		}
+		if err != nil {
 			return err
 		}
 		e.record(a)

@@ -20,7 +20,10 @@ func (e *env) asUser(needsSudo bool, args ...string) error {
 	}
 	if needsSudo {
 		rule := e.root + "/etc/sudoers.d/00-lodestar-build"
-		if err := os.WriteFile(rule, []byte(e.user+" ALL=(ALL:ALL) NOPASSWD: ALL\n"), 0o440); err != nil {
+		// SYSTEMD_IN_CHROOT (set by arch-chroot) tells pacman's hooks that
+		// nothing runs here; sudo would drop it.
+		content := "Defaults env_keep += \"SYSTEMD_IN_CHROOT\"\n" + e.user + " ALL=(ALL:ALL) NOPASSWD: ALL\n"
+		if err := os.WriteFile(rule, []byte(content), 0o440); err != nil {
 			return err
 		}
 		defer os.Remove(rule) // whatever happens to the command

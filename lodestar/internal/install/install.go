@@ -84,6 +84,7 @@ func Run(o Options) error {
 		{"The system (lodestar apply)", in.apply},
 		{"Limine", in.limine},
 		{"Passwords and remote", in.finishUser},
+		{"Links arch-chroot mounted over", in.hiddenLinks},
 		{"Unmounting", in.unmount},
 	}
 	for _, s := range steps {
@@ -506,4 +507,25 @@ func askTwice(what string) (string, error) {
 			return a, nil
 		}
 	}
+}
+
+// hiddenLinks writes the links lodestar could not write in the chroot,
+// where arch-chroot bind-mounts the live system's /etc/resolv.conf. The
+// first apply on the new system then finds them right.
+func (in *installer) hiddenLinks() error {
+	for _, f := range in.c.Files {
+		if f.Target != "/etc/resolv.conf" || f.Link == "" {
+			continue
+		}
+		path := filepath.Join(target, f.Target)
+		if cur, err := os.Readlink(path); err == nil && cur == f.Link {
+			continue
+		}
+		os.Remove(path)
+		if err := os.Symlink(f.Link, path); err != nil {
+			return err
+		}
+		fmt.Fprintf(in.Out, "    %s → %s\n", f.Target, f.Link)
+	}
+	return nil
 }
