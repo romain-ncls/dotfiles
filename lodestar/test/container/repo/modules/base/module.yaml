@@ -1,0 +1,9 @@
+packages:
+  - sudo
+  - fish
+services:
+  - fstrim.timer
+files:
+  /etc/sudoers.d/10-wheel:
+    mode: 0440
+    check: visudo -cf {}

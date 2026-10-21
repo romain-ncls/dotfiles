@@ -66,7 +66,12 @@ func (r *Renderer) Render(path string) (out []byte, secret bool, err error) {
 		return nil, false, err
 	}
 	funcs := template.FuncMap{
-		"fact": r.facts.Fact,
+		"fact": func(name string) (string, error) {
+			if r.facts == nil {
+				return "", errors.New("facts are not available here")
+			}
+			return r.facts.Fact(name)
+		},
 		"file": func(p string) (string, error) {
 			data, err := os.ReadFile(r.root + r.expand(p))
 			if errors.Is(err, fs.ErrNotExist) {

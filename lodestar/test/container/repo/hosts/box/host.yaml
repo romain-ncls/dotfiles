@@ -1,0 +1,8 @@
+modules:
+  - base
+  - shell
+user:
+  name: romain
+  shell: /usr/bin/fish
+  groups:
+    - wheel

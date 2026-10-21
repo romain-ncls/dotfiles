@@ -11,9 +11,13 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/romain-ncls/dotfiles/lodestar/internal/apply"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/config"
+	"github.com/romain-ncls/dotfiles/lodestar/internal/machine"
+	"github.com/romain-ncls/dotfiles/lodestar/internal/plan"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/render"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/schema"
+	"github.com/romain-ncls/dotfiles/lodestar/internal/ui"
 )
 
 type command struct {
@@ -22,7 +26,9 @@ type command struct {
 }
 
 var commands = map[string]command{
+	"apply":  {"make the machine match the repo", cmdApply},
 	"check":  {"validate a host's config without reading the machine", cmdCheck},
+	"plan":   {"show what apply would change", cmdPlan},
 	"schema": {"regenerate the JSON Schemas in schema/", cmdSchema},
 }
 
@@ -30,6 +36,7 @@ var commands = map[string]command{
 type options struct {
 	repo string
 	host string
+	yes  bool
 }
 
 func usage() {
@@ -45,6 +52,13 @@ func usage() {
 }
 
 func main() {
+	if len(os.Args) == 2 && os.Args[1] == apply.RootCommand {
+		if err := apply.RootMain(); err != nil {
+			fmt.Fprintln(os.Stderr, "lodestar (root):", err)
+			os.Exit(1)
+		}
+		return
+	}
 	if len(os.Args) < 2 || os.Args[1] == "-h" || os.Args[1] == "--help" || os.Args[1] == "help" {
 		usage()
 		os.Exit(2)
@@ -60,6 +74,7 @@ func main() {
 	fs := flag.NewFlagSet("lodestar "+os.Args[1], flag.ExitOnError)
 	fs.StringVar(&o.repo, "repo", "", "the dotfiles repo (default $LODESTAR_REPO, then ~/dotfiles)")
 	fs.StringVar(&o.host, "host", "", "the host to use (default: this machine's hostname)")
+	fs.BoolVar(&o.yes, "yes", false, "apply without asking")
 	fs.Parse(os.Args[2:])
 
 	if err := cmd.run(o, fs.Args()); err != nil {
@@ -163,5 +178,56 @@ func checkTemplates(c *config.Config) error {
 	if len(errs) > 0 {
 		return errors.New(strings.Join(errs, "\n"))
 	}
+	return nil
+}
+
+func (o *options) plan() (*plan.Plan, error) {
+	c, err := o.load()
+	if err != nil {
+		return nil, err
+	}
+	return plan.Compute(plan.Input{
+		Config:  c,
+		Machine: machine.Local{},
+		Facts:   &render.MachineFacts{},
+		Secrets: &render.Bitwarden{Interactive: ui.IsTerminal(os.Stdin)},
+	})
+}
+
+func style() ui.Style {
+	return ui.Style{Color: ui.IsTerminal(os.Stdout) && os.Getenv("NO_COLOR") == ""}
+}
+
+func cmdPlan(o *options, args []string) error {
+	p, err := o.plan()
+	if err != nil {
+		return err
+	}
+	if p.Empty() {
+		fmt.Println("Nothing to do: the machine matches the repo.")
+		return nil
+	}
+	ui.PrintPlan(os.Stdout, p, style())
+	return nil
+}
+
+func cmdApply(o *options, args []string) error {
+	p, err := o.plan()
+	if err != nil {
+		return err
+	}
+	if p.Empty() {
+		fmt.Println("Nothing to do: the machine matches the repo.")
+		return nil
+	}
+	ui.PrintPlan(os.Stdout, p, style())
+	fmt.Println()
+	if !o.yes && !ui.Confirm("Apply?") {
+		return exitError(1)
+	}
+	if err := apply.Apply(p, os.Stdout); err != nil {
+		return err
+	}
+	fmt.Println(style().Green("Done."))
 	return nil
 }
