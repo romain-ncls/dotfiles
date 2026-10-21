@@ -79,6 +79,7 @@ func (r *Renderer) Render(path string) (out []byte, secret bool, err error) {
 			}
 			return string(data), err
 		},
+		"trim": strings.TrimSpace,
 		"bitwarden": func(item, field string) (string, error) {
 			secret = true
 			if r.secrets == nil {
@@ -113,7 +114,7 @@ func Parse(path string) error {
 	}
 	stub := func(...string) (string, error) { return "", nil }
 	_, err = template.New(filepath.Base(path)).
-		Funcs(template.FuncMap{"fact": stub, "file": stub, "bitwarden": stub}).
+		Funcs(template.FuncMap{"fact": stub, "file": stub, "bitwarden": stub, "trim": strings.TrimSpace}).
 		Parse(string(text))
 	if err != nil {
 		return fmt.Errorf("%s: %w", path, err)

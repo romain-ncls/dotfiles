@@ -1,0 +1,20 @@
+# mpv, with one config shared with Windows: config/ is read in place (a link
+# on Arch, a junction on Windows made by windows/Setup-Mpv.ps1), so edits on
+# either side land in this repo.
+packages:
+  - mpv
+  - qbittorrent
+  - ttf-ms-fonts # Arial, Trebuchet MS: subtitle presets
+
+files:
+  ~/.config/mpv:
+    link: config
+
+breeze-exceptions:
+  # no title bar or border on mpv (matched by window class)
+  - Enabled: true
+    ExceptionType: 0
+    ExceptionPattern: mpv
+    HideTitleBar: true
+    BorderSize: 0
+    Mask: 0

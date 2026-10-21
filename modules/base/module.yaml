@@ -1,0 +1,50 @@
+# Base system: identical on every machine.
+packages:
+  - base
+  - base-devel
+  - linux
+  - linux-headers
+  - linux-firmware
+  - intel-ucode # both machines are Intel
+  - sof-firmware
+  - btrfs-progs
+  - dosfstools
+  - efibootmgr
+  - sudo
+  - man-db
+  - man-pages
+  - vim
+  - fish
+  - git
+  - openssh
+  - networkmanager
+  - iwd
+  - pacman-contrib # paccache
+  - reflector
+  - rebuild-detector # warns when a package needs a rebuild; lodestar upgrade uses it
+  - yay
+
+services:
+  - NetworkManager.service
+  - systemd-timesyncd.service
+  - paccache.timer
+  - reflector.timer
+
+files:
+  /etc/sudoers:
+    mode: 0440
+    check: visudo -cf {}
+
+# Never reported by lodestar drift. Two reasons to be here:
+#  - state, caches or generated files that are not configuration
+#  - secrets: this repo is public, so anything holding a password, hash or
+#    private key is recreated by hand (docs/manual-steps.md)
+ignore:
+  - /etc/ssh/ssh_host_*
+  - /etc/NetworkManager/system-connections/* # Wi-Fi passwords
+  - /etc/credstore*
+  - /etc/pacman.d/mirrorlist # reflector rewrites it
+  - /etc/shells # edited by shell packages' hooks
+  - /etc/os-release
+  - /etc/audisp
+  - /etc/audit/*

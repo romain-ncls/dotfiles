@@ -1,0 +1,13 @@
+# NVIDIA (RTX 3070 Ti). The modules stay out of the initramfs, or resume from
+# hibernation fails (docs/decisions.md, initramfs).
+packages:
+  - nvidia-open-dkms
+  - nvidia-utils
+  - lib32-nvidia-utils
+  - nvidia-settings
+  - egl-wayland
+
+services:
+  - nvidia-suspend.service
+  - nvidia-resume.service
+  - nvidia-hibernate.service

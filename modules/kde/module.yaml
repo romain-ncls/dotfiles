@@ -1,0 +1,28 @@
+# KDE settings shared by every machine. Only keys changed on purpose belong
+# here; KDE writes everything else itself (lodestar kde review shows changes).
+packages:
+  - kconfig # kwriteconfig6, which lodestar writes KDE keys with
+
+kde:
+  kdeglobals:
+    KDE:
+      LookAndFeelPackage: org.kde.breezedark.desktop
+  ksmserverrc:
+    General:
+      loginMode: emptySession
+  konsolerc:
+    KonsoleWindow:
+      ShowMenuBarByDefault: false
+  kxkbrc:
+    Layout:
+      LayoutList: fr
+      Use: true
+  kglobalshortcutsrc:
+    services/org.kde.konsole.desktop:
+      _launch: "Ctrl+Alt+T\tMeta+Return" # both shortcuts start Konsole
+
+hooks:
+  # Flat pointer acceleration for every mouse KDE has seen: KDE stores it per
+  # device, so a new mouse is covered at the next apply.
+  - run: flat-mice
+    when: always

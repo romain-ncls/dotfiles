@@ -14,7 +14,7 @@ scripting it would be riskier than doing it. Do them in order on a new machine.
 ### SSH key (one per machine, never synced)
 ```sh
 ssh-keygen -t ed25519 -C "nicolasromain0+$(hostname)@gmail.com"
-chezmoi apply        # regenerates ~/.config/git/allowed_signers from the new key
+lodestar apply       # regenerates ~/.config/git/allowed_signers from the new key
 ```
 Then on GitHub → Settings → SSH and GPG keys, add `~/.ssh/id_ed25519.pub`
 **twice**: once as an *Authentication key*, once as a *Signing key* (commits
@@ -22,11 +22,11 @@ are SSH-signed). Remove the key of a machine that is retired.
 
 ### Bitwarden CLI
 ```sh
-bw login          # once; afterwards chezmoi runs `bw unlock` itself when a template needs a secret
+bw login          # once; afterwards lodestar runs `bw unlock` itself when a template needs a secret
 ```
 
 ### KDE
-- Log out and back in after the first `just apply-home`: some KWin and
+- Log out and back in after the first `lodestar apply`: some KWin and
   Plasma settings (Xwayland scale, theme) are only fully applied at login.
 
 ### Readest
@@ -48,20 +48,20 @@ bw login          # once; afterwards chezmoi runs `bw unlock` itself when a temp
   `ntfs` driver checks `hiberfil.sys`); resume Windows and shut it down properly.
 
 ### Reboot-to-Arch shortcut on the Windows desktop
-1. Copy `windows/Reboot-to-Arch.ps1` to `C:\Users\nicol\menadion-scripts\`.
+1. Copy `hosts/menadion/windows/Reboot-to-Arch.ps1` to `C:\Users\nicol\menadion-scripts\`.
 2. Right-click the desktop → *New → Shortcut*, location:
    `powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "C:\Users\nicol\menadion-scripts\Reboot-to-Arch.ps1"`
 3. Name it *Reboot into Arch Linux*; icon from `%SystemRoot%\System32\shell32.dll`.
 
 The UAC prompt is the only confirmation; unsaved work is discarded.
 
-### mpv on Windows (shares mpv/ with Arch)
+### mpv on Windows (shares modules/mpv/config/ with Arch)
 ```powershell
 winget install Git.Git
 git clone https://github.com/romain-ncls/dotfiles $HOME\dotfiles
-powershell -ExecutionPolicy Bypass -File $HOME\dotfiles\windows\Setup-Mpv.ps1
+powershell -ExecutionPolicy Bypass -File $HOME\dotfiles\modules\mpv\windows\Setup-Mpv.ps1
 ```
-`%APPDATA%\mpv` becomes a junction to `$HOME\dotfiles\mpv`; the old folder is
+`%APPDATA%\mpv` becomes a junction to `$HOME\dotfiles\modules\mpv\config`; the old folder is
 kept as `mpv.backup-<date>`. Both OSes then read the same files: `git pull`
 before changing the mpv config on one side, commit and push after.
 
@@ -72,8 +72,8 @@ OS that paired it last. Pair in Windows, then give Arch the same key:
    properly; a hibernated Windows may not have written the key to disk yet.
 2. In Arch, with C: mounted on `/mnt/win`:
    ```sh
-   scripts/bt-windows-keys                      # lists what Windows has paired
-   sudo scripts/bt-windows-keys "MX Anywhere"   # writes /var/lib/bluetooth/…/info, restarts bluetooth
+   bt-windows-keys                      # lists what Windows has paired
+   sudo bt-windows-keys "MX Anywhere"   # writes /var/lib/bluetooth/…/info, restarts bluetooth
    ```
 Redo both steps after any re-pairing in Windows. Never pair that channel from
 Arch, because that replaces the key the mouse holds and breaks Windows. The keys stay

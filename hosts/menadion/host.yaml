@@ -1,0 +1,64 @@
+# The home PC: MSI Z690, i9-12900K, RTX 3070 Ti, 4K TV. Dual boot with
+# Windows 11 on a shared ESP; btrfs, snapper, Limine.
+modules:
+  - base
+  - boot
+  - dns
+  - desktop
+  - kde
+  - kdeconnect
+  - mpv
+  - readest
+  - tools
+  - git
+  - claude
+  - docker
+  - logi-wheel
+  - nvidia
+  - krdp
+  - lodestar
+
+vars:
+  name: Romain Nicolas
+  email: nicolasromain0@gmail.com
+
+user:
+  name: romain
+  shell: /usr/bin/fish
+  groups:
+    - wheel
+    - docker
+
+boot:
+  limine: limine.conf # globals and the Windows entry
+
+files:
+  /etc/sudoers.d/50-reboot-to-windows:
+    mode: 0440
+    check: visudo -cf {}
+
+json:
+  # Sizes for the 4K TV, on top of the readest module's settings.
+  - path: ~/.config/com.bilingify.readest/settings.json
+    merge: readest.json
+
+kde:
+  kwinrc:
+    Xwayland:
+      Scale: 2 # 4K TV at 200% (display-scale.sh sets the outputs)
+  # The desktop is on the TV: never lock, dim, blank or suspend on its own.
+  kscreenlockerrc:
+    Daemon:
+      Autolock: false
+      Timeout: 0
+  powerdevilrc:
+    AC/Display:
+      DimDisplayWhenIdle: false
+      DimDisplayIdleTimeoutSec: -1
+      TurnOffDisplayWhenIdle: false
+      TurnOffDisplayIdleTimeoutSec: -1
+    AC/SuspendAndShutdown:
+      AutoSuspendAction: 0
+
+hooks:
+  - run: display-scale.sh

@@ -1,0 +1,5 @@
+# lodestar itself, built from lodestar/ at the root of the repo: an edit to
+# its source rebuilds and reinstalls it at the next apply.
+pkg:
+  watch:
+    - ../../lodestar

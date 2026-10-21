@@ -6,20 +6,20 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 
 ## Tooling
 
-- **chezmoi for `$HOME`, aconfmgr for the system.** chezmoi handles per-machine
-  templates and Bitwarden; aconfmgr's `save` lists every package, `/etc` file
-  and service the repo does not know about, which is what keeps "every change
-  is in the repo" checkable (`just drift`).
+- **lodestar, our own tool, for everything** (since 21 Oct 2026; before, chezmoi
+  for `$HOME` and aconfmgr for the system). The design and its reasons are in
+  [tool-design.md](tool-design.md); `lodestar drift` keeps "every change is in
+  the repo" checkable, without root.
 - **KDE settings as single keys, not files.** Plasma rewrites its rc files on
   every change (window geometry, timestamps, migration markers), so whole files
-  would drift constantly. `home/.kde/*.tsv` holds only the keys changed on
-  purpose; `scripts/kde-config` writes and checks them.
+  would drift constantly. Modules hold only the keys changed on purpose
+  (`kde:`); `lodestar kde review` shows what changed in System Settings.
 - **No secrets in the repo, even encrypted.** The repo is public and git
   history is permanent; an encrypted secret is only safe until its key leaks.
   Secrets stay in Bitwarden and are fetched at apply time.
 - **Official Bitwarden CLI (`bw`) over `rbw`.** `rbw` is faster and has an
-  agent, but it is third-party code handling the master password. chezmoi's
-  `bitwarden.unlock = "auto"` removes most of `bw`'s session-token friction.
+  agent, but it is third-party code handling the master password. lodestar
+  runs `bw unlock` only when a template needs a secret.
 - **SSH keys per machine.** Nothing to restore on a new machine; a lost machine
   means revoking one key.
 
@@ -47,9 +47,9 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   (`Arch-Linux.linux`, `Windows-11`), not the menu title.
 - **`limine.conf` is half generated, half hand-written.** The tools own the
   Arch Linux entry and the Snapshots group; the global options and the Windows
-  entry are ours, kept in `system/limine/home.conf` and merged in by
-  `scripts/limine-conf` (which then runs `limine-update` to re-enroll the hash).
-  `/boot` itself is ignored by aconfmgr because it changes with every snapshot.
+  entry are ours, kept in `hosts/menadion/limine.conf` (`boot.limine`) and
+  merged in by lodestar, which then runs `limine-update` to re-enroll the hash.
+  lodestar never manages `/boot` otherwise: it changes with every snapshot.
 - **Rebuild with `limine-mkinitcpio`**, not `mkinitcpio -P`. The package
   replaces the stock pacman hook, so `/boot/initramfs-linux.img` is never
   updated and plain `mkinitcpio` does not update Limine's entries.
@@ -70,8 +70,8 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 ## Desktop
 
 - **`plasma-meta` stays, so Discover and Flatpak stay installed but unused.**
-  Software comes from pacman and the AUR (yay), which aconfmgr tracks; Flatpaks
-  would live outside `just drift`. `plasma-meta` hard-depends on `discover` and
+  Software comes from pacman and the AUR (yay), which lodestar tracks; Flatpaks
+  would live outside `lodestar drift`. `plasma-meta` hard-depends on `discover` and
   `flatpak-kcm` (which needs `flatpak`), and listing its other dependencies by
   hand would miss components added by later Plasma releases.
   `plasma-meta-deflatpak` (AUR) still depends on `discover`.
@@ -99,7 +99,8 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   (check `journalctl -b | grep 'ignoring bad line'` is empty after editing);
   `nvidia-suspend/hibernate/resume.service` enabled.
 - **Flat mouse acceleration for every mouse.** KDE stores it per device; there
-  is no global switch, so `scripts/flat-mice` writes it for every mouse seen.
+  is no global switch, so `modules/kde/flat-mice` (a hook run on every apply)
+  writes it for every mouse seen.
 - **C: mounted at boot with the new in-kernel `ntfs` driver** (kernel 7.2). It
   mounts a hibernated or dirty volume read-only instead of refusing it. If it
   misbehaves, `ntfs3` is the fallback.
@@ -116,7 +117,7 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 
 ## Logitech mice (logi-wheel)
 
-- **Per-app wheel settings (Options+ style) with our own `pkg/logi-wheel`,
+- **Per-app wheel settings (Options+ style) with our own `modules/logi-wheel`,
   not Solaar or logiops.** Both broke smooth scrolling on the work laptop:
   logiops diverts the wheel and re-emits coarse events, and Solaar re-applies
   the wheel resolution behind the kernel driver. The kernel's
@@ -128,11 +129,14 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 - **A KWin script reports the active window**: on Wayland only the compositor
   knows it. The daemon loads the script over D-Bus at start, so nothing in
   `kwinrc` has to enable it.
-- **Local package rather than files spread across chezmoi and `system/`**:
+- **Local package rather than files spread across the module's trees**:
   binary, user unit, KWin script, udev rule (hidraw `uaccess`) and config all
-  live in one folder and uninstall together. `scripts/local-pkgs` stores a
-  hash of the folder in the package, so editing the config is enough to make
-  `just apply-system` rebuild it; no version bumps.
+  live in one folder and uninstall together. lodestar rebuilds it when
+  `pkg/` changes, so editing the config is enough; no version bumps.
+- **Its name clashes with an AUR package** (`logi-wheel`, a racing-wheel tool,
+  0.42.5 on 21 Oct 2026). Ours is version 1, which counts as newer, and
+  `lodestar upgrade` keeps yay away from local packages; `lodestar check`
+  warns. Renaming it would remove the risk.
 - **Options+ sensitivity uses Options+'s own formula**: threshold =
   50 + round(-0.46 × sensitivity), read from the disassembly of
   `logioptionsplus_agent.exe` (`devio_feature_xsmartshift`); it matches the 10
@@ -142,27 +146,27 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 
 ## mpv
 
-- **One config for Windows and Linux**, at `mpv/` in the repo (not under
-  `home/`, so it has no chezmoi naming and Windows can use it as is). Linux
-  links `~/.config/mpv` to it; Windows junctions `%APPDATA%\mpv` to a clone.
+- **One config for Windows and Linux**, at `modules/mpv/config/` in the repo.
+  Linux links `~/.config/mpv` to it (`link:`); Windows junctions
+  `%APPDATA%\mpv` to a clone (`modules/mpv/windows/Setup-Mpv.ps1`).
   Edits land straight in the git working tree on both sides.
 - **No per-OS copies**: the only OS-specific values (screenshot folder) are
   conditional profiles on mpv's `platform` property at the end of `mpv.conf`.
-- **Fonts**: subtitle presets bring their own fonts in `mpv/fonts` (all freely
+- **Fonts**: subtitle presets bring their own fonts in `config/fonts` (all freely
   redistributable; Roboto Medium is the SubsPlease build, Apache 2.0). Arial and
   Trebuchet MS come from `ttf-ms-fonts` on Linux; the sub-style menu uses the
   bundled Atkinson Hyperlegible Next instead of Segoe UI so it looks the same.
-- **Patched ModernZ**: `mpv/scripts/modernz.lua` carries the sub-style "Aa"
-  button; `mpv/sub-style-modernz-patch.md` explains how to reapply it after
+- **Patched ModernZ**: `config/scripts/modernz.lua` carries the sub-style "Aa"
+  button; `config/sub-style-modernz-patch.md` explains how to reapply it after
   updating ModernZ.
 
 ## Readest
 
 - **Only the keys changed on purpose**, found by diffing Readest's own fresh
   defaults against the Windows `settings.json` (4 Oct 2026). The rest of that
-  file is device ids, sync state and open books. `scripts/readest-config` merges
+  file is device ids, sync state and open books. lodestar merges (`json:`)
   the keys in (only while Readest is closed, or it overwrites them on exit).
-- **Sizes are home-only** (`home.json`): font 40, 144 px margins and the wide
+- **Sizes are home-only** (`hosts/menadion/readest.json`): font 40, 144 px margins and the wide
   text block were tuned for the 4K TV and would be too big on the laptop.
 - **Reading font: Literata** (serif, `ttf-literata`), on trial from 4 Oct 2026
   after a font research round; Lato stays as the sans font. Bookerly was tried
@@ -175,10 +179,10 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 - **KRDP (Plasma's RDP server), logging in with the Linux account** (PAM,
   `SystemUserEnabled`) rather than a separate RDP user, so no password lives in
   KWallet or the repo. Port 3389; there is no firewall to open. Keys in
-  `home/.kde/home.tsv`; the certificate (self-signed, per machine) and the user
-  unit come from `run_onchange_after_45-krdp.sh`.
+  `modules/krdp/module.yaml`; the certificate (self-signed, per machine) comes
+  from its hook, `krdp-cert.sh`.
 - **Linux-account login turned off again** (11 Oct 2026): `SystemUserEnabled`
-  is back at its default (off) and no longer in `home.tsv`. Any RDP user is
+  is back at its default (off) and no longer declared. Any RDP user is
   added by hand in System Settings → Remote Desktop.
 - **Broken with FreeRDP 3.32 in krdp 6.7.5** (4 Oct 2026): FreeRDP now turns on
   extended security, so clients that offer NLA get it, and NLA looks for the
@@ -192,7 +196,7 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 
 - **docker + docker-compose + docker-buildx from the Arch repos**, not Docker
   Desktop. Rootful daemon; the user is in the `docker` group (`useradd` in
-  `install/lib.sh`), which is root-equivalent, accepted on a single-user desktop.
+  `user.groups`), which is root-equivalent, accepted on a single-user desktop.
 - **Socket-activated** (`docker.socket` only): no daemon at boot until something
   uses it. Containers with a restart policy therefore come back only once the
   socket is first hit; enable `docker.service` too if that ever matters.
@@ -203,7 +207,7 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 ## Not in the repo yet
 
 - **VS Code** settings and extensions stay in VS Code Settings Sync for now,
-  until they are cleaned up; then they move here (settings.json via chezmoi,
+  until they are cleaned up; then they move here (settings.json as a home file,
   extension list installed by a run script) and Sync gets turned off. Install
   `visual-studio-code-bin` (AUR, Microsoft build): several extensions are only
   on Microsoft's marketplace.

@@ -1,45 +1,45 @@
 # dotfiles
 
-Complete configuration for my two Arch Linux machines: the home PC (MENADION,
-dual-boot with Windows) and the work PC (LUKS, single boot). Everything that
-can be scripted is here; everything else is in [docs/manual-steps.md](docs/manual-steps.md).
+Complete configuration for my Arch Linux machines: the home PC (`menadion`,
+dual-boot with Windows) and the work laptop (`wandersail`, LUKS). Everything
+that can be scripted is here; everything else is in
+[docs/manual-steps.md](docs/manual-steps.md).
 
-- `$HOME` is managed by [chezmoi](https://chezmoi.io) from `home/`.
-- The system (packages, `/etc`, `/boot`, services) is managed by
-  [aconfmgr](https://github.com/CyberShadow/aconfmgr) from `system/`.
-- [`just`](https://just.systems) wraps both.
+**lodestar** (`lodestar/`, typed `lds`) makes a machine match this repo:
+packages, `/etc`, services, firewall, boot, `$HOME`, KDE settings, and the
+install from the live USB. Its design: [docs/tool-design.md](docs/tool-design.md).
 
 ## Day to day
 
 ```sh
-just diff      # what apply would change
-just apply     # make the machine match the repo (system, then home)
-just drift     # list anything on the machine the repo does not know about
+lds plan       # what apply would change
+lds apply      # make the machine match the repo (asks for the password once)
+lds drift      # what is on the machine but not in the repo
+lds upgrade    # yay -Syu, then rebuild our own packages if needed
+lds kde review # keep, ignore or undo what changed in System Settings
 ```
 
-Change the repo first, then apply. `just drift` should be clean before each commit.
+Change the repo first, then apply. `lds drift` should be clean before each commit.
 
 ## New machine
 
-1. Install Arch from the live USB with `install/` (see [install/README.md](install/README.md)).
-   Work PC: the installer is still to be written, see [install/WORK.md](install/WORK.md).
-2. Boot it, log in, then (the installer already put the repo in `~/dotfiles`):
-   ```sh
-   chezmoi init --source ~/dotfiles   # asks "home" or "work" unless the hostname is menadion
-   just apply
-   ```
-3. Do the manual steps in [docs/manual-steps.md](docs/manual-steps.md)
-   (BIOS, SSH key, Bitwarden login, …).
+From the Arch live USB:
+
+```sh
+loadkeys fr
+iwctl station wlan0 connect "<SSID>"     # or ethernet
+curl -fsSL https://raw.githubusercontent.com/romain-ncls/dotfiles/main/install.sh | bash -s -- <host>
+```
+
+Then the manual steps in [docs/manual-steps.md](docs/manual-steps.md)
+(BIOS, SSH key, Bitwarden login, …).
 
 ## Layout
 
 ```
-home/       chezmoi source for $HOME (.chezmoiroot points here)
-  .kde/     KDE settings as one key per line, per role
-system/     aconfmgr configuration (packages, /etc, /boot, services)
-pkg/        local packages (PKGBUILDs not on the AUR), built by just apply-system
-install/    live-USB install scripts (home done, work: see install/WORK.md)
-scripts/    helpers used by chezmoi and just
-windows/    Windows-side files for the home PC
-docs/       manual steps and design decisions
+hosts/<host>/     host.yaml (modules, user, install settings) and host-only files
+modules/<module>/ module.yaml, and system/ (files for /), home/ (files for $HOME), pkg/ (a local package)
+lodestar/         the tool's Go source
+schema/           JSON Schemas for completion in VS Code (lodestar schema)
+docs/             design, decisions, manual steps
 ```

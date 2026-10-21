@@ -1,0 +1,4 @@
+{{- /* Built from this machine's own key, so `git log --show-signature` verifies locally. */ -}}
+{{- with file "~/.ssh/id_ed25519.pub" -}}
+{{ $.vars.email }} namespaces="git" {{ trim . }}
+{{ end -}}
