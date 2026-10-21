@@ -104,6 +104,9 @@ type Action struct {
 	Hash    string `json:"hash,omitempty"`
 	HookKey string `json:"hook_key,omitempty"`
 	Always  bool   `json:"always,omitempty"` // a hook run on every apply
+	// LiveOnly: a command for running daemons (udev, sysctl), skipped in a
+	// chroot during an install.
+	LiveOnly bool `json:"live_only,omitempty"`
 	Module  string `json:"module,omitempty"`
 	Git     string `json:"git,omitempty"` // build: fetch Ref of Git first
 	Ref     string `json:"ref,omitempty"`
@@ -505,7 +508,8 @@ func (p *Plan) followUps(in Input, phase Phase) {
 		for _, cmd := range followUpsFor(a.Path, p.Home, phase) {
 			if !seen[cmd] {
 				seen[cmd] = true
-				p.add(&Action{Op: OpRun, Phase: phase, Command: cmd, Why: "after " + a.Display})
+				live := strings.HasPrefix(cmd, "udevadm") || strings.HasPrefix(cmd, "sysctl") || strings.HasPrefix(cmd, "systemctl --user")
+				p.add(&Action{Op: OpRun, Phase: phase, Command: cmd, Why: "after " + a.Display, LiveOnly: live})
 			}
 		}
 	}
@@ -667,4 +671,9 @@ func (p *Plan) limine(in Input) error {
 	}
 	p.add(a)
 	return nil
+}
+
+// Only keeps the system part (packages, AUR, system) or the home part.
+func (p *Plan) Only(system bool) {
+	p.Actions = slices.DeleteFunc(p.Actions, func(a *Action) bool { return (a.Phase == PhaseHome) == system })
 }

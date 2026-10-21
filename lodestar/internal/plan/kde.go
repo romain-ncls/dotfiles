@@ -293,11 +293,11 @@ func (p *Plan) kdeFollowUps(lookAndFeel string) {
 		}
 	}
 	if touched["kwinrc"] || touched["kdeglobals"] || touched[BreezeFile] || touched[WindowRules] {
-		p.add(&Action{Op: OpRun, Phase: PhaseHome, Why: "KWin reads its settings again",
+		p.add(&Action{Op: OpRun, Phase: PhaseHome, Why: "KWin reads its settings again", LiveOnly: true,
 			Command: "busctl --user call org.kde.KWin /KWin org.kde.KWin reconfigure >/dev/null 2>&1 || true"})
 	}
 	if touched["kglobalshortcutsrc"] || desktop {
-		p.add(&Action{Op: OpRun, Phase: PhaseHome, Why: "shortcuts are read again",
+		p.add(&Action{Op: OpRun, Phase: PhaseHome, Why: "shortcuts are read again", LiveOnly: true,
 			Command: "kbuildsycoca6 >/dev/null 2>&1; systemctl --user try-restart plasma-kglobalaccel.service 2>/dev/null || true"})
 	}
 }

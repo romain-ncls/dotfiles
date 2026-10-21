@@ -62,6 +62,9 @@ func (e *env) do(a *plan.Action) error {
 	case plan.OpAsExplicit:
 		return e.run(append([]string{"pacman", "-D", "--asexplicit"}, a.Names...)...)
 	case plan.OpInstallAUR:
+		if err := e.bootstrapYay(); err != nil {
+			return err
+		}
 		return e.asUser(true, append([]string{"yay", "-S", "--needed", "--noconfirm"}, a.Names...)...)
 	case plan.OpBuild:
 		return e.build(a)
@@ -124,6 +127,10 @@ func (e *env) do(a *plan.Action) error {
 		}
 		delete(e.st.Files, a.Path)
 	case plan.OpRun:
+		if a.LiveOnly && !e.systemdRunning() {
+			fmt.Fprintln(e.out, "    skipped: nothing runs yet")
+			return nil
+		}
 		return e.run("sh", "-c", a.Command)
 	case plan.OpEnable, plan.OpDisable:
 		verb := "enable"

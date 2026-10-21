@@ -20,6 +20,7 @@ import (
 	"github.com/romain-ncls/dotfiles/lodestar/internal/apply"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/config"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/drift"
+	"github.com/romain-ncls/dotfiles/lodestar/internal/install"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/machine"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/plan"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/render"
@@ -33,7 +34,8 @@ type command struct {
 }
 
 var commands = map[string]command{
-	"apply":   {"make the machine match the repo", cmdApply},
+	"apply":   {"make the machine match the repo (--system or --home: only that part)", cmdApply},
+	"install": {"install a host on a blank disk, from the Arch live USB", cmdInstall},
 	"check":   {"validate a host's config without reading the machine", cmdCheck},
 	"drift":   {"list what is on the machine but not in the repo", cmdDrift},
 	"kde":     {"review: keep, ignore or undo KDE changes; watch: show the keys one change sets", cmdKDE},
@@ -45,10 +47,13 @@ var commands = map[string]command{
 
 // options are the flags every command takes.
 type options struct {
-	repo string
-	host string
-	yes  bool
-	list bool
+	repo   string
+	host   string
+	yes    bool
+	list   bool
+	system bool
+	home   bool
+	disk   string
 }
 
 func usage() {
@@ -88,6 +93,9 @@ func main() {
 	fs.StringVar(&o.host, "host", "", "the host to use (default: this machine's hostname)")
 	fs.BoolVar(&o.yes, "yes", false, "apply without asking")
 	fs.BoolVar(&o.list, "list", false, "kde review: print the changes as YAML instead of asking")
+	fs.BoolVar(&o.system, "system", false, "apply: only packages and the system")
+	fs.BoolVar(&o.home, "home", false, "apply: only $HOME")
+	fs.StringVar(&o.disk, "disk", "", "install: this disk instead of the host's install.disk (tests)")
 	// Flags may come after the arguments too: lodestar kde review --list.
 	var args []string
 	rest := os.Args[2:]
@@ -256,7 +264,21 @@ func cmdApply(o *options, args []string) error {
 	if err != nil {
 		return err
 	}
+	if o.system != o.home {
+		p.Only(o.system)
+	}
 	return applyPlan(o, p)
+}
+
+func cmdInstall(o *options, args []string) error {
+	if len(args) != 1 {
+		return errors.New("usage: lodestar install <host> [--repo DIR] [--disk /dev/…] [--yes]")
+	}
+	repo, err := o.repoDir()
+	if err != nil {
+		return err
+	}
+	return install.Run(install.Options{Repo: repo, Host: args[0], Disk: o.disk, Yes: o.yes, Out: os.Stdout})
 }
 
 func applyPlan(o *options, p *plan.Plan) error {

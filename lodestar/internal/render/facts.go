@@ -1,25 +1,42 @@
 package render
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
 // MachineFacts reads facts with findmnt and lsblk, under root ("" on a
-// running system, /mnt during an install).
+// running system, /mnt during an install). Facts saved by lodestar install
+// (CacheFile) come first: resume-offset needs root to read.
 type MachineFacts struct {
 	Root  string
 	cache map[string]string
 }
 
-var factNames = []string{"root-uuid", "root-luks-uuid", "esp-uuid"}
+// CacheFile holds the facts lodestar install measured on the new disk.
+const CacheFile = "/var/lib/lodestar/facts.json"
+
+var factNames = []string{"root-uuid", "root-luks-uuid", "esp-uuid", "resume-offset"}
+
+func (m *MachineFacts) load() {
+	if m.cache != nil {
+		return
+	}
+	m.cache = map[string]string{}
+	if data, err := os.ReadFile(m.path(CacheFile)); err == nil {
+		json.Unmarshal(data, &m.cache)
+	}
+}
 
 // Fact returns one of: root-uuid (the filesystem mounted at /),
 // root-luks-uuid (the LUKS partition under /), esp-uuid (the filesystem at
 // /boot).
 func (m *MachineFacts) Fact(name string) (string, error) {
+	m.load()
 	if v, ok := m.cache[name]; ok {
 		return v, nil
 	}
@@ -32,6 +49,8 @@ func (m *MachineFacts) Fact(name string) (string, error) {
 		v, err = run("findmnt", "-no", "UUID", "--mountpoint", m.path("/boot"))
 	case "root-luks-uuid":
 		v, err = m.luksUUID()
+	case "resume-offset":
+		v, err = run("btrfs", "inspect-internal", "map-swapfile", "-r", m.path("/swap/swapfile"))
 	default:
 		return "", fmt.Errorf("unknown fact %q (known: %s)", name, strings.Join(factNames, ", "))
 	}
@@ -40,9 +59,6 @@ func (m *MachineFacts) Fact(name string) (string, error) {
 	}
 	if v == "" {
 		return "", fmt.Errorf("fact %s: not found on this machine", name)
-	}
-	if m.cache == nil {
-		m.cache = map[string]string{}
 	}
 	m.cache[name] = v
 	return v, nil

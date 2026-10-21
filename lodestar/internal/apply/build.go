@@ -131,3 +131,24 @@ func (e *env) writeJSON(a *plan.Action) error {
 	}
 	return e.write(a)
 }
+
+// bootstrapYay builds yay from the AUR when it isn't installed yet (a fresh
+// install): yay installs the other AUR packages.
+func (e *env) bootstrapYay() error {
+	if _, err := exec.LookPath("yay"); err == nil {
+		return nil
+	}
+	fmt.Fprintln(e.out, "    yay is not installed yet: building it from the AUR first")
+	src := e.cache("src", "yay")
+	os.RemoveAll(src)
+	if err := e.mkdirs(filepath.Dir(src)); err != nil {
+		return err
+	}
+	if e.owner != nil {
+		os.Chown(filepath.Dir(src), e.owner.uid, e.owner.gid)
+	}
+	if err := e.asUser(false, "git", "clone", "--depth", "1", "https://aur.archlinux.org/yay.git", src); err != nil {
+		return err
+	}
+	return e.asUser(true, "sh", "-c", `cd "$0" && exec makepkg --syncdeps --install --rmdeps --noconfirm`, src)
+}
