@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/romain-ncls/dotfiles/lodestar/internal/limine"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/plan"
@@ -33,13 +34,23 @@ type env struct {
 
 type account struct{ uid, gid int }
 
-// systemdRunning tells whether units can be started now, or only linked.
+// systemdRunning tells whether units can be started now, or only linked:
+// not under a root prefix, not in a chroot (an install), and systemd is PID 1.
 func (e *env) systemdRunning() bool {
-	if e.root != "" {
+	if e.root != "" || inChroot() {
 		return false
 	}
 	_, err := os.Stat("/run/systemd/system")
 	return err == nil
+}
+
+// inChroot tells whether / is not PID 1's root.
+func inChroot() bool {
+	var self, init syscall.Stat_t
+	if syscall.Stat("/", &self) != nil || syscall.Stat("/proc/1/root/.", &init) != nil {
+		return false
+	}
+	return self.Dev != init.Dev || self.Ino != init.Ino
 }
 
 func (e *env) systemctl(args ...string) []string {
@@ -325,7 +336,12 @@ func (e *env) mkdirs(dir string) error {
 		}
 		missing = append(missing, d)
 	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	// Folders made in $HOME are private, as gpg and ssh require for theirs.
+	perm := fs.FileMode(0o755)
+	if e.home != "" && strings.HasPrefix(dir+"/", e.root+e.home+"/") {
+		perm = 0o700
+	}
+	if err := os.MkdirAll(dir, perm); err != nil {
 		return err
 	}
 	if e.owner != nil {

@@ -511,31 +511,40 @@ lodestar then does the rest:
 1. **Checks.** lodestar checks that it is on the live USB, booted in UEFI mode,
    with a network connection. The disk must be the one named in
    `install.disk`. It shows the disk and asks you to type the hostname.
-2. **Disk (wandersail).**
+2. **Passwords, all at once.** The disk passphrase and your password (root
+   gets the same), each typed twice. The rest runs unattended.
+3. **Disk (wandersail).**
    - A GPT partition table.
    - A 4 GiB FAT32 ESP mounted at `/boot`. Limine reads only FAT, so kernels and
      snapshot kernels live there.
-   - The rest as LUKS2, which asks for the passphrase. Inside it, btrfs with the
-     subvolumes `@`, `@home`, `@snapshots`, `@var_log`, `@var_cache`,
-     `@var_tmp`, `@var_lib_docker` and `@swap`. `@swap` holds a 32 GiB swapfile
-     for hibernation.
-3. **Packages.** `pacstrap` installs the host's repo packages.
-4. **System.** This is the same code as step 6 of `apply`, aimed at `/mnt`:
-   files, units (`systemctl --root`), user and groups.
-   - Facts come from the new disk, so `fstab` and the kernel command line
-     (`rd.luks.name=…`, `resume_offset=…`) are right the first time.
+   - The rest as LUKS2. Inside it, btrfs with the subvolumes `@`, `@home`,
+     `@snapshots`, `@var_log`, `@var_cache`, `@var_tmp`, `@var_lib_docker`
+     and `@swap`. `@swap` holds a 32 GiB swapfile for hibernation.
+4. **Facts.** The UUIDs and the swapfile's resume offset are measured on the
+   new disk and saved in `/var/lib/lodestar/facts.json`, so `fstab` and the
+   kernel command line (`rd.luks.name=…`, `resume_offset=…`) are right the
+   first time, and later plans read the offset without root.
+5. **Packages.** `pacstrap` installs the host's repo packages (with the repo's
+   `pacman.conf`, for multilib).
+6. **User, repo, snapper.** The user is created and the clone, with its
+   history, is copied to `~/dotfiles`; links into the repo then point where
+   it stays. Snapper's config is made, with `@snapshots` in place of its own
+   subvolume.
+7. **lodestar apply, inside the new system.** `arch-chroot` runs
+   `lodestar apply --system`: the same code as on a running system, so the
+   install is the plan of an empty machine. AUR and local packages are
+   built as your user with a temporary sudo rule, removed whatever happens;
+   yay is built first. The home part waits for the first login, where
+   Plasma runs.
    - The initramfs gets the French keymap, so the passphrase prompt uses
      AZERTY.
-5. **AUR and local packages.** These are built in the chroot as your user, with
-   a temporary sudo rule that is removed whatever happens (as today).
-6. **Boot.** Snapper is configured on `@snapshots`, then Limine is installed
-   and its config enrolled.
-7. **Passwords and repo.** lodestar asks for your password and root's, and copies
-   the clone, with its history, to `~/dotfiles`. Its remote is switched to the
-   SSH URL, so pushing works once your key is set up.
-8. **First boot.** Reboot, type the LUKS passphrase and log in. Run
-   `lodestar apply` for the home side; it asks for the Bitwarden master password
-   once. Then restore data from the backup.
+8. **Boot.** `limine-install`, `limine-mkinitcpio`, then a second apply that
+   merges the hand-written part of `limine.conf` and enrolls its hash.
+9. **Passwords and remote.** The passwords are set, and the clone's remote is
+   switched to the SSH URL, so pushing works once your key is set up.
+10. **First boot.** Reboot, type the LUKS passphrase and log in. Run
+    `lodestar apply` for the home side; it asks for the Bitwarden master
+    password once. Then restore data from the backup.
 
 You type only passwords: the LUKS passphrase, your user and root passwords,
 the Bitwarden master password, and restic's. Rerunning the install is safe:

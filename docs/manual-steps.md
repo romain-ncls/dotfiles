@@ -84,3 +84,33 @@ pairing on another channel is a separate entry: `bluetoothctl remove <addr>`.
 ### Windows boot logo
 If the Windows boot animation looks stretched, from an elevated prompt:
 `bcdedit /set {globalsettings} highestmode on`.
+
+## Work laptop (wandersail) only
+
+### First boot after `lodestar install`
+1. Type the disk passphrase, then log in to Plasma.
+2. `lodestar apply`: the home part (KDE settings, shortcuts, home files).
+   It asks for the password once.
+3. Restore data from the backup with the drive's menu script
+   (`bash backup.sh` on the `home-bkp` partition). Pick folders, not the
+   whole home: files written for NixOS point into `/nix/store`. The data:
+   `~/git`, `~/Documents`, `~/Pictures`, `~/Images`, `~/Music`, `~/scripts`,
+   `~/.ssh`, `~/.gnupg`, `~/.kube`, `~/.claude`,
+   `~/.local/share/{mkcert,backdrop,silksong-wallpaper,kwalletd,easyeffects,com.bilingify.readest}`,
+   `~/.config/{BraveSoftware,JetBrains,kdeconnect,Vencord}`, and the fish
+   config (`~/.config/fish`, private, kept out of this repo).
+4. Log out and back in.
+
+### By hand in Plasma
+- Activities (and their shortcuts): their ids change, so they are recreated.
+- The panel: Kickoff, Pager, Icons-only Task Manager, Claude Usage, System
+  Tray (with Weather and Media Player), Digital Clock (week numbers,
+  holidays), Peek at Desktop.
+- KDE Connect: the phone's *Lock AFK* command runs `lock-afk`.
+
+### Apps
+- Brave: load the Teams extension unpacked from
+  `~/dotfiles/modules/mutectl/chrome-extension`.
+- JetBrains Toolbox: install GoLand, WebStorm, PyCharm and DataGrip.
+- NetworkManager: import the company's OpenVPN profile and the Wi-Fi
+  networks (their passwords are in Bitwarden).

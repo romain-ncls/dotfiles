@@ -79,7 +79,14 @@ install() {
 
 	say "Serving the repo ($branch) and the test script on port $port"
 	rm -rf "$work/http" && mkdir -p "$work/http"
-	git clone --quiet --bare --branch "$branch" "$repo" "$work/http/dotfiles.git"
+	# One commit with the branch's files: a real install clones the full
+	# history from GitHub, the test doesn't need it.
+	rm -rf "$work/src" && mkdir -p "$work/src"
+	git -C "$repo" archive "$branch" | tar -x -C "$work/src"
+	git -C "$work/src" init --quiet --initial-branch "$branch"
+	git -C "$work/src" add --all
+	git -C "$work/src" -c user.name=lodestar -c user.email=vm@lodestar commit --quiet -m "$branch for the VM test"
+	git clone --quiet --bare "$work/src" "$work/http/dotfiles.git"
 	git -C "$work/http/dotfiles.git" update-server-info
 	git -C "$repo" show "$branch:install.sh" >"$work/http/install.sh"
 	cat >"$work/http/test.sh" <<EOF
