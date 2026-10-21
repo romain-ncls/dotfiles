@@ -33,8 +33,10 @@ firmware() {
 vm() {
 	firmware
 	rm -f "$work/monitor.sock"
-	systemd-run --user --scope --quiet -p MemoryMax=8G \
-		qemu-system-x86_64 -enable-kvm -cpu host -smp 4 -m 6G -machine q35 \
+	# GraalVM's native-image (limine-mkinitcpio-hook, limine-snapper-sync)
+	# needs the memory: with 6 GiB its watchdog stops the build.
+	systemd-run --user --scope --quiet -p MemoryMax=12G \
+		qemu-system-x86_64 -enable-kvm -cpu host -smp 6 -m 10G -machine q35 \
 		-drive if=pflash,format=raw,readonly=on,file="$code" \
 		-drive if=pflash,format=raw,file="$work/vars.fd" \
 		-drive file="$work/disk.qcow2",if=none,id=disk,format=qcow2 \
