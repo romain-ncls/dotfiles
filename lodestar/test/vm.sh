@@ -5,6 +5,7 @@
 #
 #   test/vm.sh install [host]   fresh disk, install (default host: vm)
 #   test/vm.sh boot             boot the installed disk
+#   test/vm.sh login            log in to Plasma, lodestar apply, lodestar plan
 #
 # Needs qemu (with its edk2 firmware), bsdtar, python3 and KVM. The ISO, the
 # disk and the logs live in ~/.cache/lodestar-vm. It installs the commits of
@@ -57,6 +58,7 @@ type_text() { # type a word and Enter, as on an AZERTY keyboard (the initramfs k
 		c=${1:i:1}
 		case $c in # sendkey names US key positions
 		a) c=q ;; q) c=a ;; z) c=w ;; w) c=z ;; m) c=semicolon ;;
+		' ') c=spc ;; -) c=6 ;;
 		esac
 		monitor "sendkey $c"
 	done
@@ -106,7 +108,7 @@ systemctl poweroff
 EOF
 	python3 -m http.server "$port" --bind 0.0.0.0 --directory "$work/http" >"$work/http.log" 2>&1 &
 	local server=$!
-	trap 'kill $server 2>/dev/null' EXIT
+	trap "kill $server 2>/dev/null" EXIT
 
 	say "Installing $host (log: $work/install.log)"
 	rm -f "$work/disk.qcow2" "$work/vars.fd"
@@ -138,8 +140,36 @@ boot() {
 	wait $qemu || true
 }
 
+# The first login: the home part of lodestar apply, in a Plasma session.
+login() {
+	say "First login: lodestar apply in Plasma"
+	vm -serial file:"$work/login.log" &
+	local qemu=$!
+	sleep 30
+	type_text "$secret" # the disk
+	sleep 60
+	shot login-1-greeter
+	type_text "$secret" # the user
+	sleep 45
+	shot login-2-desktop
+	monitor "sendkey ctrl-alt-t"
+	sleep 10
+	type_text "lodestar apply --yes"
+	sleep 10
+	shot login-3-sudo
+	type_text "$secret"
+	sleep 240
+	shot login-4-applied
+	type_text "lodestar plan"
+	sleep 30
+	shot login-5-plan
+	monitor quit
+	wait $qemu || true
+}
+
 case ${1:-} in
 install) shift; install "$@" ;;
 boot) boot ;;
-*) echo "usage: test/vm.sh install [host] | boot" >&2; exit 2 ;;
+login) login ;;
+*) echo "usage: test/vm.sh install [host] | boot | login" >&2; exit 2 ;;
 esac
