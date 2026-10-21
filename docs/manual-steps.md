@@ -99,6 +99,8 @@ If the Windows boot animation looks stretched, from an elevated prompt:
    `~/.local/share/{mkcert,backdrop,silksong-wallpaper,kwalletd,easyeffects,com.bilingify.readest}`,
    `~/.config/{BraveSoftware,JetBrains,kdeconnect,Vencord}`, and the fish
    config (`~/.config/fish`, private, kept out of this repo).
+   `~/.ssh` brings back this laptop's own key, already on GitHub: skip
+   "SSH key" above, and `lodestar apply` again for `allowed_signers`.
 4. Log out and back in.
 
 ### By hand in Plasma
