@@ -108,7 +108,7 @@ systemctl poweroff
 EOF
 	python3 -m http.server "$port" --bind 0.0.0.0 --directory "$work/http" >"$work/http.log" 2>&1 &
 	local server=$!
-	trap "kill $server 2>/dev/null" EXIT
+	trap "kill $server 2>/dev/null || true" EXIT
 
 	say "Installing $host (log: $work/install.log)"
 	rm -f "$work/disk.qcow2" "$work/vars.fd"
