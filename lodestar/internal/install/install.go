@@ -407,9 +407,15 @@ func (in *installer) apply() error {
 	return in.lodestarApply()
 }
 
+// lodestarApply runs lodestar apply in the new system. arch-chroot runs
+// commands in a new PID namespace but mounts /proc before entering it, so a
+// process's /proc/<pid> would be another process: GraalVM's native-image
+// (limine-mkinitcpio-hook, limine-snapper-sync) watches its driver there and
+// stops with status 30. unshare --mount-proc gives the apply a matching /proc.
 func (in *installer) lodestarApply() error {
 	user := in.c.User.Name
-	return in.chroot("/usr/local/bin/lodestar", "apply", "--system", "--yes",
+	return in.chroot("unshare", "--pid", "--fork", "--mount-proc",
+		"/usr/local/bin/lodestar", "apply", "--system", "--yes",
 		"--repo", "/home/"+user+"/dotfiles", "--host", in.Host)
 }
 
