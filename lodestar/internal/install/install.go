@@ -392,18 +392,12 @@ func (in *installer) snapper() error {
 }
 
 // apply runs lodestar apply in the new system, for the system part: the
-// home part needs a Plasma session (first login). The machine id and a
-// seeded limine.conf come first: the initramfs rebuild needs them.
+// home part needs a Plasma session (first login). The machine id comes
+// first: limine-entry-tool files the kernels under it. limine.conf is left
+// to limine-entry-tool, which creates the OS folder expanded (/+Arch Linux),
+// so default_entry 2 is the first kernel and a fresh install boots alone.
 func (in *installer) apply() error {
 	if err := in.chroot("systemd-machine-id-setup"); err != nil {
-		return err
-	}
-	id, err := os.ReadFile(filepath.Join(target, "etc/machine-id"))
-	if err != nil {
-		return err
-	}
-	seed := fmt.Sprintf("/Arch Linux\n    comment: machine-id=%s\n", strings.TrimSpace(string(id)))
-	if err := os.WriteFile(filepath.Join(target, "boot/limine.conf"), []byte(seed), 0o600); err != nil {
 		return err
 	}
 	return in.lodestarApply()
