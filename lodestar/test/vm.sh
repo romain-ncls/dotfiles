@@ -5,7 +5,8 @@
 #
 #   test/vm.sh install [host]   fresh disk, install (default host: vm)
 #   test/vm.sh boot             boot the installed disk
-#   test/vm.sh login            log in to Plasma, lodestar apply, lodestar plan
+#   test/vm.sh login            log in to Plasma, lodestar apply, lodestar plan,
+#                               list crashes
 #
 # Needs qemu (with its edk2 firmware), bsdtar, python3 and KVM. The ISO, the
 # disk and the logs live in ~/.cache/lodestar-vm. It installs the commits of
@@ -58,7 +59,7 @@ type_text() { # type a word and Enter, as on an AZERTY keyboard (the initramfs k
 		c=${1:i:1}
 		case $c in # sendkey names US key positions
 		a) c=q ;; q) c=a ;; z) c=w ;; w) c=z ;; m) c=semicolon ;;
-		' ') c=spc ;; -) c=6 ;;
+		' ') c=spc ;; -) c=6 ;; ';') c=comma ;;
 		esac
 		monitor "sendkey $c"
 	done
@@ -163,6 +164,9 @@ login() {
 	type_text "lodestar plan"
 	sleep 30
 	shot login-5-plan
+	type_text "clear; coredumpctl list --no-pager"
+	sleep 10
+	shot login-6-crashes
 	monitor quit
 	wait $qemu || true
 }
