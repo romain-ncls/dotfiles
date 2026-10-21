@@ -51,10 +51,13 @@ s=socket.socket(socket.AF_UNIX); s.connect(sys.argv[1]); time.sleep(0.2); s.recv
 s.sendall((sys.argv[2]+"\n").encode()); time.sleep(0.3); s.close()' "$work/monitor.sock" "$1"
 }
 
-type_text() { # type a word and Enter on the VM's keyboard
+type_text() { # type a word and Enter, as on an AZERTY keyboard (the initramfs keymap is fr)
 	local c
 	for ((i = 0; i < ${#1}; i++)); do
 		c=${1:i:1}
+		case $c in # sendkey names US key positions
+		a) c=q ;; q) c=a ;; z) c=w ;; w) c=z ;; m) c=semicolon ;;
+		esac
 		monitor "sendkey $c"
 	done
 	monitor "sendkey ret"
@@ -124,11 +127,13 @@ boot() {
 	say "Booting the installed disk"
 	vm -serial file:"$work/boot.log" &
 	local qemu=$!
-	sleep 20
-	shot boot-1-passphrase
+	sleep 6
+	shot boot-1-limine
+	sleep 24
+	shot boot-2-passphrase
 	type_text "$secret"
-	sleep 60
-	shot boot-2-login
+	sleep 75
+	shot boot-3-login
 	monitor quit
 	wait $qemu || true
 }

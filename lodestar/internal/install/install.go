@@ -176,7 +176,8 @@ func (in *installer) passwords() error {
 	var err error
 	if in.c.Install.Encrypt {
 		if in.pass = os.Getenv("LODESTAR_TEST_PASSPHRASE"); in.pass == "" {
-			if in.pass, err = askTwice("Disk passphrase (LUKS, typed at every boot)"); err != nil {
+			fmt.Fprintln(in.Out, "The disk passphrase is typed at every boot, with the French keyboard layout:\nif the keyboard isn't French now, stop (Ctrl+C) and run loadkeys fr first.")
+			if in.pass, err = askTwice("Disk passphrase"); err != nil {
 				return err
 			}
 		}
