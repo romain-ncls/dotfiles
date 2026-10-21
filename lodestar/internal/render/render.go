@@ -82,7 +82,7 @@ func (r *Renderer) Render(path string) (out []byte, secret bool, err error) {
 		"bitwarden": func(item, field string) (string, error) {
 			secret = true
 			if r.secrets == nil {
-				return "", errors.New("Bitwarden is not available here")
+				return "", ErrLocked
 			}
 			return r.secrets.Secret(item, field)
 		},

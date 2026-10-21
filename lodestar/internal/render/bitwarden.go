@@ -10,6 +10,10 @@ import (
 	"strings"
 )
 
+// ErrLocked means a template needs a secret while the vault is locked and
+// there is no terminal to unlock it.
+var ErrLocked = errors.New("the Bitwarden vault is locked, and there is no terminal to ask for the master password")
+
 // Bitwarden reads secrets with the official CLI. It unlocks the vault the
 // first time a template needs a secret, and keeps the session for this run
 // only.
@@ -111,7 +115,7 @@ func (b *Bitwarden) unlock() error {
 		return errors.New("bitwarden: not logged in (run bw login once)")
 	}
 	if !b.Interactive {
-		return errors.New("bitwarden: the vault is locked, and there is no terminal to ask for the master password")
+		return ErrLocked
 	}
 	fmt.Fprintln(os.Stderr, "A template needs a Bitwarden secret.")
 	cmd := exec.Command("bw", "unlock", "--raw")

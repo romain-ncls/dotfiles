@@ -26,9 +26,17 @@ type Unit struct {
 
 // User is a login user.
 type User struct {
-	Home   string
-	Shell  string
-	Groups []string
+	Home         string
+	Shell        string
+	Groups       []string
+	PrimaryGroup string
+}
+
+// Backup is a package's config file (pacman's backup array) and whether it
+// differs from the package's version.
+type Backup struct {
+	Path, Package string
+	Status        string // modified, unmodified, or UNREADABLE without root
 }
 
 // Machine reads the machine's packages, units and users.
@@ -43,6 +51,10 @@ type Machine interface {
 	// User returns nil when the user does not exist.
 	User(name string) (*User, error)
 	GroupExists(name string) (bool, error)
+	// OwnedFiles is every path some package owns.
+	OwnedFiles() (map[string]bool, error)
+	// Backups lists every package's config files and their status.
+	Backups() ([]Backup, error)
 }
 
 // Local reads the machine lodestar runs on.
@@ -135,7 +147,59 @@ func (Local) User(name string) (*User, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &User{Home: f[5], Shell: f[6], Groups: strings.Fields(string(groups))}, nil
+	primary, err := run("id", "-gn", name)
+	if err != nil {
+		return nil, err
+	}
+	return &User{Home: f[5], Shell: f[6], Groups: strings.Fields(string(groups)), PrimaryGroup: strings.TrimSpace(string(primary))}, nil
+}
+
+func (Local) OwnedFiles() (map[string]bool, error) {
+	out, err := run("pacman", "-Qlq")
+	if err != nil {
+		return nil, err
+	}
+	owned := map[string]bool{}
+	for _, p := range lines(out) {
+		owned[strings.TrimSuffix(p, "/")] = true
+	}
+	return owned, nil
+}
+
+// Backups parses the "Backup Files" of pacman -Qii:
+//
+//	Name            : pacman
+//	Backup Files    : /etc/pacman.conf [modified]
+//	                  /etc/makepkg.conf [unmodified]
+func (Local) Backups() ([]Backup, error) {
+	out, err := run("pacman", "-Qii")
+	if err != nil {
+		return nil, err
+	}
+	var backups []Backup
+	var pkg string
+	inBackup := false
+	for _, line := range strings.Split(string(out), "\n") {
+		if k, v, ok := strings.Cut(line, " : "); ok && !strings.HasPrefix(line, " ") {
+			switch strings.TrimSpace(k) {
+			case "Name":
+				pkg = strings.TrimSpace(v)
+			case "Backup Files":
+				inBackup = true
+				line = v
+			default:
+				inBackup = false
+			}
+		}
+		if !inBackup {
+			continue
+		}
+		path, status, ok := strings.Cut(strings.TrimSpace(line), " [")
+		if ok && strings.HasPrefix(path, "/") {
+			backups = append(backups, Backup{Path: path, Package: pkg, Status: strings.TrimSuffix(status, "]")})
+		}
+	}
+	return backups, nil
 }
 
 func (Local) GroupExists(name string) (bool, error) {

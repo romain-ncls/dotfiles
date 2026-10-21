@@ -7,12 +7,14 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/romain-ncls/dotfiles/lodestar/internal/apply"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/config"
+	"github.com/romain-ncls/dotfiles/lodestar/internal/drift"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/machine"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/plan"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/render"
@@ -28,7 +30,9 @@ type command struct {
 var commands = map[string]command{
 	"apply":  {"make the machine match the repo", cmdApply},
 	"check":  {"validate a host's config without reading the machine", cmdCheck},
+	"drift":  {"list what is on the machine but not in the repo", cmdDrift},
 	"plan":   {"show what apply would change", cmdPlan},
+	"prune":  {"remove the packages the repo doesn't declare", cmdPrune},
 	"schema": {"regenerate the JSON Schemas in schema/", cmdSchema},
 }
 
@@ -186,6 +190,10 @@ func (o *options) plan() (*plan.Plan, error) {
 	if err != nil {
 		return nil, err
 	}
+	return planFor(c)
+}
+
+func planFor(c *config.Config) (*plan.Plan, error) {
 	return plan.Compute(plan.Input{
 		Config:  c,
 		Machine: machine.Local{},
@@ -230,4 +238,82 @@ func cmdApply(o *options, args []string) error {
 	}
 	fmt.Println(style().Green("Done."))
 	return nil
+}
+
+func cmdDrift(o *options, args []string) error {
+	c, err := o.load()
+	if err != nil {
+		return err
+	}
+	p, err := planFor(c)
+	if err != nil {
+		return err
+	}
+	r, err := drift.Find(c, machine.Local{}, p, "")
+	if err != nil {
+		return err
+	}
+	if r.Empty() {
+		fmt.Println("No drift: the machine matches the repo.")
+		if len(r.Unreadable) > 0 {
+			fmt.Printf("(%d paths need root to check: sudo lodestar drift)\n", len(r.Unreadable))
+		}
+		return nil
+	}
+	ui.PrintDrift(os.Stdout, r, style())
+	return exitError(1)
+}
+
+// cmdPrune marks the undeclared explicit packages as dependencies, then lets
+// pacman remove every orphan: packages still needed by declared ones stay.
+func cmdPrune(o *options, args []string) error {
+	c, err := o.load()
+	if err != nil {
+		return err
+	}
+	p, err := planFor(c)
+	if err != nil {
+		return err
+	}
+	r, err := drift.Find(c, machine.Local{}, p, "")
+	if err != nil {
+		return err
+	}
+	if len(r.UndeclaredPackages) == 0 {
+		fmt.Println("Every explicitly installed package is declared.")
+	} else {
+		s := style()
+		fmt.Println(s.Bold("Installed by hand, not declared:"))
+		for _, n := range r.UndeclaredPackages {
+			fmt.Println("  " + s.Red("-") + " " + n)
+		}
+		fmt.Println(s.Dim("They become dependencies: pacman then removes those nothing else needs."))
+		if !o.yes && !ui.Confirm("Continue?") {
+			return exitError(1)
+		}
+		if err := sudo(append([]string{"pacman", "-D", "--asdeps"}, r.UndeclaredPackages...)...); err != nil {
+			return err
+		}
+	}
+	orphans, err := exec.Command("pacman", "-Qdtq").Output()
+	names := strings.Fields(string(orphans))
+	if err != nil || len(names) == 0 {
+		fmt.Println("No orphans to remove.")
+		return nil
+	}
+	cmd := []string{"pacman", "-Rns"}
+	if o.yes {
+		cmd = append(cmd, "--noconfirm")
+	}
+	return sudo(append(cmd, names...)...)
+}
+
+// sudo runs a command as root, on the terminal.
+func sudo(args ...string) error {
+	if os.Geteuid() != 0 {
+		args = append([]string{"sudo"}, args...)
+	}
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	return cmd.Run()
 }

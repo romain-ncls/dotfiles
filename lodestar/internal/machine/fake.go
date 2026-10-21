@@ -9,6 +9,8 @@ type Fake struct {
 	Global    map[string]Unit
 	Users     map[string]*User
 	Groups    map[string]bool
+	Owned     map[string]bool
+	Backup    []Backup
 }
 
 func (f *Fake) Packages() (map[string]Package, error) { return f.Installed, nil }
@@ -23,3 +25,6 @@ func (f *Fake) Units(global bool) (map[string]Unit, error) {
 	}
 	return f.System, nil
 }
+
+func (f *Fake) OwnedFiles() (map[string]bool, error) { return f.Owned, nil }
+func (f *Fake) Backups() ([]Backup, error)           { return f.Backup, nil }

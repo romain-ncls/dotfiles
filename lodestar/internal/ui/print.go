@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/romain-ncls/dotfiles/lodestar/internal/drift"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/plan"
 )
 
@@ -178,4 +179,50 @@ func Confirm(question string) bool {
 	answer, _ := bufio.NewReader(tty).ReadString('\n')
 	answer = strings.ToLower(strings.TrimSpace(answer))
 	return answer == "y" || answer == "yes"
+}
+
+// PrintDrift shows a drift report with what to do about each part.
+func PrintDrift(w io.Writer, r *drift.Report, s Style) {
+	section := func(title, hint string, items []string) {
+		if len(items) == 0 {
+			return
+		}
+		fmt.Fprintf(w, "%s %s\n", s.Bold(title), s.Dim(hint))
+		for _, it := range items {
+			fmt.Fprintln(w, "  "+it)
+		}
+	}
+	section("Packages installed by hand", "(add them to a module, or lodestar prune)", r.UndeclaredPackages)
+	if !r.Plan.Empty() {
+		fmt.Fprintf(w, "%s %s\n", s.Bold("Declared, but different on the machine"), s.Dim("(lodestar apply puts the repo's version back)"))
+		PrintPlan(indent{w}, r.Plan, s)
+	}
+	section("Files in /etc no package owns", "(add them to a module's system/, or to an ignore: list)", r.UnownedFiles)
+	var modified []string
+	for _, b := range r.ModifiedFiles {
+		modified = append(modified, b.Path+" "+s.Dim("("+b.Package+")"))
+	}
+	section("Package config files changed on the machine", "(add them to a module's system/)", modified)
+	section("Units enabled by hand", "(add them to services:)", r.Units)
+	section("User units enabled by hand", "(add them to user-services:)", r.GlobalUnits)
+	section("Extra groups of the user", "(add them to user.groups)", r.ExtraGroups)
+	if len(r.Unreadable) > 0 {
+		fmt.Fprintf(w, "%s %d paths need root to check %s\n", s.Yellow("!"), len(r.Unreadable), s.Dim("(sudo lodestar drift)"))
+	}
+}
+
+// indent prefixes every line written through it with two spaces.
+type indent struct{ w io.Writer }
+
+func (i indent) Write(p []byte) (int, error) {
+	lines := strings.SplitAfter(string(p), "\n")
+	for _, l := range lines {
+		if l == "" {
+			continue
+		}
+		if _, err := io.WriteString(i.w, "  "+l); err != nil {
+			return 0, err
+		}
+	}
+	return len(p), nil
 }

@@ -49,6 +49,34 @@ echo "$out"
 [[ $out == "Nothing to do"* ]] || fail "second plan is not empty"
 ok "idempotent"
 
+say "drift"
+ls_ drift || fail "drift is not clean after apply"
+ok "no drift after apply"
+echo by-hand >/etc/by-hand.conf
+pacman -S --noconfirm tree >/dev/null
+if out=$(ls_ drift); then fail "drift should report the changes"; fi
+echo "$out"
+grep -q /etc/by-hand.conf <<<"$out" && grep -qw tree <<<"$out" || fail "drift misses the changes"
+ok "drift reports a file and a package installed by hand"
+ls_ prune --yes
+pacman -Q tree >/dev/null 2>&1 && fail "prune left tree installed"
+pacman -Q sudo >/dev/null || fail "prune removed a declared package"
+ok "prune removed only the undeclared package"
+rm /etc/by-hand.conf
+
+say "as the user, through sudo"
+# verifypw=any: sudo -v would still ask, because 10-wheel's rule has a password
+printf 'Defaults:romain verifypw=any\nromain ALL=(ALL) NOPASSWD: ALL\n' >/etc/sudoers.d/99-test
+chmod 440 /etc/sudoers.d/99-test
+printf 'test\n' >/repo/modules/base/system/etc/issue
+mkdir -p /repo/modules/shell/home/.config/test && printf 'x\n' >/repo/modules/shell/home/.config/test/x
+su -s /bin/bash romain -c "lodestar apply --yes --repo /repo --host box"
+[[ $(stat -c %U /etc/issue) == root && $(cat /etc/issue) == test ]] || fail "/etc/issue through sudo"
+[[ $(stat -c %U /home/romain/.config/test/x) == romain ]] || fail "home file as the user"
+grep -q '"/etc/issue"' /var/lib/lodestar/state.json || fail "system state not updated by the root process"
+ok "root part through sudo, home part as the user"
+rm /repo/modules/base/system/etc/issue /repo/modules/shell/home/.config/test/x
+
 say "drop files from the repo"
 rm /repo/modules/base/system/etc/bash.bashrc /repo/modules/base/system/etc/localtime
 rm /repo/modules/shell/home/.config/fish/config.fish

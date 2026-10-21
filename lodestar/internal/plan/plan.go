@@ -255,7 +255,9 @@ func (p *Plan) file(in Input, r *render.Renderer, f *config.File) error {
 
 	live, err := os.Lstat(phys)
 	exists := err == nil
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+	// Inside a root-only folder (/etc/sudoers.d) even lstat needs root.
+	hidden := errors.Is(err, fs.ErrPermission)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) && !hidden {
 		return fmt.Errorf("%s: %w", f.Target, err)
 	}
 	if exists && live.IsDir() {
@@ -275,10 +277,25 @@ func (p *Plan) file(in Input, r *render.Renderer, f *config.File) error {
 		return nil
 	}
 
+	// cantSee handles a file lodestar can't read: trust the state file if it
+	// records this very content, otherwise let the root process write it.
+	cantSee := func() error {
+		if rec := st.Files[path]; rec.Hash == a.Record.Hash && rec.Link == a.Record.Link {
+			return nil
+		}
+		a.Why = "can't read it without root"
+		a.Original = p.mayNeedOriginal(in, f, path)
+		p.add(a)
+		return nil
+	}
+
 	if f.Link != "" {
 		a.Op, a.LinkTo = OpLink, f.Link
 		a.Record = state.File{Link: f.Link, From: f.From}
 		p.Desired[path] = a.Record
+		if hidden {
+			return cantSee()
+		}
 		if !exists {
 			a.Why = "new"
 		} else if live.Mode()&fs.ModeSymlink == 0 {
@@ -297,6 +314,12 @@ func (p *Plan) file(in Input, r *render.Renderer, f *config.File) error {
 	var content []byte
 	if f.Template {
 		content, a.Secret, err = r.Render(f.Source)
+		if errors.Is(err, render.ErrLocked) {
+			// Not comparable now; keep it declared so it isn't removed.
+			p.Desired[path] = st.Files[path]
+			p.note("%s: uses a Bitwarden secret and the vault is locked: not compared", f.Target)
+			return nil
+		}
 		if err != nil {
 			return fmt.Errorf("%s (%s): %w", f.Target, f.From, err)
 		}
@@ -309,6 +332,8 @@ func (p *Plan) file(in Input, r *render.Renderer, f *config.File) error {
 	p.Desired[path] = a.Record
 
 	switch {
+	case hidden:
+		return cantSee()
 	case !exists:
 		a.Why = "new"
 	case live.Mode()&fs.ModeSymlink != 0:
@@ -317,10 +342,7 @@ func (p *Plan) file(in Input, r *render.Renderer, f *config.File) error {
 		old, err := os.ReadFile(phys)
 		switch {
 		case errors.Is(err, fs.ErrPermission):
-			if rec, ok := st.Files[path]; ok && rec.Hash == hash {
-				return nil // can't read it without root; lodestar wrote this content
-			}
-			a.Why = "can't read it without root"
+			return cantSee()
 		case err != nil:
 			return fmt.Errorf("%s: %w", f.Target, err)
 		case string(old) != string(content):
@@ -390,16 +412,14 @@ func (p *Plan) removals(in Input, st *state.State, scope config.Scope) error {
 		if errors.Is(err, fs.ErrNotExist) {
 			continue // already gone; the new state forgets it
 		}
-		if err != nil {
+		// A file lodestar can't see without root is checked by the root
+		// process instead (ExpectHash, ExpectLink).
+		hidden := errors.Is(err, fs.ErrPermission)
+		if err != nil && !hidden {
 			return err
 		}
 		a := &Action{Phase: phase, Path: path, Display: display, From: rec.From, ExpectHash: rec.Hash, ExpectLink: rec.Link}
-		if rec.Link != "" {
-			if cur, _ := os.Readlink(in.Root + path); live.Mode()&fs.ModeSymlink == 0 || cur != rec.Link {
-				p.note("%s: no longer declared, but changed on the machine since lodestar wrote it: left as it is", display)
-				continue
-			}
-		} else if old, err := os.ReadFile(in.Root + path); err == nil && state.Hash(old) != rec.Hash {
+		if !hidden && changedSince(in.Root+path, live, rec) {
 			p.note("%s: no longer declared, but changed on the machine since lodestar wrote it: left as it is", display)
 			continue
 		}
@@ -422,6 +442,17 @@ func (p *Plan) removals(in Input, st *state.State, scope config.Scope) error {
 		p.add(a)
 	}
 	return nil
+}
+
+// changedSince tells whether a file or link differs from what lodestar wrote.
+// An unreadable file counts as unchanged: the root process checks it.
+func changedSince(phys string, live fs.FileInfo, rec state.File) bool {
+	if rec.Link != "" {
+		cur, _ := os.Readlink(phys)
+		return live.Mode()&fs.ModeSymlink == 0 || cur != rec.Link
+	}
+	old, err := os.ReadFile(phys)
+	return err == nil && state.Hash(old) != rec.Hash
 }
 
 // followUps adds the commands that must run after some files change.
