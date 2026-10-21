@@ -1,0 +1,15 @@
+# The soundboard (README.md): sounds go into the microphone through
+# EasyEffects' input.
+shortcuts:
+  - name: Soundboard
+    keys: "Meta+:" # quoted: a value ending in : is YAML syntax
+    run: soundboard gui
+  - name: Soundboard replay
+    keys:
+      - Meta+/
+      - Meta+Ctrl+/
+      - "Meta+Ctrl+:"
+    run: soundboard replay
+  - name: Soundboard stop
+    keys: Meta+End
+    run: soundboard stop

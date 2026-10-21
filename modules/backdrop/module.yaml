@@ -1,0 +1,7 @@
+# Backdrop: the desktop wallpaper, from Windows Spotlight, Bing and Wallhaven,
+# picked by likes and dislikes (its state: ~/.local/share/backdrop).
+user-services:
+  - backdrop.service
+
+hooks:
+  - run: set-wallpaper.sh

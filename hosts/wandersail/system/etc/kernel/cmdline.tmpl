@@ -1,0 +1,1 @@
+rd.luks.name={{ fact "root-luks-uuid" }}=root rd.luks.options=discard root=/dev/mapper/root rootflags=subvol=@ rw resume=/dev/mapper/root resume_offset={{ fact "resume-offset" }} quiet loglevel=3

@@ -1,0 +1,6 @@
+# at, for one-off reminders: echo 'notify-send "Reminder"' | at 15:15
+packages:
+  - at
+
+services:
+  - atd.service

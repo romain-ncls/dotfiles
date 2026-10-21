@@ -1,0 +1,17 @@
+# gpg-agent as the SSH agent, with pinentry-qt: the key is unlocked once for
+# 12 hours (ScrollLock adds it). ~/.gnupg/sshcontrol (the key's grip) is data.
+packages:
+  - gnupg
+  - pinentry
+
+user-services:
+  - gpg-agent-ssh.socket
+
+files:
+  ~/.gnupg/gpg-agent.conf:
+    mode: 0600
+
+shortcuts:
+  - name: ssh-add
+    keys: ScrollLock
+    run: konsole -e ssh-add $HOME/.ssh/id_ed25519

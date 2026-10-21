@@ -1,0 +1,23 @@
+# Local package: lodestar builds it when this folder changes.
+pkgname=spotify-vol
+pkgver=1
+pkgrel=1
+pkgdesc="Spotify's volume over MPRIS, and Super+Shift+Scroll to change it"
+arch=(x86_64)
+license=(MIT)
+options=(!debug)
+makedepends=(go)
+source=(spotify-vol.service)
+sha256sums=(SKIP)
+
+build() {
+	cd "$startdir/daemon"
+	export GOPATH="$srcdir/gopath" GOTOOLCHAIN=local CGO_ENABLED=0
+	export GOFLAGS="-buildmode=pie -trimpath -mod=readonly -modcacherw"
+	go build -o "$srcdir/spotify-vol" .
+}
+
+package() {
+	install -Dm755 "$srcdir/spotify-vol" -t "$pkgdir/usr/bin"
+	install -Dm644 spotify-vol.service -t "$pkgdir/usr/lib/systemd/user"
+}

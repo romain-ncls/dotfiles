@@ -1,0 +1,8 @@
+# mkcert's local CA, trusted by the system. The CA's private key is data
+# (~/.local/share/mkcert, from the backup), never in this repo.
+packages:
+  - mkcert
+
+files:
+  /etc/ca-certificates/trust-source/anchors/mkcert-romain.crt:
+    then: update-ca-trust

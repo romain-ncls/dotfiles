@@ -1,0 +1,11 @@
+[Unit]
+Description=Mute control service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/mutectl-service
+Restart=always
+DynamicUser=yes
+
+[Install]
+WantedBy=multi-user.target

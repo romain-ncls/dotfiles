@@ -1,0 +1,24 @@
+# mutectl: one mute state for the microphone, Discord (the Vencord plugin in
+# mutectl-vencord-plugin.ts) and Teams in Brave (chrome-extension/, loaded
+# unpacked from this folder). pkg/ builds mutectl, its service and lock-afk
+# (KDE Connect's "Lock AFK" command).
+services:
+  - mutectl.service
+
+shortcuts:
+  - name: Mute
+    keys: Meta+É
+    run: mutectl mute
+  - name: Unmute
+    keys: Meta+&
+    run: mutectl unmute
+  - name: AFK
+    keys: Meta+"
+    run: mutectl afk
+  - name: Lock AFK
+    keys: Sleep
+    run: loginctl lock-session && mutectl afk
+  # the Sleep key locks instead of suspending
+  - component: org_kde_powerdevil
+    action: Sleep
+    keys: []

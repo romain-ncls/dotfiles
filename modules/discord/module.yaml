@@ -1,0 +1,17 @@
+# Discord, on every activity. The OpenASAR + Vencord build with the mutectl
+# plugin of the NixOS days is not rebuilt yet (mutectl/mutectl-vencord-plugin.ts).
+packages:
+  - discord
+
+window-rules:
+  - Description: Discord on all activities
+    wmclass: discord
+    wmclassmatch: 2
+    activity: 00000000-0000-0000-0000-000000000000
+    activityrule: 3
+    desktopsrule: 3
+
+shortcuts:
+  - name: Focus Discord
+    keys: Meta+<
+    run: xdotool search --onlyvisible --class discord windowactivate

@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# Control Discord's mute/deafen state through its tray icon menu (D-Bus),
+# with the same checks as mutectl-vencord-plugin.ts.
+#
+# Usage: discord-mute on|off|deafen
+
+set -euo pipefail
+
+DBUSMENU=com.canonical.dbusmenu
+
+main() {
+  [[ $# -eq 1 && $1 =~ ^(on|off|deafen)$ ]] || {
+    echo "usage: discord-mute on|off|deafen" >&2
+    exit 2
+  }
+
+  findDiscord
+  readState
+
+  # Discord only shows Mute/Deafen (and keeps them up to date) while in a voice channel
+  if [[ $muteVisible != true ]]; then
+    echo "discord-mute: not in a voice channel, nothing to do" >&2
+    exit 0
+  fi
+
+  case $1 in
+    on)
+      if [[ $muted == false ]]; then
+        toggle "$muteId" muted true
+      elif [[ $deafened == true ]]; then
+        toggle "$deafenId" deafened false
+      fi
+      ;;
+    off)
+      if [[ $muted == true ]]; then
+        toggle "$muteId" muted false
+      fi
+      ;;
+    deafen)
+      if [[ $muted == false ]]; then
+        toggle "$muteId" muted true
+      fi
+      if [[ $deafened == false ]]; then
+        toggle "$deafenId" deafened true
+      fi
+      ;;
+  esac
+}
+
+die() {
+  echo "discord-mute: $*" >&2
+  exit 1
+}
+
+# Sets $bus and $menu to Discord's tray icon bus name and menu object path.
+findDiscord() {
+  local items s path id
+  items=$(busctl --user --json=short get-property org.kde.StatusNotifierWatcher /StatusNotifierWatcher \
+    org.kde.StatusNotifierWatcher RegisteredStatusNotifierItems 2>/dev/null | jq -r '.data[]') ||
+    die "no system tray found"
+
+  for s in $items; do
+    if [[ $s == */* ]]; then
+      bus=${s%%/*} path=/${s#*/}
+    else
+      bus=$s path=/StatusNotifierItem
+    fi
+    id=$(busctl --user get-property "$bus" "$path" org.kde.StatusNotifierItem Id 2>/dev/null) || continue
+    [[ $id == 's "discord'* ]] || continue
+    menu=$(busctl --user --json=short get-property "$bus" "$path" org.kde.StatusNotifierItem Menu | jq -r .data)
+    return
+  done
+
+  die "Discord tray icon not found"
+}
+
+# Sets $muteId, $muteVisible, $muted, $deafenId and $deafened from the tray menu.
+# Item ids change every time Discord rebuilds the menu, so this must be re-read after each click.
+readState() {
+  local state
+  state=$(busctl --user --json=short call "$bus" "$menu" $DBUSMENU GetLayout iias 0 -- -1 0 | jq -r '
+    [.data[1][2][].data | {
+      key: (.[1].label.data // ""),
+      value: {id: .[0], visible: (.[1].visible.data != false), checked: (.[1]."toggle-state".data == 1)}
+    }]
+    | from_entries
+    | select(.Mute and .Deafen)
+    | [.Mute.id, .Mute.visible, .Mute.checked, .Deafen.id, .Deafen.checked] | @tsv')
+  [[ -n $state ]] || die "Mute/Deafen items not found in Discord's tray menu"
+  read -r muteId muteVisible muted deafenId deafened <<<"$state"
+}
+
+# Clicks a tray menu item, then waits until Discord reports the expected state.
+# Usage: toggle <item id> <muted|deafened> <true|false>
+toggle() {
+  busctl --user call "$bus" "$menu" $DBUSMENU Event isvu "$1" clicked i 0 0
+  for _ in {1..40}; do
+    readState
+    [[ ${!2} == "$3" ]] && return
+    sleep 0.05
+  done
+  die "Discord did not update its $2 state"
+}
+
+main "$@"

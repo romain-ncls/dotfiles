@@ -1,0 +1,227 @@
+# The work laptop: HP ProBook 460 G11, Core Ultra 5 125U (Meteor Lake), Arc
+# iGPU, 30 GiB of RAM. LUKS2 with btrfs, a swapfile for hibernation, Limine.
+modules:
+  - base
+  - boot
+  - dns
+  - desktop
+  - kde
+  - kdeconnect
+  - laptop
+  - mpv
+  - readest
+  - tools
+  - cli
+  - dev
+  - work
+  - git
+  - claude
+  - docker
+  - mkcert
+  - gpg-ssh
+  - media
+  - discord
+  - languagetool
+  - at
+  - keychron
+  - steam
+  - droidcam
+  - packet
+  - bemoji
+  - logi-wheel
+  - awpro
+  - mutectl
+  - spotify-vol
+  - backdrop
+  - soundboard
+  - lodestar
+
+vars:
+  name: Romain Nicolas
+  email: nicolasromain0@gmail.com
+
+user:
+  name: romain
+  shell: /usr/bin/fish
+  groups:
+    - wheel
+    - docker
+    - input # spotify-vol reads Super+Shift+Scroll from /dev/input
+
+install:
+  disk: nvme-SK_hynix_BC901_HFS512GEJ9X108N_4MD5N00041230573O
+  esp: 4GiB
+  encrypt: true
+  swapfile: 32GiB # hibernation: the size of the RAM
+
+boot:
+  limine: limine.conf
+
+packages:
+  - qt6-webengine # the HTML wallpaper plugin
+  - spectacle
+  - tesseract # text recognition in Spectacle
+  - tesseract-data-eng
+  - tesseract-data-fra
+
+breeze-exceptions:
+  - Enabled: true
+    ExceptionType: 0
+    ExceptionPattern: org.kde.konsole
+    HideTitleBar: true
+    BorderSize: 0
+    Mask: 0
+
+kde:
+  kwinrc:
+    Desktops:
+      Number: 4
+      Rows: 2
+    Windows:
+      Placement: Centered
+      RollOverDesktops: false
+    EdgeBarrier:
+      EdgeBarrier: 0
+    ElectricBorders:
+      TopLeft: None
+    Effect-overview:
+      BorderActivate: 9
+    Effect-presentwindows:
+      BorderActivateAll: 9
+    Effect-windowview:
+      BorderActivateAll: 9
+    Effect-blur:
+      BlurStrength: 11
+      NoiseStrength: 4
+    Effect-wobblywindows:
+      AdvancedMode: true
+      Stiffness: 20
+    Effect-kwin4_effect_translucency:
+      Inactive: 52
+    Effect-slide:
+      SlideBackground: false
+    Plugins:
+      blurEnabled: true
+      wobblywindowsEnabled: true
+      shakecursorEnabled: false
+      desktopchangeosdEnabled: false
+      minimizeallEnabled: false
+    TabBox:
+      LayoutName: thumbnail_grid
+      MultiScreenMode: 1
+    org.kde.kdecoration2:
+      ButtonsOnLeft: MFS
+      BorderSize: Normal
+  kcminputrc:
+    Keyboard:
+      NumLock: 0 # on at login
+      RepeatDelay: 600
+      RepeatRate: 25
+    "Libinput/1133/16478/Logitech M720 Triathlon":
+      PointerAcceleration: 0.400
+    "Libinput/1739/53194/SYNA311E:00 06CB:CFCA Touchpad":
+      NaturalScroll: true
+      PointerAcceleration: 1.000
+      PointerAccelerationProfile: 1
+      ScrollFactor: 0.3
+  kscreenlockerrc:
+    Daemon:
+      Timeout: 6
+    Greeter/LnF/General:
+      alwaysShowClock: false
+      hideClockWhenIdle: true
+      showMediaControls: false
+  powerdevilrc:
+    AC/Display:
+      DimDisplayWhenIdle: false
+      DimDisplayIdleTimeoutSec: -1
+      TurnOffDisplayWhenIdle: false
+      TurnOffDisplayIdleTimeoutSec: -1
+    AC/SuspendAndShutdown:
+      AutoSuspendAction: 0
+    Battery/Display:
+      DimDisplayIdleTimeoutSec: 300
+  plasmanotifyrc:
+    DoNotDisturb:
+      WhenFullscreen: false
+  plasma_calendar_holiday_regions:
+    General:
+      selectedRegions: fr_fr
+  plasma-localerc:
+    Formats:
+      LANG: en_US.UTF-8
+  dolphinrc:
+    General:
+      ShowFullPathInTitlebar: true
+  kdeglobals:
+    General:
+      BrowserApplication: brave-browser.desktop
+  mimeapps.list:
+    Default Applications:
+      text/html: brave-browser.desktop
+      x-scheme-handler/http: brave-browser.desktop
+      x-scheme-handler/https: brave-browser.desktop
+  kglobalshortcutsrc:
+    services/org.kde.krunner.desktop:
+      _launch: "Search\tAlt+Space\tAlt+F2\tMeta+Space"
+    services/org.kde.spectacle.desktop:
+      _launch: Print
+      RectangularRegionScreenShot: "Meta+Shift+S\tMeta+Shift+Print"
+    services/org.kde.screenreader.desktop:
+      toggleScreenReader: none
+
+shortcuts:
+  - name: Claude in Brave
+    keys: Meta+Shift+Return
+    run: brave "https://claude.ai/new"
+  - name: Perplexity in Brave
+    keys: Meta+Ctrl+Shift+Return
+    run: brave "https://www.perplexity.ai"
+  - name: Full brightness
+    keys: Meta+Num+*
+    run: qdbus6 local.org_kde_powerdevil /org/kde/Solid/PowerManagement/Actions/BrightnessControl setBrightness 10000
+  # session
+  - {component: ksmserver, action: Halt Without Confirmation, keys: Ctrl+Alt+Shift+PgDown}
+  - {component: ksmserver, action: Reboot Without Confirmation, keys: Ctrl+Alt+Shift+PgUp}
+  - {component: ksmserver, action: Log Out Without Confirmation, keys: Ctrl+Alt+Shift+Del}
+  # windows
+  - {component: kwin, action: Window Maximize, keys: Meta+Up}
+  - {component: kwin, action: Window Minimize, keys: Meta+Down}
+  - {component: kwin, action: Window Quick Tile Top, keys: Meta+PgUp}
+  - {component: kwin, action: Window Quick Tile Bottom, keys: Meta+PgDown}
+  - {component: kwin, action: Window Above Other Windows, keys: Meta+Shift+PgUp}
+  - {component: kwin, action: Window On All Desktops, keys: Meta+Ctrl+Shift+PgUp}
+  - {component: kwin, action: Window to Next Screen, keys: [Meta+Shift+D, Meta+Shift+Right]}
+  - {component: kwin, action: Window to Previous Screen, keys: [Meta+Shift+Q, Meta+Shift+Left]}
+  - {component: kwin, action: Kill Window, keys: Ctrl+Alt+Esc}
+  - {component: kwin, action: Activate Window Demanding Attention, keys: Ctrl+Alt+A}
+  - {component: kwin, action: view_zoom_in, keys: Meta+=}
+  # overview and window switching
+  - {component: kwin, action: Overview, keys: [Ctrl+Alt+Tab, Meta+Tab]}
+  - {component: kwin, action: Expose, keys: Ctrl+F9}
+  - {component: kwin, action: ExposeAll, keys: [Launch (C), Ctrl+F10]}
+  - {component: kwin, action: ExposeClass, keys: Ctrl+F7}
+  - {component: kwin, action: Walk Through Windows, keys: Alt+Tab}
+  - {component: kwin, action: Walk Through Windows (Reverse), keys: Alt+Shift+Tab}
+  - {component: kwin, action: Walk Through Windows of Current Application, keys: Alt+`}
+  - {component: kwin, action: Walk Through Windows of Current Application (Reverse), keys: Alt+~}
+  # desktops: A Z / Q S (AZERTY) with Meta or Meta+Ctrl
+  - {component: kwin, action: Switch to Desktop 1, keys: [Ctrl+F1, Meta+A, Meta+Ctrl+A]}
+  - {component: kwin, action: Switch to Desktop 2, keys: [Ctrl+F2, Meta+Z, Meta+Ctrl+Z]}
+  - {component: kwin, action: Switch to Desktop 3, keys: [Ctrl+F3, Meta+Q, Meta+Ctrl+Q]}
+  - {component: kwin, action: Switch to Desktop 4, keys: [Ctrl+F4, Meta+S, Meta+Ctrl+S]}
+  # Plasma
+  - {component: plasmashell, action: activate application launcher, keys: []}
+  - {component: plasmashell, action: manage activities, keys: Meta+W}
+  - {component: plasmashell, action: previous activity, keys: Meta+Shift+A}
+  - {component: plasmashell, action: stop current activity, keys: []}
+  - {component: plasmashell, action: clipboard_action, keys: Ctrl+Alt+X}
+  - {component: plasmashell, action: repeat_action, keys: Ctrl+Alt+R}
+  - {component: plasmashell, action: show-on-mouse-pos, keys: []}
+  - {component: KDE Keyboard Layout Switcher, action: Switch to Next Keyboard Layout, keys: Launch (5)}
+  - {component: kmix, action: mic_mute, keys: Microphone Mute}
+  # Brave's own global shortcuts, unbound
+  - {component: brave-browser, action: autofill_login, keys: []}
+  - {component: brave-browser, action: execute_side_panel, keys: []}
+  - {component: brave-browser, action: generate_password, keys: []}
+  - {component: brave-browser, action: save_page, keys: []}

@@ -1,0 +1,12 @@
+# Spotify's volume from the keyboard. The daemon reads /dev/input for
+# Super+Shift+Scroll, so the user must be in the input group (user.groups).
+user-services:
+  - spotify-vol.service
+
+shortcuts:
+  - name: Spotify volume down
+    keys: Launch (7)
+    run: spotify-vol down
+  - name: Spotify volume up
+    keys: Launch (8)
+    run: spotify-vol up

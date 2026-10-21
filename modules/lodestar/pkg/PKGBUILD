@@ -6,6 +6,7 @@ pkgdesc='Makes this machine match its description in the dotfiles repo'
 arch=(x86_64)
 url='https://github.com/romain-ncls/dotfiles'
 license=(MIT)
+options=(!debug)
 depends=(pacman systemd git sudo)
 makedepends=(go)
 optdepends=('kconfig: KDE settings (kwriteconfig6)'

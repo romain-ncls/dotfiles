@@ -1,0 +1,24 @@
+# Emoji picker: type, copy, or look one up on Emojipedia.
+packages:
+  - bemoji
+  - bemenu
+  - bemenu-wayland
+  - wtype
+  - wl-clipboard
+
+shortcuts:
+  - name: Type an emoji
+    keys: Meta+;
+    run: bemoji -t
+  - name: Copy an emoji
+    keys: Meta+.
+    run: bemoji -c
+  - name: Emoji on Emojipedia
+    keys: Meta+,
+    run: bemoji --echo | sed 's|^|https://emojipedia.org/|' | xargs xdg-open
+
+kde:
+  kglobalshortcutsrc:
+    # Plasma's emoji selector gives up Meta+. to bemoji
+    services/org.kde.plasma.emojier.desktop:
+      _launch: Meta+Ctrl+Alt+Shift+Space

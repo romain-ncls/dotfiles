@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+
+mute=${1:-mute}
+
+main() {
+  if [[ "$mute" == "mute" ]]; then
+    mute
+  elif [[ "$mute" == "unmute" ]]; then
+    unmute
+  elif [[ "$mute" == "afk" ]]; then
+    afk
+  else
+    echo "no command!"
+  fi
+}
+
+mute() {
+  muteClients
+  muteHeadphones
+}
+
+unmute() {
+  unmuteClients
+  unmuteHeadphones
+
+  if isVolumeTooMuch; then
+    qdbus6 org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Pause
+  fi
+}
+
+afk() {
+  afkClients
+  muteHeadphones
+  qdbus6 org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Pause || :
+}
+
+muteClients() {
+  curl -X POST http://127.0.0.1:4815/mute
+}
+
+unmuteClients() {
+  curl -X POST http://127.0.0.1:4815/unmute
+}
+
+afkClients() {
+  curl -X POST http://127.0.0.1:4815/afk
+}
+
+muteHeadphones() {
+  wpctl set-mute @DEFAULT_SOURCE@ 1
+}
+
+unmuteHeadphones() {
+  wpctl set-mute @DEFAULT_SOURCE@ 0
+}
+
+isVolumeTooMuch() {
+  volume=$(qdbus6 org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Volume || echo 0)
+
+  awk "BEGIN { exit !($volume > 0.31) }" && return 0 || return 1
+}
+
+main
