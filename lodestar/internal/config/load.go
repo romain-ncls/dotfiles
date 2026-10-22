@@ -411,7 +411,10 @@ func pkgbuildNames(path string) ([]string, error) {
 		if !ok {
 			continue
 		}
-		v = strings.Trim(v, "()")
+		if i := strings.Index(v, "#"); i >= 0 && (i == 0 || v[i-1] == ' ' || v[i-1] == '\t') {
+			v = v[:i] // a comment
+		}
+		v = strings.Trim(strings.TrimSpace(v), "()")
 		var names []string
 		for _, n := range strings.Fields(v) {
 			names = append(names, strings.Trim(n, `'"`))

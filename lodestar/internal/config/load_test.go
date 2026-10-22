@@ -307,3 +307,22 @@ func TestLoadStep2Errors(t *testing.T) {
 		})
 	}
 }
+
+func TestPkgbuildNames(t *testing.T) {
+	dir := t.TempDir()
+	for text, want := range map[string]string{
+		"pkgname=tool\n":                         "tool",
+		"pkgname=tool-bin # tool is the AUR's\n": "tool-bin",
+		"pkgname=(a 'b') # two\n":                "a b",
+		"pkgver=1 # x\npkgname=\"c#d\"\n":        "c#d",
+	} {
+		path := filepath.Join(dir, "PKGBUILD")
+		if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		names, err := pkgbuildNames(path)
+		if err != nil || strings.Join(names, " ") != want {
+			t.Errorf("%q: got %q, %v; want %q", text, names, err, want)
+		}
+	}
+}
