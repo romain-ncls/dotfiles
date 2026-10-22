@@ -115,15 +115,16 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   stays so it works if the driver gets fixed. The dark port LEDs during sleep
   mean nothing: `igc` drives the LEDs and `led_suspend` turns them off.
 
-## Logitech mice (logi-wheel)
+## Logitech mice (logi-smartshift)
 
-- **Per-app wheel settings (Options+ style) with our own `modules/logi-wheel`,
-  not Solaar or logiops.** Both broke smooth scrolling on the work laptop:
-  logiops diverts the wheel and re-emits coarse events, and Solaar re-applies
-  the wheel resolution behind the kernel driver. The kernel's
-  `logitech-hidpp` driver already gives hi-res scrolling, so logi-wheel only
-  sends SmartShift (feature 0x2111: threshold + scroll force) and never touches
-  wheel events. Neither tool has per-app profiles on KDE Wayland anyway.
+- **Per-app wheel settings (Options+ style) with our own
+  `modules/logi-smartshift`, not Solaar or logiops.** Both broke smooth
+  scrolling on the work laptop: logiops diverts the wheel and re-emits coarse
+  events, and Solaar re-applies the wheel resolution behind the kernel driver.
+  The kernel's `logitech-hidpp` driver already gives hi-res scrolling, so
+  logi-smartshift only sends SmartShift (feature 0x2111: threshold + scroll
+  force) and never touches wheel events. Neither tool has per-app profiles on
+  KDE Wayland anyway.
 - **Written in Go** like the old repo's daemons (spotify-vol, mutectl): one
   static binary, `go` only as a make dependency.
 - **A KWin script reports the active window**: on Wayland only the compositor
@@ -133,10 +134,9 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   binary, user unit, KWin script, udev rule (hidraw `uaccess`) and config all
   live in one folder and uninstall together. lodestar rebuilds it when
   `pkg/` changes, so editing the config is enough; no version bumps.
-- **Its name clashes with an AUR package** (`logi-wheel`, a racing-wheel tool,
-  0.42.5 on 21 Oct 2026). Ours is version 1, which counts as newer, and
-  `lodestar upgrade` keeps yay away from local packages; `lodestar check`
-  warns. Renaming it would remove the risk.
+- **Named logi-smartshift, no longer logi-wheel**: an AUR package (a
+  racing-wheel tool) is called `logi-wheel`, and yay would replace ours with
+  it once its version passed ours.
 - **Options+ sensitivity uses Options+'s own formula**: threshold =
   50 + round(-0.46 × sensitivity), read from the disassembly of
   `logioptionsplus_agent.exe` (`devio_feature_xsmartshift`); it matches the 10

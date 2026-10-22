@@ -217,7 +217,7 @@ shortcuts:
 - **Local packages** are built with makepkg from a PKGBUILD. They are not
   listed: including their module installs them. The PKGBUILD is either:
   - **in the module's `pkg/`**, for tools whose code lives in this repo
-    (mutectl, spotify-vol, backdrop, logi-wheel, lodestar);
+    (mutectl, spotify-vol, backdrop, logi-smartshift, lodestar);
   - **in the tool's own repo**, for tools that have one (awpro,
     whatdidhesay):
     ```yaml
@@ -243,9 +243,8 @@ shortcuts:
 - **Names must not collide with the AUR.** yay upgrades any installed package
   whose name it finds in the AUR with a higher version, even a local one.
   `lodestar check` warns when a local package has the name of an AUR or repo
-  package. Today that is `logi-wheel`: an unrelated AUR package for racing
-  wheels has the same name. Its version (0.42.5) is lower than ours (1), so
-  nothing happens yet.
+  package. That is why `logi-wheel` became `logi-smartshift`: an unrelated
+  AUR package for racing wheels has the first name.
 
 ### Updates
 

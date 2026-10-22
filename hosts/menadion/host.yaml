@@ -13,7 +13,7 @@ modules:
   - git
   - claude
   - docker
-  - logi-wheel
+  - logi-smartshift
   - nvidia
   - krdp
   - lodestar

@@ -1,16 +1,16 @@
-// logi-wheel sets SmartShift, its sensitivity and the scroll force of
+// logi-smartshift sets SmartShift, its sensitivity and the scroll force of
 // Logitech mice per app on KDE Plasma, like Logi Options+ does on Windows.
 //
 // A KWin script, loaded by the daemon, reports each window activation over
-// D-Bus. The daemon picks the matching profile in /etc/logi-wheel.toml and
-// sends one HID++ command (feature 0x2111, SmartShift enhanced) to every
+// D-Bus. The daemon picks the matching profile in /etc/logi-smartshift.toml
+// and sends one HID++ command (feature 0x2111, SmartShift enhanced) to every
 // Logitech mouse on /dev/hidraw*. It never touches wheel events or the wheel
 // resolution, so the kernel's hi-res smooth scrolling is left alone.
 //
 // Usage:
 //
-//	logi-wheel           run the daemon (the systemd user service does this)
-//	logi-wheel status    print the raw values each mouse holds now
+//	logi-smartshift           run the daemon (the systemd user service does this)
+//	logi-smartshift status    print the raw values each mouse holds now
 package main
 
 import (
@@ -28,8 +28,8 @@ import (
 )
 
 const (
-	configPath = "/etc/logi-wheel.toml"
-	kwinScript = "/usr/share/logi-wheel/logi-wheel.js"
+	configPath = "/etc/logi-smartshift.toml"
+	kwinScript = "/usr/share/logi-smartshift/logi-smartshift.js"
 	busName    = "local.LogiWheel"
 	objectPath = "/local/LogiWheel"
 )
@@ -144,13 +144,13 @@ func loadKWinScript(conn *dbus.Conn) error {
 	kwin := conn.Object("org.kde.KWin", "/Scripting")
 	const iface = "org.kde.kwin.Scripting."
 	var loaded bool
-	if err := kwin.Call(iface+"isScriptLoaded", 0, "logi-wheel").Store(&loaded); err != nil {
+	if err := kwin.Call(iface+"isScriptLoaded", 0, "logi-smartshift").Store(&loaded); err != nil {
 		return err
 	}
 	if loaded {
-		kwin.Call(iface+"unloadScript", 0, "logi-wheel")
+		kwin.Call(iface+"unloadScript", 0, "logi-smartshift")
 	}
-	if err := kwin.Call(iface+"loadScript", 0, kwinScript, "logi-wheel").Err; err != nil {
+	if err := kwin.Call(iface+"loadScript", 0, kwinScript, "logi-smartshift").Err; err != nil {
 		return err
 	}
 	return kwin.Call(iface+"start", 0).Err
@@ -236,7 +236,7 @@ func main() {
 	case len(os.Args) == 2 && os.Args[1] == "status":
 		status()
 	default:
-		fmt.Fprintln(os.Stderr, "usage: logi-wheel [status]")
+		fmt.Fprintln(os.Stderr, "usage: logi-smartshift [status]")
 		os.Exit(2)
 	}
 }

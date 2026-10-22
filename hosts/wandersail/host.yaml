@@ -29,7 +29,7 @@ modules:
   - droidcam
   - packet
   - bemoji
-  - logi-wheel
+  - logi-smartshift
   - awpro
   - mutectl
   - spotify-vol

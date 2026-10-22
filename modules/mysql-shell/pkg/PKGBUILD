@@ -2,7 +2,7 @@
 # /opt/mysql-shell. Oracle moves a version to its archives when the next
 # one is out: the source stays in lodestar's cache, and a new version only
 # needs pkgver and the checksum.
-pkgname=mysql-shell
+pkgname=mysql-shell-bin # mysql-shell is the AUR's dead 8.0 package
 pkgver=8.4.10
 pkgrel=1
 pkgdesc='MySQL Shell, the client and code editor for MySQL (Oracle build)'
@@ -11,6 +11,8 @@ url='https://dev.mysql.com/doc/mysql-shell/8.4/en/'
 license=(GPL-2.0-only)
 options=(!debug !strip)
 depends=(glibc)
+provides=(mysql-shell)
+conflicts=(mysql-shell)
 _dir="mysql-shell-$pkgver-linux-glibc2.28-x86-64bit"
 source=("https://cdn.mysql.com/Downloads/MySQL-Shell/$_dir.tar.gz")
 sha256sums=(b73c90f5e5c5e40b6bfc203eb829a7b5f8c9dc3c3185d4caf74fa9bf41d7a169)

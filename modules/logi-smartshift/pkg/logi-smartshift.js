@@ -1,4 +1,4 @@
-// Loaded into KWin by the logi-wheel daemon: reports each activated window.
+// Loaded into KWin by the logi-smartshift daemon: reports each activated window.
 function report(w) {
     if (!w) return;
     callDBus("local.LogiWheel", "/local/LogiWheel", "local.LogiWheel", "ActiveWindow",

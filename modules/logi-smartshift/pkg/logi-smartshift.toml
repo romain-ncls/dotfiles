@@ -3,7 +3,7 @@
 #   sensitivity  1-100, how easily SmartShift goes free-spin (Options+ slider)
 #   force        1-100, resistance of the clicky wheel (Options+ "scrolling force")
 # [app.<name>] matches a window's class or desktop file name (case-insensitive);
-# keys left out come from [default]. `journalctl --user -u logi-wheel` shows the
+# keys left out come from [default]. `journalctl --user -u logi-smartshift` shows the
 # class of the window each time the profile changes.
 
 [default]

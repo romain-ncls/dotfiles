@@ -1,4 +1,4 @@
-module logi-wheel
+module logi-smartshift
 
 go 1.27
 

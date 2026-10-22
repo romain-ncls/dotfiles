@@ -265,7 +265,7 @@ lodestar merges the modules of a host with these rules:
   installs the local package of the module. The PKGBUILD is in one of these
   locations:
   - In the `pkg/` folder of the module. This is for tools with their code in
-    this repository: mutectl, spotify-vol, backdrop, logi-wheel and lodestar.
+    this repository: mutectl, spotify-vol, backdrop, logi-smartshift and lodestar.
   - In the git repository of the tool. This is for tools with their own
     repository: awpro and whatdidhesay.
     ```yaml
@@ -297,9 +297,9 @@ lodestar merges the modules of a host with these rules:
 - **A local package must not have the name of an AUR package.** yay updates
   each installed package that has a higher version in the AUR, also a local
   package. `lodestar check` shows a message when a local package has the name
-  of an AUR package or an Arch package. At this time, this is true for
-  `logi-wheel`. An AUR package for game wheels has the same name. Its version
-  (0.42.5) is lower than our version (1). Thus yay does not change it now.
+  of an AUR package or an Arch package. For this reason, we changed the name
+  `logi-wheel` to `logi-smartshift`. An AUR package for game wheels has the
+  name `logi-wheel`.
 
 ### 4.2 Updates
 

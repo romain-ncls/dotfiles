@@ -4,7 +4,7 @@ PartOf=graphical-session.target
 After=graphical-session.target
 
 [Service]
-ExecStart=/usr/bin/logi-wheel
+ExecStart=/usr/bin/logi-smartshift
 Restart=on-failure
 RestartSec=3
 
