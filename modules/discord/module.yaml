@@ -1,7 +1,21 @@
-# Discord, on every activity. The OpenASAR + Vencord build with the mutectl
-# plugin of the NixOS days is not rebuilt yet (mutectl/mutectl-vencord-plugin.ts).
+# Discord, on every activity, with OpenASAR and Vencord (and Vencord's
+# mutectl plugin, ../mutectl/mutectl-vencord-plugin.ts). Arch's discord only
+# bootstraps Discord into ~/.config/discord, where Discord updates itself;
+# pkg/ builds the two mods, and discord-openasar-vencord puts them into that
+# install at each login and after each rebuild. The very first start of
+# Discord (its download) is without them, until the next login.
 packages:
   - discord
+
+pkg:
+  watch:
+    - ../mutectl/mutectl-vencord-plugin.ts
+
+user-services:
+  - discord-openasar-vencord.service
+
+hooks:
+  - run: discord-openasar-vencord
 
 window-rules:
   - Description: Discord on all activities

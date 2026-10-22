@@ -1,0 +1,64 @@
+# Local package: OpenASAR and Vencord (with the mutectl plugin) for Discord,
+# as the NixOS config had them. Arch's discord package only bootstraps
+# Discord into ~/.config/discord/app-<version>, which Discord's own updater
+# then keeps up to date; discord-openasar-vencord puts the two mods there.
+pkgname=discord-openasar-vencord
+pkgver=1.15.12 # Vencord's version
+_openasar=5a44615cad9db23ae57573c498b26bae4e6e255b
+pkgrel=1
+pkgdesc='OpenASAR and Vencord, with the mutectl plugin, for Discord'
+arch=(any)
+license=(AGPL-3.0-only GPL-3.0-only)
+options=(!debug !strip)
+depends=(discord unzip)
+makedepends=(git nodejs pnpm asar)
+source=("vencord::git+https://github.com/Vendicated/Vencord.git#tag=v$pkgver"
+        "openasar::git+https://github.com/GooseMod/OpenAsar.git#commit=$_openasar"
+        discord-openasar-vencord discord-openasar-vencord.service)
+sha256sums=(SKIP SKIP SKIP SKIP)
+
+prepare() {
+	cd openasar
+	# OpenASAR's "perf" preset turns on Chromium's DrDc: with VA-API decode on
+	# the Meteor Lake iGPU, it aborts Discord's GPU process every few minutes.
+	sed -i 's/--enable-features=EnableDrDc,/--enable-features=/' src/cmdSwitches.js
+	if grep -q EnableDrDc src/cmdSwitches.js; then
+		echo "EnableDrDc is still in OpenASAR's cmdSwitches.js" >&2
+		return 1
+	fi
+	# Its self-update would put back upstream's build: this package updates it.
+	echo "module.exports = async () => log('AsarUpdate', 'Removed');" >src/asarUpdate.js
+	sed -i "s/'nightly'/'nightly-${_openasar::7}'/" src/index.js
+
+	mkdir -p "$srcdir/vencord/src/userplugins"
+	cp "$startdir/../../mutectl/mutectl-vencord-plugin.ts" "$srcdir/vencord/src/userplugins/mutectl.ts"
+}
+
+build() {
+	cd "$srcdir/openasar"
+	node scripts/strip.js
+	asar pack src "$srcdir/openasar.asar"
+
+	cd "$srcdir/vencord"
+	export VENCORD_REMOTE=Vendicated/Vencord VENCORD_HASH="v$pkgver"
+	export npm_config_store_dir="$srcdir/pnpm-store" COREPACK_ENABLE_STRICT=0
+	pnpm install --frozen-lockfile
+	pnpm build --standalone --disable-updater
+
+	# Discord's app.asar becomes this loader: it starts Vencord, which starts
+	# the _app.asar next to it (OpenASAR).
+	mkdir -p "$srcdir/loader"
+	printf '{"name":"discord","main":"index.js"}\n' >"$srcdir/loader/package.json"
+	printf 'require("/usr/lib/%s/vencord/patcher.js");\n' "$pkgname" >"$srcdir/loader/index.js"
+	asar pack "$srcdir/loader" "$srcdir/loader.asar"
+}
+
+package() {
+	local lib="$pkgdir/usr/lib/$pkgname"
+	install -Dm644 "$srcdir/loader.asar" "$lib/app.asar"
+	install -Dm644 "$srcdir/openasar.asar" "$lib/_app.asar"
+	mkdir -p "$lib/vencord"
+	cp -r --no-preserve=ownership "$srcdir/vencord/dist/." "$lib/vencord/"
+	install -Dm755 discord-openasar-vencord -t "$pkgdir/usr/bin"
+	install -Dm644 discord-openasar-vencord.service -t "$pkgdir/usr/lib/systemd/user"
+}

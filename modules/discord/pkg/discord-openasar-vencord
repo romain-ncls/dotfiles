@@ -1,0 +1,17 @@
+#!/bin/sh
+# Puts OpenASAR and Vencord into the Discord that Discord's updater keeps in
+# ~/.config/discord: in each app-<version>/resources, app.asar becomes the
+# loader (Vencord) and _app.asar OpenASAR, which Vencord then starts.
+# Runs at login (discord-openasar-vencord.service) and after lodestar
+# rebuilds the package. Until Discord's first start has installed it, there
+# is nothing to do. A Discord update during a session keeps Vencord (it
+# copies itself over) and gets OpenASAR back at the next login.
+set -eu
+lib=/usr/lib/discord-openasar-vencord
+root=${XDG_CONFIG_HOME:-$HOME/.config}/discord
+for res in "$root"/app-*/resources; do
+	[ -f "$res/app.asar" ] || continue
+	for f in app.asar _app.asar; do
+		cmp -s "$lib/$f" "$res/$f" || install -m644 "$lib/$f" "$res/$f"
+	done
+done

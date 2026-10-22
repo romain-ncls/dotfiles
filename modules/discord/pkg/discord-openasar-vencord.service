@@ -1,0 +1,10 @@
+[Unit]
+Description=Put OpenASAR and Vencord into Discord
+Before=graphical-session.target xdg-desktop-autostart.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/discord-openasar-vencord
+
+[Install]
+WantedBy=graphical-session-pre.target
