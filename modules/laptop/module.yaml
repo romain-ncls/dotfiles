@@ -1,9 +1,13 @@
 # Laptop hardware (Intel Meteor Lake): graphics and video decode, power,
-# firmware updates, SSD trim.
+# firmware updates, SSD trim. What NixOS's nixos-hardware module
+# (hp-probook-460G11) set: thermald, fstrim, microcode (base), i915 in the
+# initramfs (mkinitcpio's kms hook), and the Intel graphics runtimes below.
 packages:
   - mesa
   - vulkan-intel
-  - intel-media-driver
+  - intel-media-driver # VA-API video decode
+  - intel-compute-runtime # OpenCL and Level Zero
+  - vpl-gpu-rt # oneVPL: Quick Sync in ffmpeg
   - libva-utils
   - power-profiles-daemon # Plasma's power profiles
   - thermald

@@ -204,6 +204,31 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   `@var_log`/`@var_cache`: images and volumes stay out of snapper's root
   snapshots, and a rollback does not roll containers back.
 
+## Discord (work laptop)
+
+- **OpenASAR and Vencord, with the mutectl plugin**, as on NixOS. Arch's
+  `discord` package is only a bootstrapper: Discord installs itself into
+  `~/.config/discord/app-<version>` and updates itself there, so the mods
+  cannot be part of a system package. `modules/discord/pkg` builds them;
+  `discord-openasar-vencord` copies them into each `app-*` folder at login
+  and after a rebuild. A Discord update during a session keeps Vencord (it
+  copies itself over) and gets OpenASAR back at the next login.
+- **OpenASAR without `EnableDrDc`**: its "perf" preset turns DrDc on, and with
+  VA-API decode on the Meteor Lake iGPU Discord's GPU process aborts every few
+  minutes. Its self-update is removed too, or it would put DrDc back.
+- **Not Vesktop**: it doesn't run OpenASAR, and the official client is what
+  mutectl's plugin was written against.
+
+## Left out of the NixOS port (work laptop)
+
+- **konsave, CUPS, the monochrome emoji font**: not needed (no printer).
+- **Plymouth**: liked, may come back later (the `plymouth` mkinitcpio hook
+  and `splash` in `/etc/kernel/cmdline`).
+- **The NPU driver** (`intel-npu-driver`): nothing uses it.
+- nixos-hardware's `hp-probook-460G11` module is covered by the laptop
+  module: thermald, fstrim, microcode, i915 early (mkinitcpio's `kms` hook),
+  and the Intel media and compute runtimes.
+
 ## Not in the repo yet
 
 - **VS Code** settings and extensions stay in VS Code Settings Sync for now,
