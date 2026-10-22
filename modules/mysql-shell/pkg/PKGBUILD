@@ -1,0 +1,23 @@
+# Local package: Oracle's build of MySQL Shell, with its own libraries, in
+# /opt/mysql-shell. Oracle moves a version to its archives when the next
+# one is out: the source stays in lodestar's cache, and a new version only
+# needs pkgver and the checksum.
+pkgname=mysql-shell
+pkgver=8.4.10
+pkgrel=1
+pkgdesc='MySQL Shell, the client and code editor for MySQL (Oracle build)'
+arch=(x86_64)
+url='https://dev.mysql.com/doc/mysql-shell/8.4/en/'
+license=(GPL-2.0-only)
+options=(!debug !strip)
+depends=(glibc)
+_dir="mysql-shell-$pkgver-linux-glibc2.28-x86-64bit"
+source=("https://cdn.mysql.com/Downloads/MySQL-Shell/$_dir.tar.gz")
+sha256sums=(b73c90f5e5c5e40b6bfc203eb829a7b5f8c9dc3c3185d4caf74fa9bf41d7a169)
+
+package() {
+	install -d "$pkgdir/opt/mysql-shell" "$pkgdir/usr/bin"
+	cp -a "$_dir/." "$pkgdir/opt/mysql-shell/"
+	ln -s /opt/mysql-shell/bin/mysqlsh "$pkgdir/usr/bin/mysqlsh"
+	ln -s /opt/mysql-shell/bin/mysql-secret-store-login-path "$pkgdir/usr/bin/mysql-secret-store-login-path"
+}
