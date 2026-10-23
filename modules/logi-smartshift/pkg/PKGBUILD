@@ -1,0 +1,30 @@
+# Local package: lodestar builds it when this folder changes.
+pkgname=logi-smartshift
+pkgver=1
+pkgrel=1
+pkgdesc='Per-app SmartShift and scroll force for Logitech mice on KDE Plasma'
+arch=(x86_64)
+license=(MIT)
+options=(!debug)
+depends=(kwin)
+makedepends=(go)
+backup=(etc/logi-smartshift.toml)
+source=(logi-smartshift.js logi-smartshift.service 70-logi-smartshift.rules logi-smartshift.toml)
+sha256sums=(SKIP SKIP SKIP SKIP)
+
+build() {
+	cd "$startdir/daemon"   # local package: the Go sources sit next to this file
+	export GOPATH="$srcdir/gopath" GOTOOLCHAIN=local CGO_ENABLED=0
+	export GOFLAGS="-buildmode=pie -trimpath -mod=readonly -modcacherw"
+	go build -o "$srcdir/logi-smartshift" .
+}
+
+package() {
+	install -Dm755 "$srcdir/logi-smartshift" -t "$pkgdir/usr/bin"
+	install -Dm644 logi-smartshift.js -t "$pkgdir/usr/share/logi-smartshift"
+	install -Dm644 logi-smartshift.service -t "$pkgdir/usr/lib/systemd/user"
+	install -d "$pkgdir/usr/lib/systemd/user/graphical-session.target.wants"
+	ln -s ../logi-smartshift.service "$pkgdir/usr/lib/systemd/user/graphical-session.target.wants/"
+	install -Dm644 70-logi-smartshift.rules -t "$pkgdir/usr/lib/udev/rules.d"
+	install -Dm644 logi-smartshift.toml "$pkgdir/etc/logi-smartshift.toml"
+}

@@ -1,0 +1,10 @@
+# Quick Share with Android phones (Packet). It finds them over mDNS.
+packages:
+  - packet
+
+firewall:
+  tcp:
+    - 5359
+  udp:
+    - 5353
+    - 5359

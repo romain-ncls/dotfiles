@@ -1,0 +1,20 @@
+# Development: languages, cluster tools, the code font.
+packages:
+  - go
+  - nodejs
+  - pnpm
+  - deno
+  - bun
+  - uv
+  - python
+  - jdk21-openjdk # the LTS in use; jdk-openjdk is 27, not an LTS
+  - graphviz # go tool pprof
+  - kind
+  - kubectl
+  - yamllint
+  - age
+  - tokei
+  - just
+  - bws-bin # Bitwarden Secrets Manager CLI
+  - s5cmd
+  - ttf-fira-code # Konsole's font

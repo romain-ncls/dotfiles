@@ -1,0 +1,11 @@
+pkgname=lodestar-test-tool
+pkgver=1
+pkgrel=1
+pkgdesc='A local package for the container test'
+arch=(any)
+license=(MIT)
+
+package() {
+	install -Dm755 /dev/stdin "$pkgdir/usr/bin/lodestar-test-tool" <<<'#!/bin/sh
+echo tool'
+}

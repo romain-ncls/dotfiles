@@ -1,0 +1,3 @@
+# Keychron keyboards (vendor 3434) expose a raw HID interface that Keychron
+# Launcher / VIA drive over WebHID; without this, /dev/hidraw* is root-only.
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3434", MODE="0660", TAG+="uaccess"

@@ -1,0 +1,3 @@
+# lodestar itself. pkg/ holds its Go source next to the PKGBUILD, so an edit
+# to the source rebuilds and reinstalls it at the next apply. test/ holds
+# the container test (container.sh) and the VM test (vm.sh).

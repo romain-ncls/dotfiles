@@ -1,0 +1,18 @@
+# Plasma's RDP server (krdp comes with plasma-meta). Logging in with the Linux account is off; RDP users
+# are added in System Settings → Remote Desktop (docs/decisions.md).
+user-services:
+  - app-org.kde.krdpserver.service
+
+kde:
+  krdpserverrc:
+    General:
+      Autostart: true
+      Certificate: /home/romain/.local/share/krdpserver/krdp.crt
+      CertificateKey: /home/romain/.local/share/krdpserver/krdp.key
+
+hooks:
+  - run: krdp-cert.sh # a self-signed certificate per machine
+
+firewall:
+  tcp:
+    - 3389

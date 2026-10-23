@@ -1,0 +1,2 @@
+# Per-app SmartShift and scroll force for Logitech mice: pkg/ builds the
+# daemon, its user unit, KWin script and udev rule (docs/decisions.md).

@@ -1,0 +1,7 @@
+# Command-line tools and editors: identical on every machine.
+packages:
+  - bitwarden-cli # secrets for lodestar's templates
+  - jq # Claude Code status line
+  - github-cli
+  - claude-code
+  - visual-studio-code-bin # settings and extensions still on Settings Sync (docs/decisions.md)

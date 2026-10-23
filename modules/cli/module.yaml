@@ -1,0 +1,26 @@
+# Command-line tools.
+packages:
+  - wget
+  - fastfetch
+  - bat
+  - eza
+  - doggo
+  - ripgrep
+  - fzf
+  - htop
+  - bottom
+  - zip
+  - unzip
+  - nmap
+  - ncdu
+  - usbutils
+  - pciutils
+  - whois # mkpasswd
+  - libnotify # notify-send
+  - wl-clipboard
+  - wtype
+  - xdotool
+  - caligula # ISO burner
+  - ffmpeg
+  - go-yq
+  - gparted

@@ -1,0 +1,24 @@
+# Local package: lodestar builds it when this folder changes.
+pkgname=mutectl
+pkgver=1
+pkgrel=1
+pkgdesc='Mute the microphone from any device and keep Discord and Teams in step'
+arch=(x86_64)
+license=(MIT)
+options=(!debug)
+depends=(curl gawk pipewire qt6-tools kdeconnect)
+makedepends=(go)
+source=(mutectl lock-afk mutectl.service)
+sha256sums=(SKIP SKIP SKIP)
+
+build() {
+	cd "$startdir/mutectl-service"   # local package: the Go sources sit next to this file
+	export GOPATH="$srcdir/gopath" GOTOOLCHAIN=local CGO_ENABLED=0
+	export GOFLAGS="-buildmode=pie -trimpath -mod=readonly -modcacherw"
+	go build -o "$srcdir/mutectl-service" .
+}
+
+package() {
+	install -Dm755 "$srcdir/mutectl-service" mutectl lock-afk -t "$pkgdir/usr/bin"
+	install -Dm644 mutectl.service -t "$pkgdir/usr/lib/systemd/system"
+}

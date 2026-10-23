@@ -1,0 +1,15 @@
+{
+  "yaml.schemas": {
+    "./schema/host.json": "hosts/*/host.yaml",
+    "./schema/module.json": "modules/*/module.yaml"
+  },
+  "workbench.editor.customLabels.enabled": true,
+  "workbench.editor.customLabels.patterns": {
+    "**/modules/*/module.yaml": "${dirname} (module)",
+    "**/hosts/*/host.yaml": "${dirname} (host)"
+  },
+  "[yaml]": {
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2
+  }
+}

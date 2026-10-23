@@ -1,0 +1,12 @@
+# Readest, with the settings chosen on Windows (docs/decisions.md, Readest).
+# The color theme lives in Readest's web storage: set it by hand
+# (docs/manual-steps.md).
+packages:
+  - readest
+  - ttf-lato # sans font
+  - ttf-literata # serif font
+
+json:
+  - path: ~/.config/com.bilingify.readest/settings.json
+    merge: readest.json
+    unless-running: readest # Readest overwrites the file on exit

@@ -1,0 +1,7 @@
+# Work apps and network access.
+packages:
+  - networkmanager-openvpn # the company VPN
+  - gitkraken
+  - postman-bin
+  - jetbrains-toolbox # GoLand, WebStorm, PyCharm, DataGrip install through it
+  - obsidian

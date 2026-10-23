@@ -1,0 +1,6 @@
+# LanguageTool's server for the browser extension (http://localhost:8749/v2).
+packages:
+  - languagetool
+
+services:
+  - languagetool.service

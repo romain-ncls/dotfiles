@@ -1,0 +1,10 @@
+# Docker, socket-activated: the daemon starts when something talks to it.
+# /var/lib/docker is its own subvolume (@var_lib_docker), out of snapper's
+# root snapshots.
+packages:
+  - docker
+  - docker-compose # docker compose
+  - docker-buildx # docker build
+
+services:
+  - docker.socket

@@ -1,0 +1,34 @@
+# KDE Plasma on Wayland and the desktop apps: identical on every machine.
+packages:
+  - plasma-meta
+  - plasma-login-manager
+  - konsole
+  - dolphin
+  - ark
+  - gwenview
+  - kate
+  - okular
+  - kdialog # dialogs for scripts (reboot-to-windows)
+  - kde-gtk-config
+  - breeze-gtk
+  # audio
+  - pipewire
+  - pipewire-alsa
+  - pipewire-pulse
+  - pipewire-jack
+  - wireplumber
+  # bluetooth (KDE's bluedevil talks to bluetoothd)
+  - bluez
+  - bluez-utils
+  # fonts
+  - noto-fonts
+  - noto-fonts-cjk
+  - noto-fonts-emoji
+  - ttf-jetbrains-mono
+  # browsers
+  - firefox
+  - brave-bin
+
+services:
+  - plasmalogin.service # also links display-manager.service
+  - bluetooth.service

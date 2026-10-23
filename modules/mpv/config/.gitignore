@@ -1,0 +1,5 @@
+# mpv keeps state outside its config folder (Linux: ~/.local/state/mpv,
+# Windows: %LOCALAPPDATA%\mpv); these are here only in case that changes.
+watch_later/
+cache/
+sub-style.json

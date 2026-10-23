@@ -1,0 +1,15 @@
+# Local package: lodestar builds it when this folder changes.
+pkgname=soundboard
+pkgver=1
+pkgrel=1
+pkgdesc='Play sounds into the microphone (sounds in ~/Music/soundbox)'
+arch=(any)
+license=(MIT)
+options=(!debug)
+depends=(pipewire bemenu bemenu-wayland procps-ng ffmpeg easyeffects)
+source=(soundboard)
+sha256sums=(SKIP)
+
+package() {
+	install -Dm755 soundboard -t "$pkgdir/usr/bin"
+}

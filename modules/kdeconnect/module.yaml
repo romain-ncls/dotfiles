@@ -1,0 +1,10 @@
+# Phone link.
+packages:
+  - kdeconnect
+  - sshfs # browse the phone's files
+
+firewall:
+  tcp:
+    - 1714-1764
+  udp:
+    - 1714-1764

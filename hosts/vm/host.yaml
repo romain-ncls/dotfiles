@@ -1,0 +1,30 @@
+# A small host to test lodestar install in a VM (modules/lodestar/test/vm.sh): the
+# same disk layout as wandersail (LUKS2, btrfs, swapfile) and the shared
+# base modules, up to the Plasma login screen.
+modules:
+  - base
+  - boot
+  - dns
+  - desktop
+  - kde
+  - git
+  - lodestar
+
+vars:
+  name: Romain Nicolas
+  email: nicolasromain0@gmail.com
+
+user:
+  name: romain
+  shell: /usr/bin/fish
+  groups:
+    - wheel
+
+install:
+  disk: virtio-lodestar-vm # QEMU disk serial
+  esp: 4GiB
+  encrypt: true
+  swapfile: 2GiB
+
+boot:
+  limine: limine.conf

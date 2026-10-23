@@ -1,0 +1,23 @@
+# Limine, with kernels and snapshot entries generated from /etc/default/limine
+# and /etc/kernel/cmdline; snapper snapshots (snap-pac around every pacman
+# transaction, lodestar around every apply).
+packages:
+  - limine
+  - limine-mkinitcpio-hook
+  - limine-snapper-sync
+  - snapper
+  - snap-pac
+  - inotify-tools # limine-snapper-sync's watcher
+  - xxhash # HASH_FUNCTION=xxhash in /etc/default/limine
+
+services:
+  - limine-snapper-sync.service
+  - snapper-cleanup.timer
+  - snapper-timeline.timer
+
+files:
+  /etc/snapper/configs/root:
+    mode: 0640
+
+ignore:
+  - /etc/conf.d/snapper # written by snapper create-config

@@ -1,0 +1,11 @@
+# awpro: the Alienware Pro headset from the command line. Its PKGBUILD lives
+# in its own repo. Launch (6) toggles noise cancelling and transparency.
+pkg:
+  git: https://github.com/romain-ncls/awpro.git
+  ref: v0.3.0
+  path: packaging/arch
+
+shortcuts:
+  - name: Headset noise cancelling
+    keys: Launch (6)
+    run: case "$(awpro get anc)" in transparency*) awpro anc on;; *) awpro anc transparency --level 5;; esac

@@ -1,0 +1,32 @@
+[user]
+	name = {{ .vars.name }}
+	email = {{ .vars.email }}
+	# each machine signs with its own key; see docs/manual-steps.md
+	signingkey = {{ .user.home }}/.ssh/id_ed25519.pub
+[gpg]
+	format = ssh
+[commit]
+	gpgsign = true
+[tag]
+	gpgsign = true
+[gpg "ssh"]
+	allowedSignersFile = {{ .user.home }}/.config/git/allowed_signers
+[init]
+	defaultBranch = main
+[pull]
+	rebase = true
+[push]
+	autoSetupRemote = true
+	default = simple
+[fetch]
+	prune = true
+[rebase]
+	autostash = true
+[diff]
+	algorithm = histogram
+[core]
+	editor = code --wait
+[rerere]
+	enabled = true
+[log]
+	date = iso

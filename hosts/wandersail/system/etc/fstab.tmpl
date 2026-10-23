@@ -1,0 +1,15 @@
+# Written by lodestar from hosts/wandersail/system/etc/fstab.tmpl: the UUIDs
+# come from the disk lodestar install made (facts).
+# <file system> <dir> <type> <options> <dump> <pass>
+{{- $btrfs := "rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2" }}
+{{- $root := fact "root-uuid" }}
+UUID={{ $root }}	/              	btrfs	{{ $btrfs }},subvol=/@	0 0
+UUID={{ $root }}	/home          	btrfs	{{ $btrfs }},subvol=/@home	0 0
+UUID={{ $root }}	/.snapshots    	btrfs	{{ $btrfs }},subvol=/@snapshots	0 0
+UUID={{ $root }}	/var/log       	btrfs	{{ $btrfs }},subvol=/@var_log	0 0
+UUID={{ $root }}	/var/cache     	btrfs	{{ $btrfs }},subvol=/@var_cache	0 0
+UUID={{ $root }}	/var/tmp       	btrfs	{{ $btrfs }},subvol=/@var_tmp	0 0
+UUID={{ $root }}	/var/lib/docker	btrfs	{{ $btrfs }},subvol=/@var_lib_docker	0 0
+UUID={{ $root }}	/swap          	btrfs	rw,noatime,ssd,subvol=/@swap	0 0
+UUID={{ fact "esp-uuid" }}	/boot	vfat	rw,relatime,fmask=0077,dmask=0077,codepage=437,iocharset=ascii,shortname=mixed,utf8,errors=remount-ro	0 2
+/swap/swapfile	none	swap	defaults	0 0

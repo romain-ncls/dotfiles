@@ -1,0 +1,29 @@
+# Local package: lodestar builds it when this folder changes.
+pkgname=backdrop
+pkgver=1
+pkgrel=1
+pkgdesc='Wallpapers from Windows Spotlight, Bing and Wallhaven, picked by likes and dislikes'
+arch=(x86_64)
+license=(MIT)
+options=(!debug)
+depends=(xdg-utils kconfig plasma5support)
+makedepends=(go)
+source=(backdrop.service)
+sha256sums=(SKIP)
+
+build() {
+	cd "$startdir/daemon"
+	export GOPATH="$srcdir/gopath" GOTOOLCHAIN=local CGO_ENABLED=0
+	export GOFLAGS="-buildmode=pie -trimpath -mod=readonly -modcacherw"
+	go build -o "$srcdir/backdrop" .
+}
+
+package() {
+	install -Dm755 "$srcdir/backdrop" -t "$pkgdir/usr/bin"
+	install -Dm644 backdrop.service -t "$pkgdir/usr/lib/systemd/user"
+	# the Plasma wallpaper plugin; it runs the CLI by its full path
+	local plugin="$pkgdir/usr/share/plasma/wallpapers/com.github.romain-ncls.backdrop"
+	mkdir -p "$plugin"
+	cp -r "$startdir/plasma/." "$plugin"
+	sed -i 's|@backdrop@|/usr/bin/backdrop|g' "$plugin/contents/ui/Backend.qml"
+}

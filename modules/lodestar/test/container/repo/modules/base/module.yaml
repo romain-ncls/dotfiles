@@ -1,0 +1,23 @@
+packages:
+  - base
+  - base-devel # explicit in the image
+  - sudo
+  - fish
+  - jq # used by the test
+services:
+  - fstrim.timer
+files:
+  /etc/sudoers.d/10-wheel:
+    mode: 0440
+    check: visudo -cf {}
+ignore:
+  # written by Docker or changed in the image: not part of the test
+  - /etc/hostname
+  - /etc/hosts
+  - /etc/resolv.conf
+  - /etc/locale.conf
+  - /etc/os-release
+  - /etc/shells
+  - /etc/pacman.conf
+  - /etc/pacman.d/mirrorlist
+  - /etc/sudoers.d/99-test

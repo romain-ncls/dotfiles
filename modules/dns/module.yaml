@@ -1,0 +1,4 @@
+# Cloudflare over DNS-over-TLS through systemd-resolved; NetworkManager uses
+# it because /etc/resolv.conf links to its stub (docs/decisions.md, DNS).
+services:
+  - systemd-resolved.service

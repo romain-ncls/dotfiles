@@ -1,0 +1,30 @@
+# Local package: lodestar builds it when this folder changes.
+pkgname=lodestar
+pkgver=1
+pkgrel=1
+pkgdesc='Makes this machine match its description in the dotfiles repo'
+arch=(x86_64)
+url='https://github.com/romain-ncls/dotfiles'
+license=(MIT)
+options=(!debug)
+depends=(pacman systemd git sudo)
+makedepends=(go)
+optdepends=('kconfig: KDE settings (kwriteconfig6)'
+            'yay: AUR packages'
+            'bitwarden-cli: secrets in templates'
+            'snapper: snapshots around each apply'
+            'nftables: the firewall'
+            'rebuild-detector: lodestar upgrade')
+
+build() {
+	cd "$startdir" # local package: the Go sources sit next to this file
+	export GOPATH="$srcdir/gopath" GOTOOLCHAIN=local CGO_ENABLED=0
+	export GOFLAGS="-trimpath -mod=readonly -modcacherw"
+	go build -o "$srcdir/lodestar" .
+}
+
+package() {
+	install -Dm755 "$srcdir/lodestar" "$pkgdir/usr/bin/lodestar"
+	install -Dm644 "$startdir/fish/completions.fish" "$pkgdir/usr/share/fish/vendor_completions.d/lodestar.fish"
+	install -Dm644 "$startdir/fish/lds.fish" "$pkgdir/usr/share/fish/vendor_conf.d/lodestar.fish"
+}
