@@ -1546,17 +1546,45 @@ def compose():
             old.unlink()
     if (OUT / "zones").is_dir():
         shutil.rmtree(OUT / "zones")
-    preview = layers["back"].copy()
+    # The world at rest, and the same with its air as the scene lays it (over the back layer and
+    # over the front, at its mean strength): what the lock screen's painting is painted from, so
+    # that the world washing in over it doesn't light it up. But the shafts, which follow the
+    # daylight (WorldScene's sun): kept apart, as how much of their light shows through what's in
+    # front of them (`cover`), which the painting lays on at the hour's strength.
+    def with_air(img, group, shafts=False):
+        for a in air:
+            if a["layer"] != group or (a["kind"] == "shaft") != shafts:
+                continue
+            piece = np.asarray(Image.open(OUT / a["file"]).convert("RGBA").resize(
+                (max(1, round(a["w"] * PPU)), max(1, round(a["h"] * PPU))), Image.LANCZOS)).copy()
+            piece[..., 3] = (piece[..., 3] / (1 + a["breathe"][0])).astype(np.uint8)
+            x, y = round(a["x"] * PPU), round((WORLD[1] - a["y"] - a["h"]) * PPU)
+            x0, y0 = max(0, -x), max(0, -y)
+            x1, y1 = min(piece.shape[1], img.width - x), min(piece.shape[0], img.height - y)
+            if x1 > x0 and y1 > y0:
+                img.alpha_composite(Image.fromarray(piece[y0:y1, x0:x1], "RGBA"), (x + x0, y + y0))
+    preview, aired = layers["back"].copy(), layers["back"].copy()
+    with_air(aired, "back")
+    shafts, cover = Image.new("RGBA", aired.size), Image.new("RGBA", aired.size)
+    with_air(shafts, "back", shafts=True)
     for name in ("mid", "front"):  # the swaying and animated pieces at rest
-        for a in animated:
-            if a["layer"] == name and name == "front":
-                cell = Image.open(OUT / a["sheet"]).crop((a["cell"][0], a["cell"][1], a["cell"][0] + a["cell"][2], a["cell"][1] + a["cell"][3]))
-                preview.alpha_composite(cell, (round(a["x"] * PPU), round((WORLD[1] - a["y"] - a["h"]) * PPU)))
-        preview.alpha_composite(layers[name])
-        for p in swaying[name]:
-            preview.alpha_composite(p["image"], p["px"])
+        for img in (preview, aired, cover):
+            for a in animated:
+                if a["layer"] == name and name == "front":
+                    cell = Image.open(OUT / a["sheet"]).crop((a["cell"][0], a["cell"][1], a["cell"][0] + a["cell"][2], a["cell"][1] + a["cell"][3]))
+                    img.alpha_composite(cell, (round(a["x"] * PPU), round((WORLD[1] - a["y"] - a["h"]) * PPU)))
+            img.alpha_composite(layers[name])
+            for p in swaying[name]:
+                img.alpha_composite(p["image"], p["px"])
+    with_air(aired, "front")
+    with_air(cover, "front")
     preview.convert("RGB").save(OUT / "preview.jpg", quality=85)
-    drawing = build_drawing(layers, swaying, animated, clock, np.array(rock_px))
+    shafts = np.asarray(shafts).astype(np.float32) / 255
+    glaze = shafts[..., 3] * (1 - np.asarray(cover)[..., 3].astype(np.float32) / 255)
+    painting = build_painting(aired, glaze)
+    # Their colour: the light's, much the same all along them (for Painting.qml).
+    shaft_light = (shafts[..., :3] * shafts[..., 3:]).sum((0, 1)) / max(float(shafts[..., 3].sum()), 1e-9)
+    shaft_light = [round(float(c), 3) for c in shaft_light]
 
     # 5. Navigation over the same rock; she keeps out of the lake.
     nav_map, _ = nav.build(WORLD, [r.points for r in rocks + room_ground() if r.solid], water=[(LAKE["x0"], LAKE["x1"], LAKE["level"])],
@@ -1575,7 +1603,7 @@ def compose():
         "height": round(WORLD[1], 3),
         "pixelsPerUnit": PPU,
         "layers": tiles,
-        "drawing": drawing,
+        "painting": painting,
         "zones": zones_out,
         "heroFeet": HERO_FEET,
         "nav": nav_map,
@@ -1602,21 +1630,26 @@ def compose():
                    f"QtObject {{\n    readonly property var world: ({json.dumps(data)})\n}}\n")
     if subprocess.run([Path(__file__).with_name("derive.py"), tmp]).returncode:
         print("derive.py failed: the wallpaper will read the PNGs", file=sys.stderr)
-    # What the lock screen draws while it makes the world (Drawing.qml), on its own: read before
+    # What the lock screen paints while it makes the world (Painting.qml), on its own: read before
     # the world, in the first frame, it has to be small. Its tiles' QOI twins, where derive.py made
     # them.
+    def twin(file):
+        return {"file": file, "qoi": (OUT / file).with_suffix(".qoi").exists()}
     sketch = {key: data[key] for key in ("build", "unitMm", "width", "height", "pixelsPerUnit")}
-    sketch["tiles"] = [dict(t, qoi=(OUT / t["file"]).with_suffix(".qoi").exists()) for t in drawing]
-    # And each screen's own image of it, for this desk (derive.py), drawn there whole.
+    sketch["light"] = shaft_light
+    for key in ("paint", "time"):
+        sketch[key] = [dict(t, **twin(t["file"])) for t in painting[key]]
+    # And each screen's own images of it, for this desk (derive.py), drawn there whole.
     derived = (OUT / "Derived.qml").read_text() if (OUT / "Derived.qml").exists() else ""
     derived = json.loads(derived[derived.index("({") + 1:derived.rindex("})") + 1]) if "({" in derived else {}
-    sketch["views"] = [{"x": v["x"], "w": v["w"], "px": v["px"], "file": v["drawing"],
-                        "qoi": (OUT / v["drawing"]).with_suffix(".qoi").exists()}
-                       for v in derived.get("views", []) if "drawing" in v and derived.get("build") == data["build"]]
-    tmp_drawing = OUT / ".Drawing.qml.tmp"
-    tmp_drawing.write_text("// Generated by packages/silksong-wallpaper/tools/world.py\nimport QtQml\n\n"
-                           f"QtObject {{\n    readonly property var drawing: ({json.dumps(sketch)})\n}}\n")
-    os.replace(tmp_drawing, OUT / "Drawing.qml")
+    sketch["views"] = [{"x": v["x"], "w": v["w"], "px": v["px"], "paint": twin(v["painting"]["paint"]),
+                        "time": twin(v["painting"]["time"])}
+                       for v in derived.get("views", []) if "painting" in v and derived.get("build") == data["build"]]
+    tmp_painting = OUT / ".Painting.qml.tmp"
+    tmp_painting.write_text("// Generated by packages/silksong-wallpaper/tools/world.py\nimport QtQml\n\n"
+                            f"QtObject {{\n    readonly property var painting: ({json.dumps(sketch)})\n}}\n")
+    os.replace(tmp_painting, OUT / "Painting.qml")
+    (OUT / "Drawing.qml").unlink(missing_ok=True)  # the line drawing an earlier build made
     os.replace(tmp, OUT / "World.qml")
     kinds = {}
     for link in nav_map["links"]:
@@ -1933,140 +1966,101 @@ def save_tiles(img, prefix):
     return tiles
 
 
-def build_drawing(layers, swaying, animated, clock, rock):
-    """The world drawn in lines, which the lock screen shows while it makes the world
-    (plasma/contents/ui/Drawing.qml): the outlines of the front and mid layers with their plants
-    and animated pieces at rest (where their alpha crosses half), the long edges painted inside
-    them, the backdrops' long edges where nothing covers them, fainter, and the lake's surface,
-    the waterfall's edges and the clock's gears (as circles: they turn), each an ordered stroke
-    traced from its left end. Hornet and the Bell Beast move, so they aren't in it. Saved as tiles
-    beside the layers: red the line, green when the pen reaches it (0..1 of the drawing's time,
-    near the line too, so that scaling a tile doesn't blur when)."""
-    from PIL import ImageDraw
+def build_painting(at_rest, glaze):
+    """The world painted in watercolor, which the lock screen shows while it makes the world
+    (plasma/contents/ui/Painting.qml): the world at rest (its layers with their plants and
+    animated pieces, and its air; no one in it, Hornet and the Bell Beast move) as Bousseau et al.
+    (2006) render watercolor: simplified into washes keeping a little of its own shading, their
+    edges wobbled by the paper's grain, and the pigment's density varied by turbulence (blotches),
+    the grain and the darker rims where washes dried: C' = C - (C - C^2)(d - 1). Each wash is
+    painted from a point of it outward, the lighter first, as a watercolorist works, all over the
+    screens at once, its time spread by how much of the painting shows by then. Saved as tiles
+    beside the layers: painting_NN.png its colours, painting_time_NN.png when the brush reaches
+    each pixel (red, 0..1 of the painting's time) and how much of the light shafts' it takes
+    (green, `glaze`, 0..1: they follow the daylight, so the shader lays them on); both smooth: the
+    shader adds the paper's grain and the wet front's raggedness, so derive.py keeps it small.
+    Both opaque, as the backdrops are kept, for Qt's scaling (save_tiles)."""
     from scipy import ndimage as ndi
-    from skimage import feature, measure
+    from skimage import segmentation
 
-    H, W = rock.shape
-    at_rest = {name: layers[name].copy() for name in ("mid", "front")}
-    for name in at_rest:
-        for a in animated:
-            if a["layer"] == name:
-                cell = Image.open(OUT / a["sheet"]).crop((a["cell"][0], a["cell"][1], a["cell"][0] + a["cell"][2], a["cell"][1] + a["cell"][3]))
-                at_rest[name].alpha_composite(cell, (round(a["x"] * PPU), round((WORLD[1] - a["y"] - a["h"]) * PPU)))
-        for p in swaying[name]:
-            at_rest[name].alpha_composite(p["image"], p["px"])
-    arr = {name: np.asarray(img).astype(np.float32) / 255 for name, img in at_rest.items()}
-    back = np.asarray(layers["back"]).astype(np.float32) / 255
-    # The lake's body is translucent: its outline would be a line just under its surface.
-    ys, xs = np.mgrid[0:H, 0:W]
-    lake = (xs >= LAKE["x0"] * PPU) & (xs <= LAKE["x1"] * PPU) & (ys >= (WORLD[1] - LAKE["level"]) * PPU) & ~rock
-    arr["front"][..., 3][lake] = 0
-    lum = lambda a: a[..., 0] * 0.3 + a[..., 1] * 0.59 + a[..., 2] * 0.11
-    strokes = []  # (points (N, 2) as (row, column), weight, depth: 0 front, 1 mid, 2 the backdrops)
-
-    for name, weight, depth in (("front", 1.0, 0), ("mid", 0.85, 1)):
-        for c in measure.find_contours(ndi.gaussian_filter(arr[name][..., 3], 1.0), 0.5):
-            if np.hypot(*np.diff(c, axis=0).T).sum() >= 18:
-                strokes.append((measure.approximate_polygon(c, 0.4), weight, depth))
-
-    def walk(edges, min_px, weight, depth):
-        """Each edge (a skeleton, one pixel wide) as a polyline: its pixels walked from one end."""
-        lab, _ = ndi.label(edges, structure=np.ones((3, 3)))
-        for i, sl in enumerate(ndi.find_objects(lab), 1):
-            sub = lab[sl] == i
-            pts = np.argwhere(sub)
-            if len(pts) < min_px:
-                continue
-            ends = np.argwhere(sub & (ndi.convolve(sub.astype(int), np.ones((3, 3), int), mode="constant") == 2))
-            cur = tuple(ends[0]) if len(ends) else tuple(pts[0])
-            left, path = set(map(tuple, pts)) - {cur}, [cur]
-            while True:
-                y, x = cur
-                cur = next(((y + dy, x + dx) for dy in (-1, 0, 1) for dx in (-1, 0, 1) if (y + dy, x + dx) in left), None)
-                if cur is None:
-                    break
-                left.discard(cur)
-                path.append(cur)
-            if len(path) >= min_px * 2 // 3:
-                strokes.append((measure.approximate_polygon(np.array(path, float) + [sl[0].start, sl[1].start], 0.6), weight, depth))
-
-    # Inside the rock: its long painted edges (moss, carvings), fainter than its outline.
-    for name, depth in (("front", 0), ("mid", 1)):
-        inside = ndi.binary_erosion(arr[name][..., 3] > 0.5, iterations=4)
-        walk(feature.canny(lum(arr[name]), sigma=2.0, low_threshold=0.06, high_threshold=0.14) & inside, 70, 0.55, depth)
-    # The backdrops: only their long edges, where nothing covers them, faint.
-    cover = ndi.maximum_filter(np.maximum(arr["front"][..., 3], arr["mid"][..., 3]), 7) > 0.5
-    walk(feature.canny(lum(back), sigma=3.2, low_threshold=0.05, high_threshold=0.12) & ~cover, 90, 0.38, 2)
-
-    def px(x, y):
-        return [(WORLD[1] - y) * PPU, x * PPU]
-    # The lake's surface, where there's water under it; the waterfall's edges; the gears.
-    row = rock[min(H - 1, round((WORLD[1] - LAKE["level"]) * PPU) + 2)]
-    x0 = None
-    for x in range(round(LAKE["x0"] * PPU), round(LAKE["x1"] * PPU) + 1):
-        if not row[x] and x0 is None:
-            x0 = x
-        elif (row[x] or x == round(LAKE["x1"] * PPU)) and x0 is not None:
-            if x - x0 > 20:
-                strokes.append((np.array([px(x0 / PPU, LAKE["level"]), px(x / PPU, LAKE["level"])]), 0.85, 1))
-            x0 = None
-    (tl, tr, ytop), (bl, br) = WATERFALL["top"], WATERFALL["bottom"]
-    for top, bottom in ((tl, bl), (tr, br)):
-        strokes.append((np.array([px(top, min(ytop, WORLD[1])), px(bottom, LAKE["level"])]), 0.7, 1))
-    for g in (clock or {}).get("gears", []):
-        a = np.asarray(Image.open(OUT / g["file"]).getchannel("A")) > 127
-        r = np.sqrt(a.sum() / np.pi) / a.shape[1] * g["size"]  # the circle as big as the gear
-        ang = np.linspace(np.pi, 3 * np.pi, 97)
-        strokes.append((np.array([px(g["x"] + r * np.cos(u), g["y"] + r * np.sin(u)) for u in ang]), 0.6, 1))
-
-    # When each stroke is drawn: all over the screens at once, mostly the rock first and the
-    # backdrops last, each traced from its leftmost point at a pen's pace; one starting as the ink
-    # of those before it is laid, so that the drawing fills in evenly over its time rather than
-    # all at first.
+    img = np.asarray(at_rest.convert("RGB")).astype(np.float32) / 255
+    H, W = img.shape[:2]
     rng = np.random.default_rng(7)
-    S = 2  # drawn at twice the size, for smooth lines
-    inten, when = Image.new("L", (W * S, H * S), 0), Image.new("F", (W * S, H * S), 2.0)
-    di, dw = ImageDraw.Draw(inten), ImageDraw.Draw(when)
-    traced = []
-    for p, weight, depth in strokes:
-        if np.allclose(p[0], p[-1]):  # closed: from its leftmost point round
-            i0 = int(np.argmin(p[:-1, 1]))
-            p = np.vstack([p[i0:-1], p[:i0 + 1]])
-        elif p[-1, 1] < p[0, 1]:
-            p = p[::-1]
-        cum = np.concatenate([[0], np.cumsum(np.hypot(*np.diff(p, axis=0).T))])
-        traced.append((0.35 * depth + rng.uniform(0, 0.65), p, cum, weight, depth))
-    ink = sum(c[-1] * w for _, _, c, w, _ in traced)
-    laid = 0.0
-    order = []
-    for _, p, cum, weight, depth in sorted(traced, key=lambda s: s[0]):
-        order.append((0.85 * laid / ink, p, cum / max(cum[-1], 1), float(np.clip(cum[-1] / 1500, 0.06, 0.3)), weight, depth))
-        laid += cum[-1] * weight
-    for t0, p, f, dur, weight, depth in sorted(order, key=lambda o: -o[0]):  # where strokes cross, the earlier's time
-        width = 3 if depth < 2 else 2
-        for a in range(len(p) - 1):
-            xy = [(p[a, 1] * S, p[a, 0] * S), (p[a + 1, 1] * S, p[a + 1, 0] * S)]
-            di.line(xy, fill=round(255 * weight), width=width)
-            dw.line(xy, fill=t0 + dur * f[a], width=width + 2)
-    line = np.asarray(inten.resize((W, H), Image.BOX)).astype(np.float32) / 255
-    t = np.asarray(when).reshape(H, S, W, S).min(axis=(1, 3))
-    drawn = (line > 0.02) & (t < 2.0)  # (a line's edge can have none of its time: its neighbours' then)
-    t = t / np.quantile(t[drawn], 0.995)  # the drawing ends with its time (the few longest strokes' ends at once)
-    dist, (iy, ix) = ndi.distance_transform_edt(~drawn, return_indices=True)
-    t = np.where(dist <= 4, t[iy, ix], 1.0)
-    rgba = np.zeros((H, W, 4), np.uint8)
-    rgba[..., 0] = (line * 255).round().astype(np.uint8)
-    rgba[..., 1] = (np.clip(t, 0, 1) * 255).round().astype(np.uint8)
-    rgba[..., 3] = 255  # opaque, as the backdrops are kept, for Qt's scaling (save_tiles)
-    img = Image.fromarray(rgba, "RGBA")
-    tiles = []
+
+    def noise(scale, seed):
+        """Smooth value noise, 0..1, of features about `scale` pixels."""
+        small = np.random.default_rng(seed).random((H // scale + 3, W // scale + 3)).astype(np.float32)
+        up = ndi.zoom(small, scale, order=3)[:H, :W]
+        return (up - up.min()) / (up.max() - up.min() + 1e-9)
+
+    def up(a):
+        return np.clip(ndi.zoom(a, (H / a.shape[0], W / a.shape[1]) + ((1,) if a.ndim == 3 else ()), order=1)[:H, :W], 0, None)
+
+    # The washes: regions of a third of the size, each its mean colour.
+    k = 3
+    small = np.asarray(Image.fromarray((img * 255).astype(np.uint8)).resize((W // k, H // k), Image.LANCZOS)).astype(np.float32) / 255
+    lab = segmentation.felzenszwalb(small, scale=150, sigma=0.9, min_size=50)
+    n = lab.max() + 1
+    mean = np.stack([ndi.mean(small[..., c], lab, np.arange(n)) for c in range(3)], -1)
+    soft = ndi.gaussian_filter(np.clip(up(mean[lab]), 0, 1), (2.5, 2.5, 0))
+    washes = 0.78 * soft + 0.22 * ndi.gaussian_filter(img, (4, 4, 0))
+    # The paper's grain, whose slope wobbles the washes' edges.
+    paper = 0.6 * noise(2, 17) + 0.4 * noise(5, 18) - 0.5
+    gy, gx = np.gradient(ndi.gaussian_filter(paper, 1.5))
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    coords = [yy + 3.0 * gy / (np.abs(gy).max() + 1e-9), xx + 3.0 * gx / (np.abs(gx).max() + 1e-9)]
+    del yy, xx, gy, gx
+    wobble = lambda a: ndi.map_coordinates(a, coords, order=1, mode="nearest")
+    washes = np.stack([wobble(washes[..., c]) for c in range(3)], -1)
+    # Where washes meet, the pigment dried darker.
+    edge = ndi.gaussian_gradient_magnitude(wobble(soft @ np.array([0.3, 0.59, 0.11], np.float32)), 1.0)
+    edge = np.clip(edge / (np.quantile(edge, 0.995) + 1e-9), 0, 1)
+    del soft
+    turbulence = 0.5 * noise(140, 12) + 0.3 * noise(60, 13) + 0.2 * noise(25, 14) - 0.5
+    d = 1 + 0.45 * turbulence + 0.3 * paper + 0.55 * edge
+    del turbulence, edge
+    paint = np.clip(washes - (washes - washes * washes) * (d[..., None] - 1), 0, 1)
+    del washes, d
+
+    # When: each wash from a point of it outward, the lighter ones first.
+    lum = mean @ np.array([0.3, 0.59, 0.11])
+    order = np.argsort(np.argsort(lum))[::-1] / max(n - 1, 1)  # 0 for the lightest
+    t0 = 0.02 + 0.5 * order + rng.uniform(0, 0.12, n)
+    t = np.zeros(lab.shape, np.float32)
+    for r, sl in enumerate(ndi.find_objects(lab + 1)):  # (it counts labels from 1)
+        if sl is None:
+            continue
+        m = lab[sl] == r
+        ys, xs = np.nonzero(m)
+        j = rng.integers(len(ys))
+        away = np.ones(m.shape, bool)
+        away[ys[j], xs[j]] = False
+        dist = ndi.distance_transform_edt(away)
+        t[sl][m] = t0[r] + 0.32 * dist[m] / (dist[m].max() + 1e-9)
+    t = wobble(ndi.gaussian_filter(up(t), 3))
+    t = (t - t.min()) / (t.max() - t.min())
+    # Timed by what shows: the painting's time spread as its paint stands out from the dark paper
+    # (Painting.qml's brush, whose pace slows while it waits, still has something to show), the
+    # same order kept. Else most of what shows would be down by 0.7 of it: the darkest washes,
+    # last, hardly show.
+    ink = np.abs(paint - np.array([0.063, 0.058, 0.053], np.float32)).mean(-1)
+    shown, edges = np.histogram(t, bins=512, range=(0, 1), weights=ink)
+    t = np.interp(t, edges, np.concatenate([[0], np.cumsum(shown) / max(float(shown.sum()), 1e-9)])).astype(np.float32)
+
+    rgba = np.full((H, W, 4), 255, np.uint8)
+    rgba[..., :3] = (paint * 255).round().astype(np.uint8)
+    colours = Image.fromarray(rgba, "RGBA")
+    rgba = np.full((H, W, 4), 255, np.uint8)  # (the image above keeps the array it's made from)
+    rgba[..., 0] = (t * 255).round().astype(np.uint8)
+    rgba[..., 1] = (np.clip(glaze, 0, 1) * 255).round().astype(np.uint8)
+    rgba[..., 2] = 0
+    when = Image.fromarray(rgba, "RGBA")
+    tiles = {"paint": [], "time": []}
     for i, x in enumerate(range(0, W, TILE_PX)):
-        name = f"drawing_{i:02d}.png"
-        img.crop((x, 0, min(W, x + TILE_PX), H)).save(OUT / name, optimize=True)
-        tiles.append({"file": name, "x": x, "width": min(TILE_PX, W - x)})
-    spread = np.sort(t[drawn])
-    print(f"drawing: {len(strokes)} strokes, {int(drawn.sum())} px of line, a quarter, half, three quarters of it drawn by "
-          + ", ".join(f"{spread[int(q * (len(spread) - 1))]:.2f}" for q in (0.25, 0.5, 0.75)), file=sys.stderr)
+        for key, img_, name in (("paint", colours, f"painting_{i:02d}.png"), ("time", when, f"painting_time_{i:02d}.png")):
+            img_.crop((x, 0, min(W, x + TILE_PX), H)).save(OUT / name, optimize=True)
+            tiles[key].append({"file": name, "x": x, "width": min(TILE_PX, W - x)})
+    print(f"painting: {n} washes", file=sys.stderr)
     return tiles
 
 

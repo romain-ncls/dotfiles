@@ -61,7 +61,7 @@ QtObject {
     readonly property real seconds: Number(arg("--seconds", 20))
     readonly property string only: arg("--only", "")
     readonly property bool greeter: flag("--greeter")
-    readonly property bool noDrawing: flag("--no-drawing")
+    readonly property bool noPainting: flag("--no-painting")
     readonly property bool fader: flag("--fader")
     readonly property real hideAt: Number(arg("--hide-at", -1))
     readonly property real showAt: Number(arg("--show-at", -1))
@@ -191,32 +191,33 @@ QtObject {
             }
 
             // Made in its window at its size, as main.qml makes it: once every screen shows its
-            // drawing, where there's one.
+            // painting, where there's one, a little at a time.
             Loader {
                 id: wallpaper
                 anchors.fill: parent
-                active: win.seated && width > 0 && height > 0 && (!(drawing.item?.present ?? false) || drawing.item.up)
-                visible: !(drawing.item?.present ?? false) || drawing.item.uncover
+                asynchronous: true
+                active: win.seated && width > 0 && height > 0 && (!(painting.item?.present ?? false) || painting.item.up)
+                visible: !(painting.item?.present ?? false) || painting.item.uncover
                 sourceComponent: WorldScene {
                     screens: bench.screens
                     gapMm: Desk.gapMm
                     screenName: win.modelData.name
                     dataDir: bench.dataDir
                     timeOffset: bench.offset
-                    coverFirst: !(drawing.item?.present ?? false)
+                    coverFirst: !(painting.item?.present ?? false)
                 }
                 onLoaded: {
                     item.everyFrame = bench.motion === 0;
                     item.nearHz = [60, 60, 30, 0][bench.motion] ?? 60;
                 }
             }
-            // The world drawn in lines meanwhile, over it, as main.qml shows it (--no-drawing: not).
-            property bool drawingGone: false
+            // The world painted meanwhile, over it, as main.qml shows it (--no-painting: not).
+            property bool paintingGone: false
             Loader {
-                id: drawing
+                id: painting
                 anchors.fill: parent
-                active: win.seated && !bench.noDrawing && !win.drawingGone
-                sourceComponent: Drawing {
+                active: win.seated && !bench.noPainting && !win.paintingGone
+                sourceComponent: Painting {
                     screens: bench.screens
                     gapMm: Desk.gapMm
                     screenName: win.modelData.name
@@ -225,24 +226,22 @@ QtObject {
                 }
             }
             Connections {
-                target: drawing.item
-                function onDrawnChanged() {
-                    console.warn(`DRAWING ${win.modelData.name} ${bench.since()} drawn`);
+                target: painting.item
+                function onShownChanged() {
+                    console.warn(`PAINTING ${win.modelData.name} ${bench.since()} shown`);
                 }
                 function onUpChanged() {
-                    console.warn(`DRAWING ${win.modelData.name} ${bench.since()} up`);
-                }
-                function onDoneChanged() {
-                    console.warn(`DRAWING ${win.modelData.name} ${bench.since()} done`);
+                    console.warn(`PAINTING ${win.modelData.name} ${bench.since()} up`);
                 }
                 function onUncoverChanged() {
-                    console.warn(`DRAWING ${win.modelData.name} ${bench.since()} uncover`);
+                    console.warn(`PAINTING ${win.modelData.name} ${bench.since()} uncover`);
                 }
                 function onLeavingChanged() {
-                    console.warn(`DRAWING ${win.modelData.name} ${bench.since()} fade`);
+                    console.warn(`PAINTING ${win.modelData.name} ${bench.since()} wash`);
                 }
                 function onGoneChanged() {
-                    win.drawingGone = true;
+                    console.warn(`PAINTING ${win.modelData.name} ${bench.since()} gone`);
+                    win.paintingGone = true;
                 }
             }
 

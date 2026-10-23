@@ -48,10 +48,11 @@ Window {
         for (const s of Desk.screens) {
             const me = layout.screens[s.name];
             const view = { x: me.x, w: me.w, px: [s.width, s.height], layers: {} };
-            // The layers, and the drawing the lock screen shows while it makes the world.
-            for (const name of ["back", "mid", "front", "lights", "drawing"]) {
+            // The layers, and the painting the lock screen shows while it makes the world (its
+            // colours, and when each pixel is painted).
+            for (const name of ["back", "mid", "front", "lights", "paint", "time"]) {
                 view.layers[name] = [];
-                for (const tile of (name === "drawing" ? world.drawing : world.layers[name]) ?? []) {
+                for (const tile of (name === "paint" || name === "time" ? world.painting?.[name] : world.layers[name]) ?? []) {
                     const place = World.tilePlace(world, tile, null, me, s.width, s.height);
                     if (place) {
                         const file = `${s.name}_${name}_${view.layers[name].length}.png`;

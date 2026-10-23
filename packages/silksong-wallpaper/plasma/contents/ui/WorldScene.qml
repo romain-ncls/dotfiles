@@ -32,7 +32,10 @@ Item {
 
     readonly property url worldDir: dataDir + "/world"
     readonly property var world: worldData.item?.world ?? null
-    readonly property var clips: sprites.item?.clips ?? null
+    // Hornet's clips, given out once the day's plans are made (dayReady): everything that asks for
+    // her, the Bell Beast or the small life asks with them.
+    readonly property var spriteClips: sprites.item?.clips ?? null
+    readonly property var clips: dayReady ? spriteClips : null
     readonly property real unitMm: world ? world.unitMm : 10
 
     // A file of the world, at its build's URL (a new build's images are new images to the engine).
@@ -464,11 +467,44 @@ Item {
         firstAt = Date.now() / 1000 + timeOffset;
         Qt.callLater(reveal); // in case nothing is loaded anew (the same files)
     }
-    onWorldChanged: if (revealed) conceal()
+    onWorldChanged: {
+        if (revealed) {
+            conceal();
+        }
+        dayPrep = null;
+        planSome();
+    }
+
+    // The day's plans (life.js prepareDay), made a few milliseconds at a time as the GUI thread
+    // goes round, before her clips are given out, rather than at once when she's first asked for:
+    // a third of a second and more, which would hold back every frame of the lock screen meanwhile
+    // (its painting's brush: Painting.qml). On the lock screen, begun before (DayPlanner.qml). Once
+    // made, the plans of the days after (from 04:00), or of a new world, are made at once when
+    // asked for (on the desktop, which nothing covers then).
+    property bool dayReady: false
+    property var dayPrep: null
+    function planSome() {
+        if (dayReady || !world || !spriteClips) {
+            return;
+        }
+        if (!dayPrep) {
+            dayPrep = Life.prepareDay(world, spriteClips, time);
+        }
+        if (dayPrep.step(25)) {
+            dayPrep = null;
+            dayReady = true;
+        } else {
+            Qt.callLater(planSome);
+        }
+    }
+    onSpriteClipsChanged: {
+        dayPrep = null;
+        planSome();
+    }
     property bool everRevealed: revealed
     onRevealedChanged: everRevealed = true // whichever way it changes, it has been revealed
-    // Whether it waits under black before it's first revealed: not where the world's drawing
-    // (Drawing.qml) is over it then, fading away over it. Read as it's made.
+    // Whether it waits under black before it's first revealed: not where the world's painting
+    // (Painting.qml) is over it then, fading away over it. Read as it's made.
     property bool coverFirst: true
     readonly property string placing: [me.x, me.w, width, height, pxPerUnit].join()
     onPlacingChanged: {
@@ -952,6 +988,7 @@ Item {
         syncSheets();
         Reveal.join(root);
         Life.join();
+        planSome();
     }
 
     Item {
@@ -1341,7 +1378,7 @@ Item {
     // in, which would show the scene's translucent layers through one another, and is back at once
     // when concealed again. Not in renders (live off). Not an OpacityAnimator, on the render
     // thread: QML Timers run on the GUI thread's animation clock, which stands still while one
-    // runs (Drawing.qml), and in Qt 6.11 every timer of the process fired late once one had run,
+    // runs (Painting.qml), and in Qt 6.11 every timer of the process fired late once one had run,
     // the water then moving 13 times a second rather than 30.
     Rectangle {
         id: black

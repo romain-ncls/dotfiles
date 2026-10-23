@@ -9,14 +9,14 @@
 
 - QOI twins: the same pixels, in a format Qt reads 2-4 times faster than PNG with KDE's image
   formats (kimageformats, which Plasma has). For each image the wallpaper waits for as it loads
-  (the tiles, the drawing shown meanwhile, the air, the plants' and the floor bells' sheets, the
+  (the tiles, the painting shown meanwhile, the air, the plants' and the floor bells' sheets, the
   sheets Sprites.qml lists, and the views and sheet sets below), X.qoi beside X.png, made again
   only once the PNG has changed.
 - Views, in views/: for each screen of this desk (tools/desk.js), the texels each layer shows
   there, as Qt itself reads them from the tiles (tools/derive.qml): already scaled to the screen,
   and cut to the bands of rows that hold anything. A screen then reads those few rather than
-  every tile it shows, whole, and keeps about half as many texels. The world's drawing (which the
-  lock screen shows in its first frame) as one image of each screen's size.
+  every tile it shows, whole, and keeps about half as many texels. The world's painting (which
+  the lock screen shows in its first frame) as one image of each screen's size, and its timing.
 - Sheet sets, in hornet@<density>/: each sheet Sprites.qml lists at each screen's density, at the
   size the wallpaper asks for it there, scaled by Qt itself: read as it is, rather than read whole
   and scaled down.
@@ -144,11 +144,12 @@ def cut(drawn, out, folder):
     return pieces
 
 
-def drawing_view(drawn, size, out, folder, index):
-    """A screen's view of the world's drawing in one image of its size, views/drawing_<n>.png:
-    the texels it shows of each of the drawing's tiles, where they go. The drawing is opaque, so
-    there's nothing to cut away; one image is read sooner than several."""
-    img = Image.new("RGBA", tuple(size), (0, 255, 0, 255))  # no line, drawn last
+def whole_view(drawn, size, out, folder, stem, scale=1.0):
+    """A screen's view of an opaque image laid as tiles (the world's painting, its timing) in one
+    image of its size, views/<stem>.png: the texels it shows of each tile, where they go. There's
+    nothing to cut away; one image is read sooner than several. Smaller by scale where it's smooth
+    (the painting's timing, a quarter): stretched back as it's drawn."""
+    img = Image.new("RGBA", tuple(size), (0, 0, 0, 255))
     for texels in drawn:
         with Image.open(out / texels["file"]) as piece:
             piece.load()
@@ -156,7 +157,9 @@ def drawing_view(drawn, size, out, folder, index):
         if (w, h) != piece.size:
             piece = piece.resize((w, h), Image.BILINEAR)
         img.paste(piece, (round(texels["fx"] + texels["tx"] * texels["sx"]), round(texels["fy"] + texels["ty"] * texels["sy"])))
-    file = f"views/drawing_{index}.png"
+    if scale != 1.0:
+        img = img.resize((round(img.width * scale), round(img.height * scale)), Image.LANCZOS)
+    file = f"views/{stem}.png"
     data = io.BytesIO()
     img.save(data, format="PNG")
     put(folder / file, data.getvalue())
@@ -187,10 +190,11 @@ def main():
             drawn = {"views": [], "sheetSets": {}}
         for i, view in enumerate(drawn["views"]):
             layers = dict(view["layers"])
-            sketch = layers.pop("drawing", [])
+            paint, time_ = layers.pop("paint", []), layers.pop("time", [])
             views.append(dict(view, layers={name: cut(texels, out, folder) for name, texels in layers.items()}))
-            if sketch:
-                views[-1]["drawing"] = drawing_view(sketch, view["px"], out, folder, i)
+            if paint and time_:
+                views[-1]["painting"] = {"paint": whole_view(paint, view["px"], out, folder, f"painting_{i}"),
+                                         "time": whole_view(time_, view["px"], out, folder, f"painting_time_{i}", 0.25)}
         for set_folder, px_per_unit in drawn["sheetSets"].items():
             sheet_sets[set_folder] = px_per_unit
             for name in dict.fromkeys(Path(clip["file"]).name for clip in clips.values()):
@@ -205,12 +209,12 @@ def main():
 
     files = [tile["file"] for tiles in world["layers"].values() for tile in tiles]
     files += [a["file"] for a in world.get("air", [])]
-    files += [tile["file"] for tile in world.get("drawing", [])]
+    files += [tile["file"] for tiles in (world.get("painting") or {}).values() for tile in tiles]
     files += [world["sway"]["atlas"]] if world.get("sway") else []
     files += [a["sheet"] for a in world.get("animated", [])]
     files += [clip["file"] for clip in clips.values()]
     files += [piece["file"] for view in views for pieces in view["layers"].values() for piece in pieces]
-    files += [view["drawing"] for view in views if "drawing" in view]
+    files += [file for view in views for file in view.get("painting", {}).values()]
     files += sheets
 
     made, twins = 0, {}

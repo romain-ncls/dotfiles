@@ -42,6 +42,7 @@ Item {
         id: ui
         anchors.fill: parent
         focus: true
+        asynchronous: true // made a little at a time between frames (below)
         onStatusChanged: {
             if (status === Loader.Error && source.toString().endsWith("SilksongLockUi.qml")) {
                 console.warn("Silksong lock screen: falling back to Plasma's prompt");
@@ -50,16 +51,23 @@ Item {
         }
     }
 
-    // The prompt is made once every screen has drawn its first frame (the wallpaper's drawing,
+    // The prompt is made once every screen has drawn its first frame (the wallpaper's painting,
     // prompts.js): it only shows on a key or the mouse, and making it first (the first screen's
     // compiles it, a tenth of a second) would hold those frames back. Should no frame come (the
-    // screen off), made anyway half a second on.
+    // screen off), made anyway half a second on. Made a moment after it's due, not from within a
+    // frame's handler, and a little at a time: each window takes the compositor's word on its
+    // surface on the GUI thread, and until it has, its wallpaper's animations stand still (the
+    // wallpaper's Painting.qml).
     property string prompt: ""
     property bool drawn: false
+    property bool promptDue: false
     function makePrompt() {
-        if (prompt !== "" && ui.source.toString() === "") {
-            ui.source = prompt;
-        }
+        promptDue = true;
+    }
+    Timer {
+        interval: 30
+        running: root.promptDue && root.prompt !== "" && ui.source.toString() === ""
+        onTriggered: ui.source = root.prompt
     }
     Connections {
         target: root.Window.window

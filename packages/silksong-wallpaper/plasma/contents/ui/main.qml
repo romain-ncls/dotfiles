@@ -52,19 +52,22 @@ WallpaperItem {
     }
     onVisibleChanged: if (visible) released = false
 
-    // On the lock screen, made once every screen shows its drawing (below), hidden under it until
+    // On the lock screen, made once every screen shows its painting (below), hidden under it until
     // it uncovers the world. Loaded by URL, as Scene.qml below: WorldScene.qml and life.js are
-    // only compiled then, not before the drawing's first frame (the lock screen compiles it all
-    // at every lock). Its properties come with it, bindings included.
+    // only compiled then, not before the painting's first frame (the lock screen compiles it all
+    // at every lock). Its properties come with it, bindings included. Compiled and made
+    // asynchronously, a little at a time between frames: made at once, it would hold the
+    // painting's brush back (Painting.qml).
     Loader {
         id: view
         anchors.fill: parent
+        asynchronous: true
         active: root.seated && root.configuration.SceneId === "world" && !root.released
-            && (!(drawing.item?.present ?? false) || drawing.item.up)
-        visible: !(drawing.item?.present ?? false) || drawing.item.uncover
+            && (!(painting.item?.present ?? false) || painting.item.up)
+        visible: !(painting.item?.present ?? false) || painting.item.uncover
 
         Component.onCompleted: setSource(Qt.resolvedUrl("WorldScene.qml"), {
-            coverFirst: Qt.binding(() => !(drawing.item?.present ?? false)),
+            coverFirst: Qt.binding(() => !(painting.item?.present ?? false)),
             screens: Qt.binding(() => Qt.application.screens),
             screenName: Qt.binding(() => root.Screen.name),
             dataDir: root.dataDir,
@@ -80,22 +83,57 @@ WallpaperItem {
             paused: Qt.binding(() => pauser.item?.paused ?? false)
         })
     }
-    // On the lock screen, the world drawn in lines (Drawing.qml) in the first frame while the world
-    // is made, fading away over it once it's in; then let go. Not on the desktop, where Plasma's
-    // splash screen covers the wallpaper until the world shows.
-    property bool drawingGone: false
-    Loader {
-        id: drawing
-        anchors.fill: parent
-        active: root.seated && !root.desktop && root.configuration.SceneId === "world" && !root.drawingGone
+    // Hornet's day planned meanwhile (DayPlanner.qml), from when the world is made: compiled away from
+    // the GUI thread (it imports life.js), then made at once (it's small), not after the world as a
+    // Loader making it asynchronously would; by URL, as WorldScene.qml is (life.js compiled only
+    // then). Let go with the painting.
+    property QtObject dayPlanner: null
+    property Component dayPlannerType: null // (kept while it's compiled)
+    function planDay() {
+        dayPlannerType = Qt.createComponent(Qt.resolvedUrl("DayPlanner.qml"), Component.Asynchronous);
+        const make = () => {
+            if (dayPlannerType?.status === Component.Ready && !dayPlanner && !paintingGone) {
+                dayPlanner = dayPlannerType.createObject(root, { dataDir: root.dataDir });
+            }
+        };
+        dayPlannerType.statusChanged.connect(make);
+        make();
+    }
+    Connections {
+        target: painting.item
 
-        sourceComponent: Drawing {
+        function onUpChanged() {
+            if (painting.item.up) {
+                root.planDay();
+            }
+        }
+    }
+    onPaintingGoneChanged: {
+        if (paintingGone && dayPlanner) {
+            dayPlanner.destroy();
+            dayPlanner = null;
+        }
+    }
+    // On the lock screen, the world painted in watercolor (Painting.qml) in the first frame while
+    // the world is made, washing away over it once it's in; then let go. Not on the desktop, where
+    // Plasma's splash screen covers the wallpaper until the world shows.
+    property bool paintingGone: false
+    Loader {
+        id: painting
+        anchors.fill: parent
+        active: root.seated && !root.desktop && root.configuration.SceneId === "world" && !root.paintingGone
+
+        sourceComponent: Painting {
             screens: Qt.application.screens
             screenName: root.Screen.name
             dataDir: root.dataDir
             gapMm: root.configuration.GapMm
+            latitude: root.configuration.Latitude
+            longitude: root.configuration.Longitude
+            dayHours: [root.configuration.NightUntil ?? "", root.configuration.DayFrom ?? "",
+                       root.configuration.DayUntil ?? "", root.configuration.NightFrom ?? ""]
             revealed: view.item?.revealed ?? false
-            onGoneChanged: if (gone) root.drawingGone = true
+            onGoneChanged: if (gone) root.paintingGone = true
         }
     }
     // On the desktop, standing still while windows are in front of it (PauseWhen). Pauser.qml

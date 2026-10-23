@@ -1222,6 +1222,21 @@ function withIdleRests(segs, clips, r) {
 
 // The whole day from 04:00 (local) to 04:00 the next day.
 function planDay(world, clips, day0, dateKey) {
+    return drain(planDaySteps(world, clips, day0, dateKey));
+}
+
+// Runs one of the steppers below (made to be taken a little at a time, prepareDay) to its end, and
+// gives what it made. A stepper's next() does a little of the work and tells whether it's all
+// done; its result() is what it made. (Closures rather than generators: the QML engine keeps a
+// generator's frame between steps, which its garbage collector has crashed on.)
+function drain(steps) {
+    while (!steps.next()) {
+    }
+    return steps.result();
+}
+
+// planDay's stepper: each step, one thing she does.
+function planDaySteps(world, clips, day0, dateKey) {
     const p = new Planner(world, clips, dateKey);
     const pois = world.nav.pois;
     const bed = pois.find(q => q.activity === "sleep");
@@ -1350,7 +1365,18 @@ function planDay(world, clips, day0, dateKey) {
         p.hold("LookingUp", between(r, 6, 9));
         p.hold("LookUpEnd");
     };
-    while (p.t < bedtime - 600) {
+    let result = null;
+    const next = () => {
+        if (result) {
+            return true;
+        }
+        if (p.t >= bedtime - 600) {
+            p.goTo(bed.surface, bed.x);
+            p.face(!bed.mirror);
+            p.sleep(bed, nextWake, r() < 0.6);
+            result = { segments: withIdleRests(p.segments, clips, rng(dateKey * 13 + 5)), log: p.log, wake: wake, bedtime: bedtime };
+            return true;
+        }
         const mark = { segments: p.segments.length, log: p.log.length, t: p.t, x: p.x, surface: p.surface,
                        facingRight: p.facingRight, needs: Object.assign({}, needs), recent: recent.slice(), stuck: stuck };
         step();
@@ -1368,15 +1394,16 @@ function planDay(world, clips, day0, dateKey) {
             stuck = mark.stuck;
             listen(song);
         }
-    }
-    p.goTo(bed.surface, bed.x);
-    p.face(!bed.mirror);
-    p.sleep(bed, nextWake, r() < 0.6);
-    return { segments: withIdleRests(p.segments, clips, rng(dateKey * 13 + 5)), log: p.log, wake: wake, bedtime: bedtime };
+        return false;
+    };
+    return { next: next, result: () => result };
 }
 
 // The day's plans (Hornet's and the Bell Beast's), made once per day, world build and clips.
 let cache = { key: "", segments: [], beast: [], critters: { songs: [], flights: {} }, from: 0, until: 0 };
+
+// The day's plans being made a little at a time (prepareDay), if they are: { key, steps, by, at }.
+let preparing = null;
 
 // The screens showing the world (WorldScene.qml), counted so that the plans and routes kept for
 // them go with the last one: plasmashell lives for days, and lets go the scenes of a desktop
@@ -1392,6 +1419,7 @@ function leave() {
     if (scenes === 0) {
         routes = { key: "", starts: new Map() };
         cache = { key: "", segments: [], beast: [], critters: { songs: [], flights: {} }, from: 0, until: 0 };
+        preparing = null;
     }
 }
 
@@ -1414,6 +1442,11 @@ const BEAST_GREET_AFTER = 300;       // back after this long away, a song for he
 // playing her needolin there: [{ t, near, left, perf, x }] at each change through her day (x:
 // where she was then).
 function hornetNear(world, segs, beast) {
+    return drain(hornetNearSteps(world, segs, beast));
+}
+
+// hornetNear's stepper (drain): each step, so many of her segments.
+function hornetNearSteps(world, segs, beast) {
     const out = [];
     let last = null;
     const x0 = beast.x - BEAST_LOOK_X;
@@ -1434,17 +1467,16 @@ function hornetNear(world, segs, beast) {
             out.push(last);
         }
     };
-    for (let i = 0; i < segs.length; i++) {
-        const seg = segs[i];
+    const one = seg => {
         if (seg.kind === "clip") {
             const at = seg.pivot ? seg.pivot[0] : seg.x;
             const s = side(at, seg.pivot ? seg.pivot[1] : seg.y);
             note(seg.t0, s, s > 0 && (seg.clip.indexOf("Needolin Play") >= 0 || seg.clip.indexOf("NeedolinSit Play") >= 0), at);
-            continue;
+            return;
         }
         if (Math.max(seg.x0, seg.x1) < x0 - 1 || Math.min(seg.x0, seg.x1) > x1 + 1) {
             note(seg.t0, 0, false, seg.x0);
-            continue;
+            return;
         }
         // Where she is every half second, and to a twentieth of a second where that changes
         // (coming in, going out, passing it).
@@ -1481,8 +1513,15 @@ function hornetNear(world, segs, beast) {
             }
             prev = cur;
         }
-    }
-    return out;
+    };
+    let i = 0;
+    const next = () => {
+        for (const end = Math.min(segs.length, i + 64); i < end; i++) {
+            one(segs[i]);
+        }
+        return i >= segs.length;
+    };
+    return { next: next, result: () => out };
 }
 
 // The Bell Beast's day in its station, from Hornet's: it wakes a little after her, sings the
@@ -2125,13 +2164,18 @@ function firstFrom(list, moves, pos, free, k) {
 // From Hornet's day: her songs ([t0, t1, x, y]) and, for each lilypad fly, its flights
 // ({ t0, t1, from, to } perch indices) as she comes close to the perch it's on.
 function planCritters(world, clips, segs) {
+    return drain(planCrittersSteps(world, clips, segs));
+}
+
+// planCritters' stepper (drain): each step, so many of her segments, then of a fly's flights.
+function planCrittersSteps(world, clips, segs) {
     const songs = [];
     // Where she moves (walks, lines, falls, jumps), in order, and for each perch of each lilypad
     // fly, those of her moves that pass near enough to it to matter (by their ends' x).
     const flies = (world.critters || []).filter(c => c.species === "lilypad_fly" && c.perches.length >= 2);
     const near = flies.map(c => c.perches.map(() => []));
     const moves = [];
-    segs.forEach(seg => {
+    const one = seg => {
         if (seg.kind === "clip") {
             if (seg.clip.indexOf("Needolin Play") >= 0 || seg.clip.indexOf("NeedolinSit Play") >= 0) {
                 songs.push([seg.t0, seg.t1, seg.x, seg.y]);
@@ -2153,20 +2197,23 @@ function planCritters(world, clips, segs) {
                 }
             }
         }
-    });
+    };
     const flights = {};
-    flies.forEach((c, f) => {
+    // A fly's flights, as she comes close (flight() its next, false once she doesn't).
+    const fly = f => {
+        const c = flies[f];
         const out = [];
         let at = 0;
         let free = -Infinity;
         let pos = 0; // the next of her moves to look at
         const next = c.perches.map(() => 0); // where each perch's list was left
-        for (;;) {
+        // Its next flight, if she comes close again (false once she doesn't).
+        const flight = () => {
             // Her next move near the perch it's on, once it minds her again.
             const list = near[f][at];
             const k = firstFrom(list, moves, pos, free, next[at]);
             if (k >= list.length) {
-                break;
+                return false;
             }
             next[at] = k + 1;
             const seg = moves[list[k]];
@@ -2184,10 +2231,35 @@ function planCritters(world, clips, segs) {
                     break;
                 }
             }
+            return true;
+        };
+        return { flight: flight, id: c.id, out: out };
+    };
+    let i = 0;
+    let f = 0;
+    let flying = null;
+    const next = () => {
+        if (i < segs.length) {
+            for (const end = Math.min(segs.length, i + 256); i < end; i++) {
+                one(segs[i]);
+            }
+            return false;
         }
-        flights[c.id] = out;
-    });
-    return { songs: songs, flights: flights };
+        if (f >= flies.length) {
+            return true;
+        }
+        flying = flying || fly(f);
+        for (let k = 0; k < 32; k++) {
+            if (!flying.flight()) {
+                flights[flying.id] = flying.out;
+                flying = null;
+                f++;
+                break;
+            }
+        }
+        return false;
+    };
+    return { next: next, result: () => ({ songs: songs, flights: flights }) };
 }
 
 // The song she's playing at t within reach of (x, y), or null.
@@ -2577,6 +2649,103 @@ function clipsSignature(clips) {
 }
 
 // The day's segments, planned once per day (and per world build and clips).
+// The day t falls in (from 04:00), and what its plans are kept under: the date, the world's build
+// and ways, Hornet's clips.
+function dayOf(world, clips, t, signature) {
+    const start = dayStart(new Date(t * 1000));
+    const dateKey = start.getFullYear() * 10000 + (start.getMonth() + 1) * 100 + start.getDate();
+    const key = dateKey + ":" + (world.build || 0) + ":" + world.nav.surfaces.length + ":" + world.nav.links.length
+        + ":" + signature;
+    return { start: start, dateKey: dateKey, key: key };
+}
+
+// The day's plans' stepper (drain), kept as they're made: Hornet's, where she is to the Bell Beast,
+// its own and its children's, then the small life's.
+function daySteps(world, clips, day) {
+    const day0 = day.start.getTime() / 1000;
+    const plan = planDaySteps(world, clips, day0, day.dateKey);
+    let near = null;
+    let track = [];
+    let beast = null;
+    let beastlings = null;
+    let critters = null;
+    const stages = [
+        () => plan.next(),
+        () => {
+            if (!world.beast) {
+                return true;
+            }
+            near = near || hornetNearSteps(world, plan.result().segments, world.beast);
+            if (!near.next()) {
+                return false;
+            }
+            track = near.result();
+            return true;
+        },
+        () => {
+            beast = planBeast(world, clips, day0, day.dateKey, plan.result(), track);
+            return true;
+        },
+        () => {
+            beastlings = planBeastlings(world, clips, day0, day.dateKey, beast, track);
+            critters = planCrittersSteps(world, clips, plan.result().segments);
+            return true;
+        },
+        () => critters.next(),
+        () => {
+            cache = { key: day.key, segments: plan.result().segments, beast: beast, beastlings: beastlings,
+                      critters: critters.result() };
+            return true;
+        }
+    ];
+    let k = 0;
+    return {
+        next: () => {
+            if (k < stages.length && stages[k]()) {
+                k++;
+            }
+            return k >= stages.length;
+        },
+        result: () => cache
+    };
+}
+
+// The day's plans for t, made a little at a time rather than at once when she's first asked for
+// (WorldScene: a third of a second and more, which would hold the lock screen's frames back): each
+// step(ms) makes them for about that long, and tells whether they're made. Those asking for the
+// same day (DayPlanner.qml, WorldScene's) share the making (preparing, above), one of them doing it
+// at a time (the one that last did, while it goes on asking), so that a step takes no longer for
+// there being several.
+function prepareDay(world, clips, t) {
+    const day = dayOf(world, clips, t, clipsSignature(clips));
+    if (cache.key !== day.key && (preparing === null || preparing.key !== day.key)) {
+        preparing = { key: day.key, steps: daySteps(world, clips, day), by: null, at: 0 };
+    }
+    const me = {};
+    return {
+        step: ms => {
+            if (cache.key === day.key || preparing === null || preparing.key !== day.key) {
+                return true; // made (or made otherwise, daySegments then makes them at once)
+            }
+            const now = Date.now();
+            if (preparing.by !== me && now - preparing.at < 100) {
+                return false;
+            }
+            preparing.by = me;
+            for (;;) {
+                if (preparing.steps.next()) {
+                    preparing = null;
+                    return true;
+                }
+                if (Date.now() >= now + ms) {
+                    preparing.at = Date.now();
+                    return false;
+                }
+            }
+        }
+    };
+}
+
 function daySegments(world, clips, t) {
     // Most calls are for the day planned last: t (in milliseconds, as new Date(t * 1000) holds
     // it) between its 04:00 and the next, the same world build and clips. Only otherwise is the
@@ -2588,17 +2757,10 @@ function daySegments(world, clips, t) {
         && cache.clips === signature) {
         return cache.segments;
     }
-    const start = dayStart(new Date(t * 1000));
-    const dateKey = start.getFullYear() * 10000 + (start.getMonth() + 1) * 100 + start.getDate();
-    const key = dateKey + ":" + (world.build || 0) + ":" + world.nav.surfaces.length + ":" + world.nav.links.length
-        + ":" + signature;
-    if (cache.key !== key) {
-        const plan = planDay(world, clips, start.getTime() / 1000, dateKey);
-        const track = world.beast ? hornetNear(world, plan.segments, world.beast) : [];
-        const beast = planBeast(world, clips, start.getTime() / 1000, dateKey, plan, track);
-        cache = { key: key, segments: plan.segments, beast: beast,
-                  beastlings: planBeastlings(world, clips, start.getTime() / 1000, dateKey, beast, track),
-                  critters: planCritters(world, clips, plan.segments) };
+    const day = dayOf(world, clips, t, signature);
+    const start = day.start;
+    if (cache.key !== day.key) {
+        drain(daySteps(world, clips, day));
     }
     cache.from = start.getTime();
     cache.until = dayStart(new Date(start.getTime() + 30 * 3600 * 1000)).getTime(); // the next 04:00
