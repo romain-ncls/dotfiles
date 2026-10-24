@@ -9,6 +9,7 @@ modules:
   - konsole
   - kdeconnect
   - laptop
+  - plymouth
   - mpv
   - readest
   - tools

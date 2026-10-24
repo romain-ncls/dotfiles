@@ -226,8 +226,6 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 ## Left out of the NixOS port (work laptop)
 
 - **konsave, CUPS, the monochrome emoji font**: not needed (no printer).
-- **Plymouth**: liked, may come back later (the `plymouth` mkinitcpio hook
-  and `splash` in `/etc/kernel/cmdline`).
 - **The NPU driver** (`intel-npu-driver`): nothing uses it.
 - nixos-hardware's `hp-probook-460G11` module is covered by the laptop
   module: thermald, fstrim, microcode, i915 early (mkinitcpio's `kms` hook),

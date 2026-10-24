@@ -1,0 +1,6 @@
+# The boot splash, from the initramfs to SDDM, with the LUKS passphrase prompt
+# drawn in it. The host adds the `plymouth` hook (after `kms`, before
+# `sd-encrypt`) to its mkinitcpio.conf and `splash` to its kernel cmdline. The
+# theme is Arch's default, bgrt: the firmware's logo with a spinner.
+packages:
+  - plymouth
