@@ -1,5 +1,5 @@
 # Claude Code's user settings, status line and instructions. ollama: the
-# client that claude-ollama (in the private fish config) runs Claude Code
-# through, against a remote Ollama server.
+# client that claude-ollama (in ~/.config/fish/conf.d/private.fish) runs
+# Claude Code through, against a remote Ollama server.
 packages:
   - ollama

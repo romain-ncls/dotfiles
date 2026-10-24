@@ -101,8 +101,10 @@ If the Windows boot animation looks stretched, from an elevated prompt:
    `~/git`, `~/Documents`, `~/Pictures`, `~/Images`, `~/Music`, `~/scripts`,
    `~/.ssh`, `~/.gnupg`, `~/.kube`, `~/.claude`,
    `~/.local/share/{mkcert,backdrop,silksong-wallpaper,kwalletd,easyeffects,com.bilingify.readest}`,
-   `~/.config/{BraveSoftware,JetBrains,kdeconnect,Vencord}`, and the fish
-   config (`~/.config/fish`, private, kept out of this repo).
+   `~/.config/{BraveSoftware,JetBrains,kdeconnect,Vencord}`, and the private
+   fish files `~/.config/fish/conf.d/{private,secrets}.fish` (names of servers
+   and clients, Bitwarden lookups; the rest of the fish config is the shell
+   module).
    `~/.ssh` brings back this laptop's own key, already on GitHub: skip
    "SSH key" above, and `lodestar apply` again for `allowed_signers`.
 4. Log out and back in.

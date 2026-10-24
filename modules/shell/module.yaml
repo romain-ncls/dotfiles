@@ -1,0 +1,8 @@
+# fish, the login shell on every machine: prompt, key bindings, aliases. The
+# work functions are in the work module (conf.d/work.fish). Names of
+# servers and clients, and the Bitwarden lookups, stay in private files on
+# the machine (~/.config/fish/conf.d/{private,secrets}.fish, docs/manual-steps.md).
+packages:
+  - eza # ll, l, tree
+  - bat # cat, bat
+  - fzf # fzf-preview, vzf
