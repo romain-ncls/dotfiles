@@ -8,6 +8,7 @@ packages:
   - gwenview
   - kate
   - okular
+  - qrca # QR code scanner
   - kdialog # dialogs for scripts (reboot-to-windows)
   - kde-gtk-config
   - breeze-gtk
