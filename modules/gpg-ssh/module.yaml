@@ -4,9 +4,6 @@ packages:
   - gnupg
   - pinentry
 
-user-services:
-  - gpg-agent-ssh.socket
-
 files:
   ~/.gnupg/gpg-agent.conf:
     mode: 0600
