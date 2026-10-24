@@ -1,0 +1,4 @@
+# The default for every account: KWin turns Num Lock on when it starts, in the
+# Plasma Login greeter too.
+[Keyboard]
+NumLock=0

@@ -10,6 +10,7 @@ modules:
   - kdeconnect
   - laptop
   - plymouth
+  - numlock
   - mpv
   - readest
   - tools
@@ -117,7 +118,6 @@ kde:
       BorderSize: Normal
   kcminputrc:
     Keyboard:
-      NumLock: 0 # on at login
       RepeatDelay: 600
       RepeatRate: 25
     "Libinput/1133/16478/Logitech M720 Triathlon":

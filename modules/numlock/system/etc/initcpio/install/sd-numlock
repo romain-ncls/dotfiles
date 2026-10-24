@@ -1,0 +1,25 @@
+#!/bin/bash
+# Num Lock on the virtual consoles, before Plymouth starts: it reads the
+# passphrase from tty1 (plymouth.use-legacy-input) or, in newer versions, takes
+# tty1's Num Lock as the initial state of its own keyboards. -D makes it the
+# consoles' default, so it lasts past the initramfs.
+
+build() {
+    add_binary setleds
+    add_file - /usr/lib/systemd/system/numlock.service 644 <<'UNIT'
+[Unit]
+Description=Num Lock on the virtual consoles
+DefaultDependencies=no
+After=systemd-vconsole-setup.service
+Before=plymouth-start.service cryptsetup-pre.target sysinit.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'for tty in /dev/tty[1-6]; do setleds -D +num < $$tty; done'
+UNIT
+    add_symlink /usr/lib/systemd/system/sysinit.target.wants/numlock.service ../numlock.service
+}
+
+help() {
+    echo "Turns Num Lock on in the virtual consoles (systemd initramfs)."
+}

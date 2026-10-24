@@ -223,6 +223,18 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 - **Not Vesktop**: it doesn't run OpenASAR, and the official client is what
   mutectl's plugin was written against.
 
+## Num Lock (numlock module)
+
+- **Plymouth's LUKS prompt**: since version 22 Plymouth reads keyboards
+  itself (evdev + xkb) with Num Lock off, whatever the console says.
+  `plymouth.use-legacy-input` on wandersail's cmdline makes it read tty1
+  instead, where the `sd-numlock` initramfs hook has turned Num Lock on.
+  Plymouth's main branch now takes tty1's Num Lock as its starting state; once
+  Arch ships that, the cmdline flag can go (the hook already runs before
+  Plymouth starts).
+- **The Plasma Login greeter** runs KWin as the `plasmalogin` user, whose home
+  is private: `/etc/xdg/kcminputrc` sets the default for every account instead.
+
 ## Left out of the NixOS port (work laptop)
 
 - **konsave, CUPS, the monochrome emoji font**: not needed (no printer).

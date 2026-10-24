@@ -531,7 +531,7 @@ func followUpsFor(path, home string, phase Phase) []string {
 		return []string{"udevadm control --reload", "udevadm trigger"}
 	case strings.HasPrefix(path, "/etc/systemd/"):
 		return []string{"systemctl daemon-reload"}
-	case path == "/etc/mkinitcpio.conf", strings.HasPrefix(path, "/etc/mkinitcpio.conf.d/"), path == "/etc/kernel/cmdline":
+	case path == "/etc/mkinitcpio.conf", strings.HasPrefix(path, "/etc/mkinitcpio.conf.d/"), strings.HasPrefix(path, "/etc/initcpio/"), path == "/etc/kernel/cmdline":
 		return []string{rebuildInitramfs}
 	case strings.HasPrefix(path, "/etc/sysctl.d/"):
 		return []string{"sysctl --system"}

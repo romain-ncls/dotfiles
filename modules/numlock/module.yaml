@@ -1,0 +1,11 @@
+# Num Lock on everywhere: the consoles and Plymouth's LUKS prompt (the
+# `sd-numlock` initramfs hook, which the host adds to its mkinitcpio.conf after
+# `systemd`), the Plasma Login greeter (/etc/xdg/kcminputrc, the default for
+# every account, the greeter's included) and the Plasma session.
+packages:
+  - kbd # setleds
+
+kde:
+  kcminputrc:
+    Keyboard:
+      NumLock: 0 # 0 on, 1 off, 2 leave as is
