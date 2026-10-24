@@ -1,7 +1,7 @@
 # Development: languages, cluster tools, the code font.
 packages:
   - go
-  - nodejs
+  - nodejs-lts-jod # Node 22: bitwarden-cli requires it, and it conflicts with nodejs
   - pnpm
   - deno
   - bun
