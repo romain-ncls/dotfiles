@@ -56,7 +56,10 @@ var builtinIgnores = []string{
 
 // Find builds the report. p is the plan for the same config and machine.
 func Find(c *config.Config, m machine.Machine, p *plan.Plan, root string) (*Report, error) {
-	r := &Report{Plan: p}
+	// What runs on every apply (hooks with when: always) is not drift.
+	kept := *p
+	kept.Actions = slices.DeleteFunc(slices.Clone(p.Actions), func(a *plan.Action) bool { return a.Always })
+	r := &Report{Plan: &kept}
 
 	installed, err := m.Packages()
 	if err != nil {
@@ -109,6 +112,9 @@ func (r *Report) files(c *config.Config, m machine.Machine, p *plan.Plan, root s
 		path := strings.TrimPrefix(phys, root)
 		if err != nil {
 			if errors.Is(err, fs.ErrPermission) {
+				if ignored(path) || ignored(path+"/*") {
+					return filepath.SkipDir
+				}
 				r.Unreadable = append(r.Unreadable, path)
 				return filepath.SkipDir
 			}

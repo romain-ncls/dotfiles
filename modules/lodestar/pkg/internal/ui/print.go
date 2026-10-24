@@ -273,8 +273,22 @@ func PrintDrift(w io.Writer, r *drift.Report, s Style) {
 	section("Units enabled by hand", "(add them to services:)", r.Units)
 	section("User units enabled by hand", "(add them to user-services:)", r.GlobalUnits)
 	section("Extra groups of the user", "(add them to user.groups)", r.ExtraGroups)
-	if len(r.Unreadable) > 0 {
-		fmt.Fprintf(w, "%s %d paths need root to check %s\n", s.Yellow("!"), len(r.Unreadable), s.Dim("(sudo lodestar drift)"))
+	PrintUnreadable(w, r.Unreadable, s)
+}
+
+// PrintUnreadable names the paths drift couldn't check, and suggests sudo
+// unless it already runs as root.
+func PrintUnreadable(w io.Writer, paths []string, s Style) {
+	if len(paths) == 0 {
+		return
+	}
+	hint := "(sudo lodestar drift)"
+	if os.Geteuid() == 0 {
+		hint = "(unreadable even as root)"
+	}
+	fmt.Fprintf(w, "%s %d paths not checked %s\n", s.Yellow("!"), len(paths), s.Dim(hint))
+	for _, p := range paths {
+		fmt.Fprintln(w, "  "+p)
 	}
 }
 

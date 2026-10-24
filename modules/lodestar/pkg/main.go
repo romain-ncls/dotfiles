@@ -324,9 +324,7 @@ func cmdDrift(o *options, args []string) error {
 	}
 	if r.Empty() {
 		fmt.Println("No drift: the machine matches the repo.")
-		if len(r.Unreadable) > 0 {
-			fmt.Printf("(%d paths need root to check: sudo lodestar drift)\n", len(r.Unreadable))
-		}
+		ui.PrintUnreadable(os.Stdout, r.Unreadable, style())
 		return nil
 	}
 	ui.PrintDrift(os.Stdout, r, style())

@@ -65,5 +65,6 @@ func Merge(repo, live string) string {
 	for _, e := range rentries {
 		out = append(out, append(trim(e), "")...)
 	}
-	return strings.Join(out, "\n")
+	// One newline at the end, as limine-snapper-sync writes it.
+	return strings.TrimRight(strings.Join(out, "\n"), "\n") + "\n"
 }
