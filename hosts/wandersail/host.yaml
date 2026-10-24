@@ -121,6 +121,10 @@ kde:
       RepeatRate: 25
     "Libinput/1133/16478/Logitech M720 Triathlon":
       PointerAcceleration: 0.400
+    "Libinput/1133/45111/Logitech MX Anywhere 3S":
+      PointerAcceleration: 0.400
+    "Libinput/1133/16500/Logitech G305":
+      PointerAcceleration: 0.200
     "Libinput/1739/53194/SYNA311E:00 06CB:CFCA Touchpad":
       NaturalScroll: true
       PointerAcceleration: 1.000
