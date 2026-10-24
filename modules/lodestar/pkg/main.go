@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -133,6 +134,12 @@ func (o *options) repoDir() (string, error) {
 		home, err := os.UserHomeDir()
 		if err != nil {
 			return "", err
+		}
+		// Under sudo, the repo is still the one in the user's home.
+		if name := os.Getenv("SUDO_USER"); os.Geteuid() == 0 && name != "" && name != "root" {
+			if u, err := user.Lookup(name); err == nil {
+				home = u.HomeDir
+			}
 		}
 		dir = filepath.Join(home, "dotfiles")
 	}

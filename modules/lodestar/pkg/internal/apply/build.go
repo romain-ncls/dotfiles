@@ -153,5 +153,8 @@ func (e *env) bootstrapYay() error {
 	if err := e.asUser(false, "git", "clone", "--depth", "1", "https://aur.archlinux.org/yay.git", src); err != nil {
 		return err
 	}
-	return e.asUser(true, "sh", "-c", `cd "$0" && exec makepkg --syncdeps --install --rmdeps --noconfirm`, src)
+	// Not --install: that would also install yay-debug, when makepkg.conf
+	// still has the debug option (the repo turns it off later in the apply).
+	return e.asUser(true, "sh", "-c", `cd "$0" && makepkg --syncdeps --rmdeps --noconfirm &&
+		exec sudo pacman -U --noconfirm $(makepkg --packagelist | grep -v -- -debug-)`, src)
 }
