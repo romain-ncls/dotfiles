@@ -440,9 +440,11 @@ func (in *installer) finishUser() error {
 	}
 	// Pushing goes over SSH, once the machine's key is on GitHub.
 	repo := "/home/" + user + "/dotfiles"
-	if url, err := output("git", "-C", target+repo, "remote", "get-url", "origin"); err == nil {
+	// As root, git refuses a repo the user owns unless told it is safe.
+	git := []string{"git", "-c", "safe.directory=" + target + repo, "-C", target + repo, "remote"}
+	if url, err := output(append(git, "get-url", "origin")...); err == nil {
 		if m := regexp.MustCompile(`^https://github\.com/(.+)$`).FindStringSubmatch(url); m != nil {
-			in.run("git", "-C", target+repo, "remote", "set-url", "origin", "git@github.com:"+m[1])
+			in.run(append(git, "set-url", "origin", "git@github.com:"+m[1])...)
 		}
 	}
 	return nil
