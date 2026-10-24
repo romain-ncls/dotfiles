@@ -660,7 +660,7 @@ func (p *Plan) limine(in Input) error {
 		return err
 	default:
 		merged := limine.Merge(string(repo), string(live))
-		if merged == string(live) {
+		if limine.Same(merged, string(live)) {
 			if in.System.Hooks[a.HookKey] != a.Hash {
 				a.Op, a.Why = OpAdopt, "already matches"
 				p.add(a)

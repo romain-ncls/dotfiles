@@ -462,7 +462,7 @@ func (e *env) limine(a *plan.Action) error {
 		return err
 	}
 	merged := limine.Merge(a.Value, string(live))
-	if merged != string(live) {
+	if !limine.Same(merged, string(live)) {
 		if err := os.WriteFile(path+".bak", live, 0o600); err != nil {
 			return err
 		}

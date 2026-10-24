@@ -65,6 +65,11 @@ func Merge(repo, live string) string {
 	for _, e := range rentries {
 		out = append(out, append(trim(e), "")...)
 	}
-	// One newline at the end, as limine-snapper-sync writes it.
-	return strings.TrimRight(strings.Join(out, "\n"), "\n") + "\n"
+	return strings.Join(out, "\n")
+}
+
+// Same tells whether two limine.conf texts differ only by blank lines at
+// the end (limine-snapper-sync's rewrites add one).
+func Same(a, b string) bool {
+	return strings.TrimRight(a, "\n") == strings.TrimRight(b, "\n")
 }

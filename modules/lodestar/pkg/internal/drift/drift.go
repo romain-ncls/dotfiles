@@ -157,7 +157,7 @@ func (r *Report) files(c *config.Config, m machine.Machine, p *plan.Plan, root s
 		switch b.Status {
 		case "modified":
 			r.ModifiedFiles = append(r.ModifiedFiles, b)
-		case "unmodified":
+		case "unmodified", "missing": // missing: e.g. ppp ships its secrets only as .example
 		default:
 			r.Unreadable = append(r.Unreadable, b.Path)
 		}
