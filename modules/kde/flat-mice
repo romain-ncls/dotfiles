@@ -43,5 +43,8 @@ for path in $(busctl --user tree org.kde.KWin | grep -oE '/org/kde/KWin/InputDev
 	name=${name#\"} name=${name%\"}
 	speed=$(kreadconfig6 --file kcminputrc --group Libinput --group "$(prop "$path" vendor | cut -d' ' -f1)" \
 		--group "$(prop "$path" product | cut -d' ' -f1)" --group "$name" --key PointerAcceleration)
-	[[ -n $speed ]] && busctl --user set-property org.kde.KWin "$path" org.kde.KWin.InputDevice pointerAcceleration d "$speed"
+	# an if, not &&: a false test as the last command would be the exit status
+	if [[ -n $speed ]]; then
+		busctl --user set-property org.kde.KWin "$path" org.kde.KWin.InputDevice pointerAcceleration d "$speed"
+	fi
 done
