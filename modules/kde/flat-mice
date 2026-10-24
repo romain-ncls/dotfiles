@@ -3,7 +3,7 @@
 # KDE stores acceleration per device ([Libinput][vendor][product][name] in
 # kcminputrc) and has no global switch, so this writes the key for each
 # connected pointer and for every device already listed. Runs on each
-# `chezmoi apply`; a new mouse is covered at the next apply.
+# `lodestar apply`; a new mouse is covered at the next apply.
 set -euo pipefail
 
 declare -A seen
@@ -32,9 +32,16 @@ for dev in "${!seen[@]}"; do
 		--key PointerAccelerationProfile 1
 done
 
-# KWin only reads kcminputrc when a device appears; push it to live devices too
+# KWin only reads kcminputrc when a device appears; push it to live devices
+# too: the flat profile, and the speed kcminputrc has for that device
 busctl --user status org.kde.KWin >/dev/null 2>&1 || exit 0
+prop() { busctl --user get-property org.kde.KWin "$1" org.kde.KWin.InputDevice "$2" | cut -d' ' -f2-; }
 for path in $(busctl --user tree org.kde.KWin | grep -oE '/org/kde/KWin/InputDevice/event[0-9]+'); do
-	[[ $(busctl --user get-property org.kde.KWin "$path" org.kde.KWin.InputDevice pointer) == "b true" ]] || continue
+	[[ $(prop "$path" pointer) == true ]] || continue
 	busctl --user set-property org.kde.KWin "$path" org.kde.KWin.InputDevice pointerAccelerationProfileFlat b true
+	name=$(prop "$path" name)
+	name=${name#\"} name=${name%\"}
+	speed=$(kreadconfig6 --file kcminputrc --group Libinput --group "$(prop "$path" vendor | cut -d' ' -f1)" \
+		--group "$(prop "$path" product | cut -d' ' -f1)" --group "$name" --key PointerAcceleration)
+	[[ -n $speed ]] && busctl --user set-property org.kde.KWin "$path" org.kde.KWin.InputDevice pointerAcceleration d "$speed"
 done
