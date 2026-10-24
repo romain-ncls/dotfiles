@@ -17,4 +17,3 @@ packages:
   - just
   - bws-bin # Bitwarden Secrets Manager CLI
   - s5cmd-bin # upstream's release; the source package's tests failed in the install chroot
-  - ttf-fira-code # Konsole's font

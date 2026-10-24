@@ -3,6 +3,17 @@
 # DarkOne color schemes, which kube switches between. Konsole rewrites the
 # profile when it is edited in its settings: bring changes back here.
 # The main and session toolbars are hidden by hand (docs/manual-steps.md).
+packages:
+  - ttf-fira-code
+
+breeze-exceptions:
+  - Enabled: true
+    ExceptionType: 0
+    ExceptionPattern: org.kde.konsole
+    HideTitleBar: true
+    BorderSize: 0
+    Mask: 0
+
 kde:
   konsolerc:
     Desktop Entry:
