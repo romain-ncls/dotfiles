@@ -126,4 +126,22 @@ if status is-interactive
         end
         sed -i "/^$argv[1]/d" ~/.ssh/known_hosts
     end
+
+    # Ask for a variable and export it; sreadenv doesn't echo what is typed.
+    function readenv -a var
+        read --global --export --prompt-str "$var: " $var
+    end
+
+    function sreadenv -a var
+        read --global --export --silent --prompt-str "$var: " $var
+    end
+
+    # Unlock Bitwarden for this shell; locked again when the shell exits.
+    function bwu
+        function lock-bw-sessions --on-event fish_exit
+            bw lock &>/dev/null &
+        end
+
+        set -gx BW_SESSION "$(bw unlock --raw)"
+    end
 end
