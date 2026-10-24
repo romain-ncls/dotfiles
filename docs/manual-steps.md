@@ -128,7 +128,9 @@ the enrolled config boots before Secure Boot is on.
    sudo sbctl enroll-keys -m      # -m: keep Microsoft's keys (option ROMs, firmware)
    ```
    Reboot. `sbctl status` and `bootctl status` show Secure Boot **enabled**.
-4. Bind the disk to the TPM (PCR 7: the Secure Boot state and the key that
+4. **After that reboot**, with Secure Boot enabled (not in the setup-mode
+   boot of step 3: the TPM would record Secure Boot off and never unlock),
+   bind the disk to the TPM (PCR 7: the Secure Boot state and the key that
    signed what booted). The passphrase stays as a key slot:
    ```sh
    sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7 /dev/disk/by-uuid/255164aa-991a-4b46-a733-3c73fa801fb3
