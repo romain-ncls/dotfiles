@@ -307,9 +307,13 @@ lodestar merges the modules of a host with these rules:
 
 ### 4.2 Updates
 
-- **One command.** `lodestar upgrade` (abbreviation `lds up`) runs `yay -Syu`
-  without the local packages. Then it builds again the local packages that
-  must be built again (refer to Section 4.1).
+- **One command.** `lodestar upgrade` (abbreviation `lds upgrade`) runs
+  `yay -Syu` without the local packages. Then it builds again the local
+  packages that must be built again (refer to Section 4.1).
+- **apply does not refresh the sync databases.** `pacman -Sy` without `-u` is
+  a partial upgrade. If the databases are older than the mirrors, the mirrors
+  do not have some package files. Then the installation fails with error 404
+  from each mirror. apply then tells you to run `lodestar upgrade`.
 - **No pacman hook from lodestar.** A pacman hook runs as root while pacman
   locks its database. Thus a hook cannot build or install packages. It can
   only show a message. The Arch package `rebuild-detector` already shows the

@@ -3,6 +3,8 @@
 package apply
 
 import (
+	"bytes"
+	"cmp"
 	"errors"
 	"fmt"
 	"io"
@@ -29,6 +31,7 @@ type env struct {
 	root  string       // filesystem prefix, "" on a running system
 	st    *state.State // updated as actions succeed
 	out   io.Writer    // progress
+	errs  io.Writer    // the commands' errors, when not out
 	owner *account     // owner of home files when running as root
 }
 
@@ -69,14 +72,18 @@ func (e *env) do(a *plan.Action) error {
 	switch a.Op {
 	case plan.OpInstall:
 		// No --asexplicit: it would mark the dependencies explicit too.
-		return e.run(append([]string{"pacman", "-S", "--needed", "--noconfirm"}, a.Names...)...)
+		return e.install(func() error {
+			return e.run(append([]string{"pacman", "-S", "--needed", "--noconfirm"}, a.Names...)...)
+		})
 	case plan.OpAsExplicit:
 		return e.run(append([]string{"pacman", "-D", "--asexplicit"}, a.Names...)...)
 	case plan.OpInstallAUR:
 		if err := e.bootstrapYay(); err != nil {
 			return err
 		}
-		return e.asUser(true, append([]string{"yay", "-S", "--needed", "--noconfirm"}, a.Names...)...)
+		return e.install(func() error {
+			return e.asUser(true, append([]string{"yay", "-S", "--needed", "--noconfirm"}, a.Names...)...)
+		})
 	case plan.OpBuild:
 		return e.build(a)
 	case plan.OpHook:
@@ -224,11 +231,52 @@ func (e *env) record(a *plan.Action) {
 
 func (e *env) run(args ...string) error {
 	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, e.out, e.out
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, e.out, cmp.Or(e.errs, e.out)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("%s: %w", strings.Join(args, " "), err)
 	}
 	return nil
+}
+
+// install runs a pacman or yay install, and points to lodestar upgrade when
+// a package failed to download with 404 from every mirror: the sync
+// databases are older than the mirrors, which dropped the version they name.
+// apply doesn't refresh them itself: pacman -Sy without -u is a partial
+// upgrade.
+func (e *env) install(run func() error) error {
+	w := &notFound{w: e.out}
+	e.errs = w // stdout stays the terminal, for pacman's progress bars
+	defer func() { e.errs = nil }()
+	err := run()
+	if err != nil && w.seen {
+		return fmt.Errorf("%w\nthe package databases are older than the mirrors: run lodestar upgrade", err)
+	}
+	return err
+}
+
+// notFound passes a command's errors on, watching for pacman's "failed
+// retrieving file 'x.pkg.tar.zst' from mirror : The requested URL returned
+// error: 404". pacman translates its part of the line, but not the file name
+// or curl's part.
+type notFound struct {
+	w    io.Writer
+	line []byte // the start of the current line
+	seen bool
+}
+
+func (n *notFound) Write(p []byte) (int, error) {
+	n.line = append(n.line, p...)
+	for {
+		line, rest, ok := bytes.Cut(n.line, []byte("\n"))
+		if !ok {
+			break
+		}
+		if bytes.Contains(line, []byte(".pkg.tar")) && bytes.Contains(line, []byte("returned error: 404")) {
+			n.seen = true
+		}
+		n.line = rest
+	}
+	return n.w.Write(p)
 }
 
 // existingGroups drops (with a warning) the groups that don't exist yet.

@@ -251,8 +251,12 @@ shortcuts:
 
 ### Updates
 
-- **One command.** `lodestar upgrade` (`lds up`) runs `yay -Syu` with the local
-  packages excluded, then rebuilds the local packages that need it (above).
+- **One command.** `lodestar upgrade` (`lds upgrade`) runs `yay -Syu` with the
+  local packages excluded, then rebuilds the local packages that need it
+  (above).
+- **apply never refreshes the sync databases.** `pacman -Sy` without `-u` is a
+  partial upgrade. When the databases are older than the mirrors, an install
+  fails with a 404 on every mirror; apply then says to run `lodestar upgrade`.
 - **No pacman hook of our own.** A pacman hook runs as root while pacman holds
   its database lock, so it can't build or install anything; it could only warn.
   The useful warning already exists: `rebuild-detector` (Arch repos) warns
