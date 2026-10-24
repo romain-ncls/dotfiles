@@ -64,7 +64,12 @@ func (p *Plan) json(in Input) error {
 		a := &Action{Op: OpJSON, Phase: PhaseHome, Path: path, Display: t.Path, Content: append(content, '\n'),
 			Why: why, From: t.From}
 		if old != nil {
+			// Shown as a diff: formatted like Content, so that only the keys
+			// that change show, not the app's own layout of the file.
 			a.Old = old
+			if live, err := json.MarshalIndent(live, "", "  "); err == nil {
+				a.Old = append(live, '\n')
+			}
 		}
 		p.add(a)
 	}
