@@ -1,3 +1,6 @@
-# The phone as a webcam.
+# The phone as a webcam. droidcam loads DroidCam's own v4l2loopback fork
+# (/etc/modules-load.d/droidcam.conf), from the same PKGBUILD; the dependency
+# alone pulls the upstream v4l2loopback-dkms instead.
 packages:
   - droidcam
+  - v4l2loopback-dc-dkms
