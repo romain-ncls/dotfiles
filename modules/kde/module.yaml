@@ -13,6 +13,10 @@ kde:
   konsolerc:
     KonsoleWindow:
       ShowMenuBarByDefault: false
+  # KRunner floats in the middle of the screen instead of dropping from the top.
+  krunnerrc:
+    General:
+      FreeFloating: true
   # Navigation and window management, the same on every machine.
   kwinrc:
     Desktops:
