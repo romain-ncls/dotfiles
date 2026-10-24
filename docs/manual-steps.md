@@ -28,6 +28,9 @@ bw login          # once; afterwards lodestar runs `bw unlock` itself when a tem
 ### KDE
 - Log out and back in after the first `lodestar apply`: some KWin and
   Plasma settings (Xwayland scale, theme) are only fully applied at login.
+- Konsole (hosts with the `konsole` module): right-click the toolbar and hide
+  the main and session toolbars. Konsole keeps that in a binary window state
+  (`~/.local/state/konsolestaterc`), not in a key the repo could set.
 
 ### Readest
 - Settings → *Theme* → color theme **Contrast** (for both the library and the
