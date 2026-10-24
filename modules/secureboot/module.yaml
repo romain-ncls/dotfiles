@@ -1,0 +1,13 @@
+# Secure Boot with our own keys, and the LUKS volume unlocked by the TPM.
+# sbctl holds the keys (/var/lib/sbctl, per machine, never in the repo);
+# limine-entry-tool signs Limine with them after enrolling the config hash
+# (ENABLE_ENROLL_LIMINE_CONFIG, set by the host var `secureboot: "yes"`), and
+# fwupd boots its own copy signed by sbctl for firmware updates. The host adds
+# `tpm2-device=auto` to rd.luks.options. Keys, firmware and the TPM enrollment
+# are manual: docs/manual-steps.md.
+packages:
+  - sbctl
+
+files:
+  /etc/fwupd/fwupd.conf:
+    mode: 0640

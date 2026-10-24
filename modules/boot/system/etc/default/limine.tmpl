@@ -12,3 +12,9 @@ HASH_FUNCTION=xxhash
 TERMINAL=konsole
 FIND_BOOTLOADERS=no
 ENABLE_LIMINE_FALLBACK=yes
+{{- if eq (index .vars "secureboot") "yes" }}
+# Secure Boot (the secureboot module): the BLAKE2B hash of limine.conf is
+# enrolled into Limine's EFI binary, which sbctl then signs. Limine then
+# refuses a modified config, any file without its hash, and the editor.
+ENABLE_ENROLL_LIMINE_CONFIG=yes
+{{- end }}

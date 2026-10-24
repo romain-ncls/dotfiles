@@ -6,7 +6,8 @@ scripting it would be riskier than doing it. Do them in order on a new machine.
 ## Both machines
 
 ### Firmware (BIOS)
-- Secure Boot **off**, CSM **off**.
+- CSM **off**. Secure Boot **off** on the home PC; on the laptop it is turned
+  on after install, with our own keys ("Secure Boot and TPM unlock" below).
 - Home (MSI, Del at POST): `Above 4G Decoding` and `Re-Size BAR Support` **on**.
 - Home: Boot → Boot Option #1 = **Limine**, #2 = **Windows Boot Manager**.
   The MSI firmware reverts boot orders set with `efibootmgr`; only this sticks.
@@ -105,6 +106,41 @@ If the Windows boot animation looks stretched, from an elevated prompt:
    `~/.ssh` brings back this laptop's own key, already on GitHub: skip
    "SSH key" above, and `lodestar apply` again for `allowed_signers`.
 4. Log out and back in.
+
+### Secure Boot and TPM unlock
+Once, after `lodestar apply` has installed sbctl and enrolled Limine's config
+hash (`ENABLE_ENROLL_LIMINE_CONFIG=yes`). Reboot once at this point: it proves
+the enrolled config boots before Secure Boot is on.
+1. Keys, then sign Limine with them:
+   ```sh
+   sudo sbctl create-keys
+   sudo limine-enroll-config      # re-enrolls the hash and signs BOOTX64.EFI
+   sudo sbctl sign -s -o /usr/lib/fwupd/efi/fwupdx64.efi.signed /usr/lib/fwupd/efi/fwupdx64.efi
+   sudo sbctl verify              # Limine's binary and fwupd's: signed
+   ```
+   `-s` saves fwupd's binary in sbctl's list: its pacman hook re-signs it
+   when fwupd-efi updates. Firmware updates then go through fwupd as before.
+2. Firmware (F10 at POST): Security → Secure Boot Configuration →
+   **Secure Boot: enabled**, **Clear Secure Boot keys** (setup mode). Save; HP
+   asks for a 4-digit code at the next boot.
+3. Back in Arch (setup mode boots unsigned):
+   ```sh
+   sudo sbctl enroll-keys -m      # -m: keep Microsoft's keys (option ROMs, firmware)
+   ```
+   Reboot. `sbctl status` and `bootctl status` show Secure Boot **enabled**.
+4. Bind the disk to the TPM (PCR 7: the Secure Boot state and the key that
+   signed what booted). The passphrase stays as a key slot:
+   ```sh
+   sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7 /dev/disk/by-uuid/255164aa-991a-4b46-a733-3c73fa801fb3
+   ```
+   Add `--tpm2-with-pin=yes` to also ask a PIN at boot.
+
+Never `sbctl sign` the fallback `EFI/BOOT/BOOTX64.EFI`: it has no config hash
+enrolled, so a signed copy would boot any `limine.conf`.
+
+The TPM stops unlocking (the passphrase prompt comes back) when PCR 7 changes:
+new Secure Boot keys, a db/dbx update (fwupd), a BIOS update or reset. Re-bind:
+`sudo systemd-cryptenroll --wipe-slot=tpm2 --tpm2-device=auto --tpm2-pcrs=7 /dev/disk/by-uuid/255164aa-…`.
 
 ### By hand in Plasma
 - Activities (and their shortcuts): their ids change, so they are recreated.

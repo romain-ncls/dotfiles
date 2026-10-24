@@ -3,6 +3,7 @@
 modules:
   - base
   - boot
+  - secureboot
   - dns
   - desktop
   - kde
@@ -43,6 +44,7 @@ modules:
 vars:
   name: Romain Nicolas
   email: nicolasromain0@gmail.com
+  secureboot: "yes" # Limine's config hash enrolled (modules/boot)
 
 user:
   name: romain
