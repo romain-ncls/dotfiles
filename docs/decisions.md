@@ -92,6 +92,10 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 - On a network whose internal names need its own DNS (the work LAN, a captive
   portal), add that connection's DNS by hand: `nmcli connection modify <con>
   ipv4.ignore-auto-dns no`.
+- **The company VPN uses its own DNS, in plain text** (`modules/work/vpn-dns`):
+  its servers' names only exist there, and the server doesn't speak TLS. The
+  hook turns DNS-over-TLS off for that connection and makes its DNS first for
+  every name while connected (`~.`, priority -50), as NixOS did.
 
 ## Hardware (home PC)
 

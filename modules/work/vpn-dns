@@ -1,0 +1,9 @@
+#!/bin/sh
+# The company VPN ("Agora", imported by hand: its file holds the password)
+# names its servers on its own DNS server, which speaks plain DNS only.
+# Against the dns module's defaults: no DNS-over-TLS on that link, and its
+# DNS first for every name while connected (~.), as NixOS did.
+vpn=Agora
+nmcli -t -f NAME connection show | grep -qx "$vpn" || exit 0
+[ "$(nmcli -g connection.dns-over-tls,ipv4.dns-search,ipv4.dns-priority connection show "$vpn" | paste -sd:)" = "0:~.:-50" ] && exit 0
+nmcli connection modify "$vpn" connection.dns-over-tls no ipv4.dns-search "~." ipv4.dns-priority -50

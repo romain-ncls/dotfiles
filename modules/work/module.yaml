@@ -5,3 +5,9 @@ packages:
   - postman-bin
   - jetbrains-toolbox # GoLand, WebStorm, PyCharm, DataGrip install through it
   - obsidian
+
+hooks:
+  # The VPN's own DNS, without DNS-over-TLS, for every name while it's
+  # connected; on every apply, since the VPN is imported by hand.
+  - run: vpn-dns
+    when: always
