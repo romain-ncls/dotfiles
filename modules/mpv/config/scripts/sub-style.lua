@@ -1,6 +1,7 @@
 -- sub-style.lua
--- Subtitle style switcher: file's own style, mpv default, VLC-like, and a few
--- popular font presets. Opens a menu (script-binding sub_style/menu) and
+-- Subtitle style switcher: auto, file's own style, mpv default, VLC-like, and
+-- a few popular font presets. Auto (the default) picks SubsPlease for anime
+-- (Japanese audio) and VLC-like for everything else. Opens a menu (script-binding sub_style/menu) and
 -- publishes its state in user-data/sub-style for the ModernZ "Aa" button
 -- (see sub-style-modernz-patch.md).
 --
@@ -39,8 +40,10 @@ local MPV_DEFAULTS = {
     ["sub-spacing"] = 0, ["sub-margin-y"] = 34,
 }
 
--- id "file" = no styling of ours at all.
+-- id "file" = no styling of ours at all; id "auto" = one of the others,
+-- chosen per file by auto_preset().
 local PRESETS = {
+    { id = "auto", label = "Auto (SubsPlease for anime, VLC-like otherwise)" },
     { id = "file", label = "File's own style" },
     { id = "mpv", label = "mpv default", opts = MPV_DEFAULTS },
     { id = "vlc", label = "VLC-like (Arial, thick outline, soft shadow)", opts = {
@@ -94,7 +97,7 @@ local PRESETS = {
 
 local state_path = mp.command_native({"expand-path", "~~state/sub-style.json"})
 local startup = {}
-local current = "file"
+local current = "auto"
 local force_ass = false
 
 local function find(id)
@@ -120,6 +123,19 @@ local function save_state()
     f:close()
 end
 
+-- Anime = the audio playing is Japanese
+local function auto_preset()
+    local audio = mp.get_property_native("current-tracks/audio")
+    local lang = audio and (audio.lang or ""):lower() or ""
+    return find((lang == "ja" or lang == "jpn") and "subsplease" or "vlc")
+end
+
+-- The preset actually applied: auto resolved to its pick
+local function effective()
+    if current == "auto" then return auto_preset() end
+    return find(current)
+end
+
 local function sub_kind()
     local track = mp.get_property_native("current-tracks/sub")
     if not track then return "none" end
@@ -132,25 +148,25 @@ end
 -- Tell ModernZ what to draw: icon = own | plain | preset | image | none
 local function publish()
     local kind = sub_kind()
-    local p = find(current)
+    local p = effective()
     local icon, tip
     if kind == "none" then
         icon, tip = "none", "Subtitle style: no subtitles"
     elseif kind == "image" then
         icon, tip = "image", "Subtitle style: image subtitles (can't be restyled)"
-    elseif kind == "ass" and (current == "file" or not force_ass) then
+    elseif kind == "ass" and (p.id == "file" or not force_ass) then
         icon, tip = "own", "Subtitle style: file's own (styled .ass)"
-    elseif current == "file" or current == "mpv" then
+    elseif p.id == "file" or p.id == "mpv" then
         icon, tip = "plain", "Subtitle style: mpv default (file has no style of its own)"
         if kind == "ass" then icon, tip = "preset", "Subtitle style: mpv default (forced on .ass)" end
     else
-        icon, tip = "preset", "Subtitle style: " .. p.label
+        icon, tip = "preset", "Subtitle style: " .. (current == "auto" and "Auto · " or "") .. p.label
     end
     mp.set_property_native("user-data/sub-style", {icon = icon, tooltip = tip, preset = current})
 end
 
 local function apply()
-    local p = find(current)
+    local p = effective()
     local opts = p.opts or {}
     for _, k in ipairs(KEYS) do
         local v = opts[k]
@@ -209,6 +225,7 @@ options.read_options(o, "sub_style")
 
 -- Short menu text per preset: name (drawn in the preset's font) + hint
 local MENU_TEXT = {
+    auto      = {"Auto", "SubsPlease on anime, else VLC"},
     file      = {"File's own style", "as the subtitle file defines it"},
     mpv       = {"mpv default", "sans-serif, thin outline"},
     vlc       = {"VLC-like", "Arial, thick outline, soft shadow"},
@@ -294,7 +311,7 @@ local function render()
         end
 
         -- name in the preset's own font, as a preview
-        local po = p.opts or {}
+        local po = (p.id == "auto" and effective().opts) or p.opts or {}
         local font = po["sub-font"] or o.ui_font
         if font == "sans-serif" then font = "Arial" end
         local bold = po["sub-bold"] and "\\b1" or "\\b0"
@@ -412,6 +429,10 @@ for _, k in ipairs(KEYS) do startup[k] = mp.get_property_native(k) end
 load_state()
 apply()
 
+-- auto depends on the audio language
+mp.observe_property("current-tracks/audio", "native", function()
+    if current == "auto" then apply() end
+end)
 mp.observe_property("current-tracks/sub", "native", function()
     publish()
     if m.open then render() end

@@ -186,6 +186,12 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   redistributable; Roboto Medium is the SubsPlease build, Apache 2.0). Arial and
   Trebuchet MS come from `ttf-ms-fonts` on Linux; the sub-style menu uses the
   bundled Atkinson Hyperlegible Next instead of Segoe UI so it looks the same.
+- **Subtitle style defaults to Auto**: SubsPlease look when the audio is
+  Japanese (anime), VLC-like otherwise. Styled .ass subs still keep their own
+  style. Picking a preset in the menu overrides it until Auto is picked again.
+- **Forced subtitle tracks are skipped** (`skip-signs-subs.lua`): streaming
+  rips flag the forced track (foreign lines only) as default, so mpv picked it
+  over the full one; the script swaps to the full, non-SDH track.
 - **Patched ModernZ**: `config/scripts/modernz.lua` carries the sub-style "Aa"
   button; `config/sub-style-modernz-patch.md` explains how to reapply it after
   updating ModernZ.
