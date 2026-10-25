@@ -1,0 +1,4 @@
+# makepkg output when a PKGBUILD is built by hand (lodestar builds in its cache)
+modules/*/pkg/src/
+modules/*/pkg/pkg/
+modules/*/pkg/*.pkg.tar.*
