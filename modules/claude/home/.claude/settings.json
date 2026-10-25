@@ -1,6 +1,10 @@
 {
   "permissions": {
-    "defaultMode": "auto"
+    "defaultMode": "auto",
+    "allow": [
+      "mcp__raindrop__delete_bookmarks",
+      "mcp__raindrop__delete_collections"
+    ]
   },
   "statusLine": {
     "type": "command",
