@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+      http://www.kde.org/standards/kcfg/1.0/kcfg.xsd" >
+  <kcfgfile name=""/>
+
+  <group name="General">
+    <entry name="GapMm" type="Double">
+      <label>Distance between the picture areas of neighbouring screens, in millimetres</label>
+      <default>15</default>
+    </entry>
+    <entry name="UnitMm" type="Double">
+      <label>Size of one game unit on screen, in millimetres (at 16.3 a 476 mm wide monitor shows one game screen)</label>
+      <default>16.3</default>
+    </entry>
+    <entry name="SceneId" type="String">
+      <label>"world" for the aquarium from tools/world.py, or a scene baked by tools/bake.py</label>
+      <default>world</default>
+    </entry>
+    <entry name="Latitude" type="Double">
+      <label>Latitude for sunrise and sunset</label>
+      <default>48.85</default>
+    </entry>
+    <entry name="Longitude" type="Double">
+      <label>Longitude for sunrise and sunset</label>
+      <default>2.35</default>
+    </entry>
+    <entry name="NightUntil" type="String">
+      <label>The night lasts until this time (HH:MM), then dawn; with DayFrom, DayUntil and NightFrom (all four, in order), these hours replace the sun's</label>
+      <default>09:30</default>
+    </entry>
+    <entry name="DayFrom" type="String">
+      <label>Day from this time (HH:MM), after dawn</label>
+      <default>10:00</default>
+    </entry>
+    <entry name="DayUntil" type="String">
+      <label>Day until this time (HH:MM), then the golden hour and dusk</label>
+      <default>17:00</default>
+    </entry>
+    <entry name="NightFrom" type="String">
+      <label>Full night from this time (HH:MM)</label>
+      <default>17:30</default>
+    </entry>
+    <entry name="Motion" type="Int">
+      <label>How often everything moves: 0 every frame on every screen; paced (less work): 1 every frame where Hornet is, 2 thirty times a second where she rests, 3 each screen at the rate of what it shows</label>
+      <default>0</default>
+    </entry>
+    <entry name="PauseWhen" type="Int">
+      <label>On the desktop only (never on the lock screen), stand still: 0 never, 1 while a window is maximized or full screen on that screen, 2 while any window is focused</label>
+      <default>2</default>
+    </entry>
+    <entry name="Debug" type="Bool">
+      <label>Draw alignment guides</label>
+      <default>false</default>
+    </entry>
+  </group>
+</kcfg>

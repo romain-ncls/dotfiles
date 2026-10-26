@@ -39,6 +39,7 @@ modules:
   - mutectl
   - spotify-vol
   - backdrop
+  - silksong
   - soundboard
   - lodestar
 

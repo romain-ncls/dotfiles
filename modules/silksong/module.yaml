@@ -1,0 +1,18 @@
+# Silksong Aquarium: a Hollow Knight: Silksong world across the desk's screens,
+# Hornet living in it, as the lock screen's wallpaper with the game's prompt
+# (wallpaper/README.md). The game's art is made from the installed game into
+# ~/.local/share/silksong-wallpaper by the tools, never kept here.
+files:
+  ~/.local/share/plasma/wallpapers/com.github.romain-ncls.silksong:
+    link: wallpaper/plasma # edited in place
+
+kde:
+  kscreenlockerrc:
+    Greeter:
+      WallpaperPlugin: com.github.romain-ncls.silksong
+    Greeter/Wallpaper/com.github.romain-ncls.silksong/General:
+      SceneId: world
+
+hooks:
+  - run: link-lockscreen # ~/.local/share/plasma/shells/com.github.romain-ncls.silksong-lock
+    when: changed

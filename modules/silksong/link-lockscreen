@@ -1,0 +1,5 @@
+#!/bin/sh
+# Makes the Silksong lock screen's shell package again (it links to the
+# system's own prompt files, so it follows Plasma; the env script does the same
+# at each login).
+exec "$(dirname "$0")/wallpaper/tools/lockscreen.sh" link

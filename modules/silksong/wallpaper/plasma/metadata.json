@@ -1,0 +1,16 @@
+{
+    "KPackageStructure": "Plasma/Wallpaper",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Romain Nicolas"
+            }
+        ],
+        "Description": "Hornet living in a Silksong scene laid across all your monitors",
+        "Icon": "preferences-desktop-wallpaper",
+        "Id": "com.github.romain-ncls.silksong",
+        "License": "MIT",
+        "Name": "Silksong Aquarium",
+        "Version": "0.1.0"
+    }
+}
