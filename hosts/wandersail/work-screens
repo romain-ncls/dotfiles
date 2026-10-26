@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+# The layout of the desk at work: the two BenQs on each side of the laptop,
+# which stays the primary screen. KWin keeps layouts in kwinoutputconfig.json
+# and adds every screen it meets, so this merges our screens and their layout
+# into it instead of owning the file. KWin only reads the file at login: when
+# the screens are plugged in, kscreen-doctor also applies the layout now.
+# KWin knows a screen by the MD5 of its EDID; /sys gives the connector.
+import copy, glob, hashlib, json, os, subprocess, sys
+
+here = os.path.dirname(os.path.abspath(__file__))
+work = json.load(open(os.path.join(here, "work-screens.json")))
+path = os.path.expanduser("~/.config/kwinoutputconfig.json")
+
+try:
+    config = json.load(open(path))
+except FileNotFoundError:
+    config = []
+sections = {e["name"]: e["data"] for e in copy.deepcopy(config)}
+outputs = sections.setdefault("outputs", [])
+setups = sections.setdefault("setups", [])
+
+index = {}
+for out in work["outputs"]:
+    for i, o in enumerate(outputs):
+        if o.get("edidHash") == out["edidHash"] and o.get("edidIdentifier") == out["edidIdentifier"]:
+            break
+    else:
+        outputs.append(out)
+        i = len(outputs) - 1
+    index[out["edidHash"]] = i
+
+setup = {
+    "lidClosed": False,
+    "outputs": [
+        {
+            "enabled": True,
+            "outputIndex": index[s["edidHash"]],
+            "position": {"x": s["x"], "y": s["y"]},
+            "priority": s["priority"],
+            "replicationSource": "",
+        }
+        for s in work["setup"]
+    ],
+}
+ours = {o["outputIndex"] for o in setup["outputs"]}
+for i, s in enumerate(setups):
+    if not s.get("lidClosed") and {o["outputIndex"] for o in s["outputs"]} == ours:
+        setups[i] = setup
+        break
+else:
+    setups.append(setup)
+
+new = [{"name": n, "data": d} for n, d in sections.items()]
+if new != config:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path + ".new", "w") as f:
+        json.dump(new, f, indent=4)
+    os.replace(path + ".new", path)
+    print("work-screens: layout merged into kwinoutputconfig.json")
+
+# Live: only in a Plasma session with the three screens plugged in.
+if not os.environ.get("WAYLAND_DISPLAY"):
+    sys.exit(0)
+connectors = {}
+for edid in glob.glob("/sys/class/drm/card*-*/edid"):
+    data = open(edid, "rb").read()
+    if data:
+        connectors[hashlib.md5(data).hexdigest()] = os.path.basename(os.path.dirname(edid)).split("-", 1)[1]
+if not all(s["edidHash"] in connectors for s in work["setup"]):
+    sys.exit(0)
+live = {o["name"]: o for o in json.loads(subprocess.check_output(["kscreen-doctor", "-j"]))["outputs"]}
+args = []
+for s in work["setup"]:
+    name = connectors[s["edidHash"]]
+    o = live.get(name)
+    if o and (o["pos"] != {"x": s["x"], "y": s["y"]} or o["priority"] != s["priority"] or not o["enabled"]):
+        args += [f"output.{name}.enable", f"output.{name}.position.{s['x']},{s['y']}", f"output.{name}.priority.{s['priority']}"]
+if args:
+    subprocess.run(["kscreen-doctor", *args], check=True)
+    print("work-screens: layout applied")

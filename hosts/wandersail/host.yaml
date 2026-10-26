@@ -165,3 +165,9 @@ shortcuts:
   - {component: brave-browser, action: execute_side_panel, keys: []}
   - {component: brave-browser, action: generate_password, keys: []}
   - {component: brave-browser, action: save_page, keys: []}
+
+hooks:
+  - run: work-screens # the desk at work: a BenQ on each side of the laptop
+    when: always
+  - run: tray-shortcuts # Meta+~ volume, Meta+² media player
+    when: always

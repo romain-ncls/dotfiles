@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+# Global shortcuts that open system tray widgets. Plasma keeps a widget's
+# shortcut in its layout file, under the widget's number, which a new layout
+# can change, and its scripting API cannot reach the widgets of the tray. So
+# this finds the widgets by type and, when a shortcut is missing, writes it
+# with plasmashell stopped (it saves its layout when it exits) and restarts
+# it, which registers the shortcuts with KDE.
+import os, re, subprocess, sys
+
+shortcuts = {
+    "org.kde.plasma.volume": "Meta+~",
+    "org.kde.plasma.mediacontroller": "Meta+²",
+}
+
+layout = os.path.expanduser("~/.config/plasma-org.kde.plasma.desktop-appletsrc")
+if not os.path.exists(layout):
+    print("tray-shortcuts: no Plasma layout yet, run lodestar apply again from Plasma", file=sys.stderr)
+    sys.exit(1)
+
+groups, group = {}, None
+for line in open(layout, encoding="utf-8"):
+    line = line.rstrip("\n")
+    if line.startswith("["):
+        group = tuple(re.findall(r"\[([^\]]*)\]", line))
+        groups.setdefault(group, {})
+    elif group and "=" in line:
+        k, v = line.split("=", 1)
+        groups[group][k] = v
+
+# Tray widgets: Applets of an Applets entry, the tray.
+missing = {}
+for g, keys in groups.items():
+    plugin = keys.get("plugin")
+    if plugin in shortcuts and len(g) >= 4 and g[-2] == "Applets" and "Applets" in g[:-2]:
+        if groups.get(g + ("Shortcuts",), {}).get("global") != shortcuts[plugin]:
+            missing[g] = shortcuts[plugin]
+found = {groups[g]["plugin"] for g in groups if groups[g].get("plugin") in shortcuts}
+for plugin in shortcuts.keys() - found:
+    print(f"tray-shortcuts: no {plugin} in the tray", file=sys.stderr)
+if not missing:
+    sys.exit(0)
+
+running = subprocess.run(["systemctl", "--user", "is-active", "-q", "plasma-plasmashell.service"]).returncode == 0
+if running:
+    subprocess.run(["systemctl", "--user", "stop", "plasma-plasmashell.service"], check=True)
+try:
+    for g, keys in missing.items():
+        args = [a for part in g + ("Shortcuts",) for a in ("--group", part)]
+        subprocess.run(["kwriteconfig6", "--file", layout, *args, "--key", "global", keys], check=True)
+        print(f"tray-shortcuts: {groups[g]['plugin']} on {keys}")
+finally:
+    if running:
+        subprocess.run(["systemctl", "--user", "start", "plasma-plasmashell.service"], check=True)
