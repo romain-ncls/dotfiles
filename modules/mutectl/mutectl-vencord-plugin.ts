@@ -1,12 +1,9 @@
 import definePlugin from '@utils/types';
+import { findByPropsLazy } from '@webpack';
+import { MediaEngineStore } from '@webpack/common';
 
-function getMuteBtn(): HTMLButtonElement {
-  return document.querySelector('div[class*="audioButtonParent"]:first-of-type > button[role="switch"]') as HTMLButtonElement
-}
-
-function getAfkButton(): HTMLButtonElement {
-  return document.querySelector('div[class*="audioButtonParent"]:last-of-type > button[role="switch"]') as HTMLButtonElement
-}
+// Discord's audio actions: what its mute/deafen buttons, tray menu and keybinds call.
+const AudioActions = findByPropsLazy('toggleSelfMute', 'toggleSelfDeaf');
 
 function connect() {
   const eventSource = new EventSource('http://127.0.0.1:4815/sse');
@@ -15,31 +12,23 @@ function connect() {
     setTimeout(connect, 1000);
   });
   eventSource.addEventListener('mute', () => {
-    const btn = getMuteBtn()
-    if (btn.ariaChecked == 'false') {
-      btn.click()
-    } else {
-      const afkBtn = getAfkButton()
-      if (afkBtn.ariaChecked == 'true') {
-        afkBtn.click()
-      }
+    if (!MediaEngineStore.isSelfMute()) {
+      AudioActions.toggleSelfMute();
+    } else if (MediaEngineStore.isSelfDeaf()) {
+      AudioActions.toggleSelfDeaf();
     }
   });
   eventSource.addEventListener('unmute', () => {
-    const btn = getMuteBtn()
-    if (btn.ariaChecked == 'true') {
-      btn.click()
+    if (MediaEngineStore.isSelfMute()) {
+      AudioActions.toggleSelfMute();
     }
-
   });
   eventSource.addEventListener('afk', () => {
-    const muteBtn = getMuteBtn()
-    const afkBtn = getAfkButton()
-    if (muteBtn.ariaChecked == 'false') {
-      muteBtn.click()
+    if (!MediaEngineStore.isSelfMute()) {
+      AudioActions.toggleSelfMute();
     }
-    if (afkBtn.ariaChecked == 'false') {
-      afkBtn.click()
+    if (!MediaEngineStore.isSelfDeaf()) {
+      AudioActions.toggleSelfDeaf();
     }
   });
 }
