@@ -129,10 +129,13 @@ in
   services.flatpak.enable = true;
 
   virtualisation.docker.enable = true;
+  # nixpkgs links dockerd against systemd-minimal-libs, which can't read zstd
+  # journals, so the default journald driver makes `docker logs` come back empty.
+  virtualisation.docker.logDriver = "local";
 
   services.atd.enable = true; # echo 'notify-send -u critical "Reminder" "GitLab Update"' | at 15:15
 
-  programs.droidcam.enable = true;
+  #programs.droidcam.enable = true;
 
   programs.steam.enable = true;
 
