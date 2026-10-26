@@ -5,3 +5,4 @@ user-services:
 
 hooks:
   - run: set-wallpaper.sh
+    when: always # Plasma gives a screen it has never seen the default image
