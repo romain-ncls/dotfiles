@@ -1,0 +1,6 @@
+{
+  "LoopbackNetworkAllowedForUrls": [
+    "https://teams.cloud.microsoft",
+    "https://teams.microsoft.com"
+  ]
+}

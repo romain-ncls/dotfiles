@@ -1,7 +1,10 @@
 # mutectl: one mute state for the microphone, Discord (the Vencord plugin in
 # mutectl-vencord-plugin.ts, built by the discord module) and Teams in Brave
-# (chrome-extension/, loaded unpacked from this folder). pkg/ builds mutectl,
-# its service and lock-afk (KDE Connect's "Lock AFK" command).
+# (chrome-extension/, loaded unpacked from this folder; a Brave policy lets
+# Teams reach mutectl-service on localhost without asking). pkg/ builds
+# mutectl, its service and lock-afk (KDE Connect's "Lock AFK" command).
+# chrome-extension/icons/*.png are rendered from the SVGs next to them:
+# icon-16.png from icon-16.svg, the others from icon.svg (rsvg-convert -w N).
 services:
   - mutectl.service
 
