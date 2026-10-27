@@ -66,8 +66,9 @@ changed in System Settings since the last apply: `lodestar kde review --list`.
   prompt, and each attempt counts as a failure towards the faillock lockout
   (3 → 10 min; `faillock --user romain --reset` clears it without sudo).
   `lodestar apply`, `prune` and `upgrade` ask for the password once: tell the
-  user to run them in their terminal, piped to a log if you need the output
-  (`lodestar apply 2>&1 | tee ~/apply.log`), then read the log and delete it.
+  user to run them in their terminal. Each run writes its log (the plan, the
+  answer, every step, the commands' errors, how it ended) to
+  `~/.local/state/lodestar/logs/`; read `last.log` there afterwards.
 - **The repo is public.** Never commit secrets, even encrypted. Secrets live in
   Bitwarden and templates read them at apply time
   (`{{ bitwarden "item" "password" }}`). SSH keys are per machine and never synced.

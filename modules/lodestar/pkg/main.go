@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -25,6 +26,7 @@ import (
 	"github.com/romain-ncls/dotfiles/lodestar/internal/machine"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/plan"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/render"
+	"github.com/romain-ncls/dotfiles/lodestar/internal/runlog"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/schema"
 	"github.com/romain-ncls/dotfiles/lodestar/internal/ui"
 )
@@ -259,14 +261,16 @@ func cmdPlan(o *options, args []string) error {
 	}
 	if p.Empty() {
 		fmt.Println("Nothing to do: the machine matches the repo.")
-		printNotes(p)
+		printNotes(os.Stdout, p)
 		return nil
 	}
 	ui.PrintPlan(os.Stdout, p, style())
 	return nil
 }
 
-func cmdApply(o *options, args []string) error {
+func cmdApply(o *options, args []string) (err error) {
+	log := startLog()
+	defer func() { endLog(log, err) }()
 	p, err := o.plan()
 	if err != nil {
 		return err
@@ -274,7 +278,35 @@ func cmdApply(o *options, args []string) error {
 	if o.system != o.home {
 		p.Only(o.system)
 	}
-	return applyPlan(o, p)
+	return applyPlan(o, p, log)
+}
+
+// startLog opens the log of a command that changes the machine. Without one
+// (as root: an install, or it can't be written) the command runs unlogged.
+func startLog() *runlog.Log {
+	if os.Geteuid() == 0 {
+		return nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+	log, err := runlog.Open(home, os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "lodestar: no log:", err)
+		return nil
+	}
+	return log
+}
+
+// endLog writes how the command ended; exitError means a question was
+// answered no.
+func endLog(log *runlog.Log, err error) {
+	var exit exitError
+	if errors.As(err, &exit) {
+		err = errors.New("answered no")
+	}
+	log.End(err)
 }
 
 func cmdInstall(o *options, args []string) error {
@@ -288,25 +320,41 @@ func cmdInstall(o *options, args []string) error {
 	return install.Run(install.Options{Repo: repo, Host: args[0], Disk: o.disk, Yes: o.yes, Out: os.Stdout})
 }
 
-func applyPlan(o *options, p *plan.Plan) error {
+func applyPlan(o *options, p *plan.Plan, log *runlog.Log) error {
+	out := log.Tee(os.Stdout)
+	run := apply.Output{Term: os.Stdout, Log: log}
 	if p.Empty() {
-		fmt.Println("Nothing to do: the machine matches the repo.")
-		printNotes(p)
+		fmt.Fprintln(out, "Nothing to do: the machine matches the repo.")
+		printNotes(out, p)
 		if len(p.Actions) > 0 { // hooks that run on every apply
-			return apply.Apply(p, os.Stdout)
+			return apply.Apply(p, run)
 		}
 		return nil
 	}
-	ui.PrintPlan(os.Stdout, p, style())
-	fmt.Println()
-	if !o.yes && !ui.Confirm("Apply?") {
+	ui.PrintPlan(out, p, style())
+	fmt.Fprintln(out)
+	if !confirm(o, log, "Apply?") {
 		return exitError(1)
 	}
-	if err := apply.Apply(p, os.Stdout); err != nil {
+	if err := apply.Apply(p, run); err != nil {
 		return err
 	}
-	fmt.Println(style().Green("Done."))
+	fmt.Fprintln(out, style().Green("Done."))
 	return nil
+}
+
+// confirm asks a question unless --yes, and logs the answer.
+func confirm(o *options, log *runlog.Log, question string) bool {
+	if o.yes {
+		log.Printf("%s yes (--yes)\n", question)
+		return true
+	}
+	if ui.Confirm(question) {
+		log.Printf("%s yes\n", question)
+		return true
+	}
+	log.Printf("%s no\n", question)
+	return false
 }
 
 func cmdDrift(o *options, args []string) error {
@@ -333,7 +381,10 @@ func cmdDrift(o *options, args []string) error {
 
 // cmdPrune marks the undeclared explicit packages as dependencies, then lets
 // pacman remove every orphan: packages still needed by declared ones stay.
-func cmdPrune(o *options, args []string) error {
+func cmdPrune(o *options, args []string) (err error) {
+	log := startLog()
+	defer func() { endLog(log, err) }()
+	out := log.Tee(os.Stdout)
 	c, err := o.load()
 	if err != nil {
 		return err
@@ -346,16 +397,35 @@ func cmdPrune(o *options, args []string) error {
 	if err != nil {
 		return err
 	}
+	// One password for both pacman commands.
+	var stop func()
+	defer func() {
+		if stop != nil {
+			stop()
+		}
+	}()
+	sudo := func(args ...string) error {
+		if os.Geteuid() == 0 {
+			return runLogged(log, args...)
+		}
+		if stop == nil {
+			var err error
+			if stop, err = apply.HoldSudo(log); err != nil {
+				return err
+			}
+		}
+		return runLogged(log, append([]string{"sudo"}, args...)...)
+	}
 	if len(r.UndeclaredPackages) == 0 {
-		fmt.Println("Every explicitly installed package is declared.")
+		fmt.Fprintln(out, "Every explicitly installed package is declared.")
 	} else {
 		s := style()
-		fmt.Println(s.Bold("Installed by hand, not declared:"))
+		fmt.Fprintln(out, s.Bold("Installed by hand, not declared:"))
 		for _, n := range r.UndeclaredPackages {
-			fmt.Println("  " + s.Red("-") + " " + n)
+			fmt.Fprintln(out, "  "+s.Red("-")+" "+n)
 		}
-		fmt.Println(s.Dim("They become dependencies: pacman then removes those nothing else needs."))
-		if !o.yes && !ui.Confirm("Continue?") {
+		fmt.Fprintln(out, s.Dim("They become dependencies: pacman then removes those nothing else needs."))
+		if !confirm(o, log, "Continue?") {
 			return exitError(1)
 		}
 		if err := sudo(append([]string{"pacman", "-D", "--asdeps"}, r.UndeclaredPackages...)...); err != nil {
@@ -365,7 +435,7 @@ func cmdPrune(o *options, args []string) error {
 	orphans, err := exec.Command("pacman", "-Qdtq").Output()
 	names := strings.Fields(string(orphans))
 	if err != nil || len(names) == 0 {
-		fmt.Println("No orphans to remove.")
+		fmt.Fprintln(out, "No orphans to remove.")
 		return nil
 	}
 	cmd := []string{"pacman", "-Rns"}
@@ -375,26 +445,32 @@ func cmdPrune(o *options, args []string) error {
 	return sudo(append(cmd, names...)...)
 }
 
-// sudo runs a command as root, on the terminal.
-func sudo(args ...string) error {
-	if os.Geteuid() != 0 {
-		args = append([]string{"sudo"}, args...)
-	}
+// runLogged runs an interactive command on the terminal. The log gets the
+// command line and its errors; its output and questions stay on the
+// terminal only.
+func runLogged(log *runlog.Log, args ...string) error {
+	log.Printf("$ %s\n", strings.Join(args, " "))
 	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-	return cmd.Run()
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, log.Tee(os.Stderr)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%s: %w", args[0], err)
+	}
+	return nil
 }
 
-func printNotes(p *plan.Plan) {
+func printNotes(w io.Writer, p *plan.Plan) {
 	for _, n := range p.Notes {
-		fmt.Println(style().Yellow("!") + " " + n)
+		fmt.Fprintln(w, style().Yellow("!")+" "+n)
 	}
 }
 
 // cmdUpgrade updates the system with yay, keeping yay away from the local
 // packages (an AUR package of the same name would replace them), then
-// rebuilds the local packages that need it and applies.
-func cmdUpgrade(o *options, args []string) error {
+// rebuilds the local packages that need it and applies. The password is
+// asked once, before yay, and held until the end.
+func cmdUpgrade(o *options, args []string) (err error) {
+	log := startLog()
+	defer func() { endLog(log, err) }()
 	c, err := o.load()
 	if err != nil {
 		return err
@@ -403,14 +479,19 @@ func cmdUpgrade(o *options, args []string) error {
 	if err != nil {
 		return err
 	}
+	if os.Geteuid() != 0 {
+		stop, err := apply.HoldSudo(log)
+		if err != nil {
+			return err
+		}
+		defer stop()
+	}
 	yay := []string{"yay", "-Syu"}
 	if len(before.LocalNames) > 0 {
 		yay = append(yay, "--ignore", strings.Join(before.LocalNames, ","))
 	}
-	cmd := exec.Command(yay[0], yay[1:]...)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("yay: %w", err)
+	if err := runLogged(log, yay...); err != nil {
+		return err
 	}
 
 	// checkrebuild (rebuild-detector) lists packages whose libraries changed.
@@ -429,7 +510,7 @@ func cmdUpgrade(o *options, args []string) error {
 	if err != nil {
 		return err
 	}
-	return applyPlan(o, p)
+	return applyPlan(o, p, log)
 }
 
 // nameClashes warns about local packages named like a repo or AUR package:

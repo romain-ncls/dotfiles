@@ -25,14 +25,15 @@ import (
 
 // env is what executing an action needs to know about where it runs.
 type env struct {
-	user  string       // the configured user
-	repo  string       // the repo lodestar reads
-	home  string       // the user's home
-	root  string       // filesystem prefix, "" on a running system
-	st    *state.State // updated as actions succeed
-	out   io.Writer    // progress
-	errs  io.Writer    // the commands' errors, when not out
-	owner *account     // owner of home files when running as root
+	user   string       // the configured user
+	repo   string       // the repo lodestar reads
+	home   string       // the user's home
+	root   string       // filesystem prefix, "" on a running system
+	st     *state.State // updated as actions succeed
+	out    io.Writer    // progress: the terminal and the log
+	cmdOut io.Writer    // the commands' stdout (out when nil)
+	errs   io.Writer    // the commands' errors, when not out
+	owner  *account     // owner of home files when running as root
 }
 
 type account struct{ uid, gid int }
@@ -231,7 +232,7 @@ func (e *env) record(a *plan.Action) {
 
 func (e *env) run(args ...string) error {
 	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, e.out, cmp.Or(e.errs, e.out)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, cmp.Or(e.cmdOut, e.out), cmp.Or(e.errs, e.out)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("%s: %w", strings.Join(args, " "), err)
 	}

@@ -448,7 +448,9 @@ the fish abbr `lds`, so `lds plan` expands to `lodestar plan`.
 
 1. **Plan, as you.** lodestar loads the config, reads the machine, computes the
    plan and shows it. `plan` stops here.
-2. **Password, once.** lodestar runs `sudo -v` and keeps it alive for the run.
+2. **Password, once.** lodestar runs `sudo -v` (unless the ticket is still
+   valid) and keeps it alive for the run. `upgrade` does it before yay, so
+   yay, makepkg and the apply after it all use that one ticket.
 3. **Pre-snapshot** with snapper.
 4. **Repo packages, as root** (`pacman -S --needed`). Packages come before
    files, so pacman never finds an unowned file in its way.
@@ -463,6 +465,13 @@ the fish abbr `lds`, so `lds plan` expands to `lodestar plan`.
 The root steps run as `sudo lodestar` with the plan passed on stdin, so the root
 side does exactly what was shown. Claude can run `plan` and `drift`; `apply`
 stays yours.
+
+Every `apply`, `upgrade` and `prune` writes a log in
+`~/.local/state/lodestar/logs/` (`last.log` is the newest; 30 are kept): the
+plan, the answer, each step, the commands' errors (their normal output stays
+on the terminal, for pacman's progress bars), whether sudo asked for the
+password, and how it ended. The root process appends to the same file. So
+Claude reads what happened without the run being piped anywhere.
 
 ## 8. State and removal
 
