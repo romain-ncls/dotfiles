@@ -44,18 +44,22 @@ def scheme(name, hue=255, tint=1, depth=0, accent_hue=250):
     c = BASE_CHROMA * tint
     frame, base, pane, raised, overlay = [oklch(l + depth, c * r, hue) for l, r in zip(L_SURFACES, CHROMA_RAMP)]
     fg, fg2, fg3 = oklch(0.94, c * 0.8, hue), oklch(0.76, c * 1.5, hue), oklch(0.58, c * 1.5, hue)
-    acc, on_acc = oklch(0.72, 0.13, accent_hue), oklch(0.2, c * 0.9, hue)
-    link, visited = oklch(0.75, 0.12, accent_hue), oklch(0.74, 0.12, 305)
+    # Two accents of one hue: a deep one for fills (light text on it reaches
+    # ~4.5:1; Kirigami draws marks and text on fills in the scheme's light
+    # text, so fills can't be pale) and a light one for text and links.
+    acc, acc_text = oklch(0.56, 0.13, accent_hue), oklch(0.76, 0.12, accent_hue)
+    link, visited = acc_text, oklch(0.74, 0.12, 305)
     neg, neu, pos = oklch(0.70, 0.14, 20), oklch(0.80, 0.12, 75), oklch(0.78, 0.12, 150)
 
     def group(bg, alt, text=fg):
         return {"BackgroundNormal": bg, "BackgroundAlternate": alt, "DecorationFocus": acc, "DecorationHover": acc,
-                "ForegroundActive": acc, "ForegroundInactive": fg2, "ForegroundLink": link,
+                "ForegroundActive": acc_text, "ForegroundInactive": fg2, "ForegroundLink": link,
                 "ForegroundNegative": neg, "ForegroundNeutral": neu, "ForegroundNormal": text,
                 "ForegroundPositive": pos, "ForegroundVisited": visited}
-    selection = group(acc, mix(acc, base, 0.4), on_acc)
-    selection.update(ForegroundInactive=mix(on_acc, acc, 0.35), ForegroundActive=on_acc,
-                     ForegroundLink=on_acc, ForegroundVisited=on_acc)
+    # Selection is the deep accent with light text: KDE also uses it as "the
+    # accent" (Breeze folder icons, Plasma), so it can't be a dark tint. The
+    # style draws selected list rows as a tint itself.
+    selection = group(acc, mix(acc, base, 0.4))
     return {
         "General": {"Name": name, "ColorScheme": name},
         "Colors:Window": group(pane, raised),

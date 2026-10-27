@@ -302,10 +302,29 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
   take an inset but no radius. Only square panes with gaps were possible,
   which read as plain dividers and clipped Dolphin's status label. Worth
   another look if a later Union rounds page backgrounds (Kirigami apps only).
+- **Two accents of one hue**: a deep one (OKLCH L 0.56) fills checked boxes,
+  switches, sliders, focus and the menu hover, with light text on it (~4.5:1);
+  a light one is for accent text and links. Fills can't be pale: Kirigami
+  draws text and marks on them in the scheme's light text, whatever the CSS
+  says. The scheme's selection color is the deep accent too, since KDE uses
+  it as "the accent" (Breeze folders, Plasma); the style draws selected list
+  rows as a dark accent tint under normal text instead.
+- **No filled primary button**: Union's QtWidgets backend reports every
+  dialog button as highlighted (Qt makes them all auto-default), so System
+  Settings' Help / Defaults / Reset would fill like Apply.
+- **Union 6.8 bugs we live with**: QtWidgets menus misalign entries without
+  an icon (they start at the left edge), and QtWidgets progress bars draw
+  their percentage over the bar.
+- **CSS variables**: a color variable defined from another variable in the
+  same `:root` doesn't resolve for text, so text colors spell out their
+  `custom-color(...)`.
 - **Line icons at 1 px**, per KDE's monochrome icon guidelines (16 and 22 px,
   lines on the pixel grid): the Lucide stroke is computed per size.
 - **Testing never touches the session**: `dev/test.sh` runs an app in a
-  headless KWin with its own D-Bus and a copy of the config.
+  headless KWin with its own D-Bus and a copy of the config. Galleries of
+  every control: `dev/gallery/kirigami.sh` (QtQuick, run through test.sh)
+  and `dev/gallery/grab.sh` (QtWidgets, rendered offscreen, since Wayland
+  won't open a menu without real input).
 
 ## Not in the repo yet
 
