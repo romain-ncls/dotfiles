@@ -7,6 +7,9 @@
 # The palette's knobs are in palette.json (defaults when it's missing), written
 # by the page and by `nalthis tune`.
 kde:
+  kwinrc:
+    org.kde.kdecoration2:
+      library: org.kde.nalthis # our decoration (pkg/decoration)
   kdeglobals:
     KDE:
       widgetStyle: Union

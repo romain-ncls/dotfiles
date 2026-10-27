@@ -13,13 +13,14 @@ dev=$(cd "$(dirname "$0")" && pwd)
 module=$(dirname "$dev")
 work=${NALTHIS_DEV:-$XDG_RUNTIME_DIR/nalthis-dev}
 out=$(realpath -m "$1"); shift
-knobs="255 1 0 250" then=""
+knobs="255 1 0 250" then="" decoration=""
 while [[ $1 == --* ]]; do
     case $1 in
-        --knobs) knobs=$2 ;;
-        --then) then=$2 ;;
+        --knobs) knobs=$2; shift ;;
+        --then) then=$2; shift ;;
+        --decoration) decoration=1 ;; # KWin uses our decoration (built by pkg/decoration/build.sh)
     esac
-    shift 2
+    shift
 done
 
 # A small root: our style where it will be installed, Breeze where it is,
@@ -33,6 +34,13 @@ ln -s /usr/share/union "$work/root/usr/share/union"
 "$work-bin/nalthis" merge "$HOME/.config/kdeglobals" "$work/data/color-schemes/Nalthis.colors" \
     | sed '/^\[KDE\]$/a widgetStyle=Union\nunionStyle=nalthis' > "$work/config/kdeglobals"
 grep -q '^\[KDE\]$' "$work/config/kdeglobals" || printf '[KDE]\nwidgetStyle=Union\nunionStyle=nalthis\n' >> "$work/config/kdeglobals"
+kwin_env=()
+if [[ -n $decoration ]]; then
+    "$module/pkg/decoration/build.sh" "$work-bin/plugins" > /dev/null
+    cp "$HOME/.config/kwinrc" "$HOME/.config/breezerc" "$work/config/" # breezerc: the window exceptions
+    kwriteconfig6 --file "$work/config/kwinrc" --group org.kde.kdecoration2 --key library org.kde.nalthis
+    kwin_env=(env XDG_CONFIG_HOME="$work/config" QT_PLUGIN_PATH="$work-bin/plugins")
+fi
 
 inner="$work/inner.sh"
 {
@@ -52,6 +60,6 @@ inner="$work/inner.sh"
 chmod +x "$inner"
 # Capped (memory-heavy: a whole KWin plus the app); one run at a time.
 systemd-run --user --scope -q -p MemoryMax=3G -p MemorySwapMax=0 nice -n 10 \
-    timeout 60 dbus-run-session -- kwin_wayland --virtual --width 1280 --height 800 --no-lockscreen \
+    timeout 60 dbus-run-session -- "${kwin_env[@]}" kwin_wayland --virtual --width 1280 --height 800 --no-lockscreen \
         --socket "wl-nalthis-$$" --exit-with-session "$inner" > "$work/kwin.log" 2>&1
 echo "$out"

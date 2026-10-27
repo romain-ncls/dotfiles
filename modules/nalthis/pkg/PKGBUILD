@@ -2,12 +2,12 @@
 pkgname=nalthis
 pkgver=1
 pkgrel=1
-pkgdesc='Palette of the Nalthis theme: nalthis command and System Settings page'
+pkgdesc='Nalthis theme: palette command, System Settings page, window decoration'
 arch=(x86_64)
 url='https://github.com/romain-ncls/dotfiles'
 license=(MIT)
 options=(!debug)
-depends=(kcmutils kcoreaddons kirigami qt6-declarative plasma-workspace systemd)
+depends=(kcmutils kcoreaddons kcolorscheme kconfig kdecoration kirigami qt6-declarative plasma-workspace systemd)
 makedepends=(go gcc qt6-base)
 
 build() {
@@ -16,11 +16,14 @@ build() {
 	export GOFLAGS="-trimpath -mod=readonly -modcacherw"
 	go build -o "$srcdir/nalthis" .
 	kcm/build.sh "$srcdir/plugins"
+	decoration/build.sh "$srcdir/plugins"
 }
 
 package() {
 	install -Dm755 "$srcdir/nalthis" "$pkgdir/usr/bin/nalthis"
 	install -Dm755 "$srcdir/plugins/plasma/kcms/systemsettings/kcm_nalthis.so" \
 		"$pkgdir/usr/lib/qt6/plugins/plasma/kcms/systemsettings/kcm_nalthis.so"
+	install -Dm755 "$srcdir/plugins/org.kde.kdecoration3/org.kde.nalthis.so" \
+		"$pkgdir/usr/lib/qt6/plugins/org.kde.kdecoration3/org.kde.nalthis.so"
 	install -Dm644 "$startdir/kcm/kcm_nalthis.desktop" "$pkgdir/usr/share/applications/kcm_nalthis.desktop"
 }

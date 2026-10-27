@@ -306,6 +306,15 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
   (signature `a{saay}`, recorded with `busctl monitor`; with any other
   signature apps keep their cached colors) and KGlobalSettings'
   `notifyChange(0, 0)`.
+- **Our own window decoration** (`pkg/decoration/`, KDecoration3 in C++,
+  modelled on Breeze's): tiles for minimize / maximize / close (the close
+  tile fills the corner, red on hover), square ghost buttons on the left like
+  the toolbar's, centered title, title bar merged with the toolbar, 12 px
+  corners, square when maximized or tiled. Not Aurorae: it can't declare a
+  corner radius, so KWin wouldn't round the bottom corners, and its SVG
+  shadows can't blur. Colors come from the scheme, so the sliders recolor
+  it. It honors Breeze's "hide title bar" window exceptions (breezerc), so
+  `breeze-exceptions:` still works for Konsole, mpv and Spotify.
 - **The settings page is C++ only where KDE requires it**: a System Settings
   page must be a compiled plugin, so `pkg/kcm/` is a thin C++ shell around
   QML that runs `nalthis`. It builds with Qt's moc and rcc plus g++ (no CMake);

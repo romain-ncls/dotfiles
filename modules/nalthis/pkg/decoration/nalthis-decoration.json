@@ -1,0 +1,15 @@
+{
+    "KPlugin": {
+        "Description": "Nalthis window decoration: tiles for the window controls, title bar merged with the toolbar",
+        "EnabledByDefault": true,
+        "Name": "Nalthis"
+    },
+    "org.kde.kdecoration3": {
+        "blur": false,
+        "recommendedBorderSize": "None",
+        "styles": [
+            "shadow",
+            "titled"
+        ]
+    }
+}
