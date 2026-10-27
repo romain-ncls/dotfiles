@@ -283,7 +283,8 @@ func (p *Plan) kdeFollowUps(lookAndFeel string) {
 	if lookAndFeel != "" {
 		// The global theme sets colours, icons and more; the declared keys
 		// are written after it, so they win.
-		run := &Action{Op: OpRun, Phase: PhaseHome, Why: "global theme",
+		run := &Action{Op: OpRun, Phase: PhaseHome, Why: "global theme", KDEFile: "kdeglobals",
+			Display: "plasma-apply-lookandfeel " + lookAndFeel,
 			Command: `[ -z "$WAYLAND_DISPLAY" ] || plasma-apply-lookandfeel --apply ` + shellQuote(lookAndFeel)}
 		for i, a := range p.Actions {
 			if a.Op == OpKDE {
@@ -294,10 +295,12 @@ func (p *Plan) kdeFollowUps(lookAndFeel string) {
 	}
 	if touched["kwinrc"] || touched["kdeglobals"] || touched[BreezeFile] || touched[WindowRules] {
 		p.add(&Action{Op: OpRun, Phase: PhaseHome, Why: "KWin reads its settings again", LiveOnly: true,
+			KDEFile: "kwinrc", Display: "KWin reconfigure",
 			Command: "busctl --user call org.kde.KWin /KWin org.kde.KWin reconfigure >/dev/null 2>&1 || true"})
 	}
 	if touched["kglobalshortcutsrc"] || desktop {
 		p.add(&Action{Op: OpRun, Phase: PhaseHome, Why: "shortcuts are read again", LiveOnly: true,
+			KDEFile: "kglobalshortcutsrc", Display: "kbuildsycoca6, restart kglobalaccel",
 			Command: "kbuildsycoca6 >/dev/null 2>&1; systemctl --user try-restart plasma-kglobalaccel.service 2>/dev/null || true"})
 	}
 }

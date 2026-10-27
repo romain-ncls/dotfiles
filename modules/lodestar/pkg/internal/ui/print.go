@@ -3,6 +3,7 @@ package ui
 
 import (
 	"bufio"
+	"cmp"
 	"fmt"
 	"io"
 	"os"
@@ -50,11 +51,14 @@ func PrintPlan(w io.Writer, p *plan.Plan, s Style) {
 		}},
 		{"Units", func(a *plan.Action) bool { return a.Phase == plan.PhaseSystem && a.Unit != "" }},
 		{"User " + p.User, func(a *plan.Action) bool { return a.User != "" }},
-		{"Home", func(a *plan.Action) bool { return a.Phase == plan.PhaseHome && a.KDEFile == "" }},
+		{"Home", func(a *plan.Action) bool {
+			return a.Phase == plan.PhaseHome && a.KDEFile == "" && a.Op != plan.OpHook
+		}},
 		{"KDE", func(a *plan.Action) bool { return a.Phase == plan.PhaseHome && a.KDEFile != "" }},
+		{"Hooks", func(a *plan.Action) bool { return a.Phase == plan.PhaseHome && a.Op == plan.OpHook }},
 	}
 	for _, sec := range sections {
-		var lines []string
+		var lines, always []string
 		adopted, forgotten := 0, 0
 		for _, a := range p.Actions {
 			if !sec.match(a) {
@@ -67,8 +71,14 @@ func PrintPlan(w io.Writer, p *plan.Plan, s Style) {
 			case a.Op == plan.OpForget && a.Why == "":
 				forgotten++
 				continue
+			case a.Op == plan.OpHook && a.Always:
+				always = append(always, a.Command)
+				continue
 			}
 			lines = append(lines, describe(a, s)...)
+		}
+		if len(always) > 0 {
+			lines = append(lines, s.Dim("> "+strings.Join(always, ", ")+" · on every apply"))
 		}
 		if adopted > 0 {
 			lines = append(lines, s.Dim(fmt.Sprintf("= %d already match: recorded as managed", adopted)))
@@ -81,7 +91,7 @@ func PrintPlan(w io.Writer, p *plan.Plan, s Style) {
 		}
 		fmt.Fprintln(w, s.Bold(sec.title))
 		for _, l := range lines {
-			fmt.Fprintln(w, "  "+l)
+			fmt.Fprintln(w, "  "+strings.TrimRight(l, " "))
 		}
 	}
 	if len(p.Notes) > 0 {
@@ -94,6 +104,7 @@ func PrintPlan(w io.Writer, p *plan.Plan, s Style) {
 
 func describe(a *plan.Action, s Style) []string {
 	add, change, remove := s.Green("+"), s.Yellow("~"), s.Red("-")
+	// detail starts with ·, to stand apart without colours too.
 	detail := func(parts ...string) string {
 		var keep []string
 		for _, p := range parts {
@@ -101,7 +112,10 @@ func describe(a *plan.Action, s Style) []string {
 				keep = append(keep, p)
 			}
 		}
-		return s.Dim(strings.Join(keep, " · "))
+		if len(keep) == 0 {
+			return ""
+		}
+		return s.Dim("· " + strings.Join(keep, " · "))
 	}
 	names := strings.Join(a.Names, " ")
 	switch a.Op {
@@ -128,7 +142,7 @@ func describe(a *plan.Action, s Style) []string {
 	case plan.OpAddGroups:
 		return []string{fmt.Sprintf("%s groups %s", add, names)}
 	case plan.OpRun:
-		return []string{fmt.Sprintf("%s run %s %s", s.Cyan(">"), a.Command, detail(a.Why))}
+		return []string{fmt.Sprintf("%s run %s %s", s.Cyan(">"), cmp.Or(a.Display, a.Command), detail(a.Why))}
 	case plan.OpRemove, plan.OpRestorePackage, plan.OpRestoreOriginal:
 		return []string{fmt.Sprintf("%s %s %s", remove, a.Display, detail(a.Why))}
 	case plan.OpForget:

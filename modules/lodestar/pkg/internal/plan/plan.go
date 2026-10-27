@@ -90,7 +90,7 @@ type Action struct {
 	Shell   string   `json:"shell,omitempty"`
 	Command string   `json:"command,omitempty"`
 
-	KDEFile  string              `json:"kde_file,omitempty"`
+	KDEFile  string              `json:"kde_file,omitempty"` // a run: the file it makes KDE read again
 	KDEGroup []string            `json:"kde_group,omitempty"`
 	KDEKey   string              `json:"kde_key,omitempty"`
 	KDEID    string              `json:"kde_id,omitempty"`
@@ -509,7 +509,11 @@ func (p *Plan) followUps(in Input, phase Phase) {
 			if !seen[cmd] {
 				seen[cmd] = true
 				live := strings.HasPrefix(cmd, "udevadm") || strings.HasPrefix(cmd, "sysctl") || strings.HasPrefix(cmd, "systemctl --user")
-				p.add(&Action{Op: OpRun, Phase: phase, Command: cmd, Why: "after " + a.Display, LiveOnly: live})
+				run := &Action{Op: OpRun, Phase: phase, Command: cmd, Why: "after " + a.Display, LiveOnly: live}
+				if cmd == rebuildInitramfs {
+					run.Display = "rebuild the initramfs"
+				}
+				p.add(run)
 			}
 		}
 	}
