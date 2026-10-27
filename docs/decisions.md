@@ -275,6 +275,34 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   module: thermald, fstrim, microcode, i915 early (mkinitcpio's `kms` hook),
   and the Intel media and compute runtimes.
 
+## Nalthis theme (in progress)
+
+Our dark, rounded theme for Plasma 6.8, in `modules/nalthis/`, not used by a
+host yet. Design page with the research and choices so far:
+https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
+
+- **Choices so far** (Oct 2026): Nocturne greys (hue 255, low tint), blue accent
+  (hue 250), radii 12 window / 10 popup / 6 controls, glass only on Plasma's
+  panel and popups, Tela (square) color icons with our own line icons drawn
+  from Lucide, Breeze cursor.
+- **Application style = Breeze (Union) plus overrides**, not a fork: the Union
+  style imports Breeze and changes variables and a few rules. A fork would be
+  3,000 lines to merge every Plasma release.
+- **Installed in `/usr/local/share/union/styles/nalthis`** so it can import
+  Breeze by a relative path, like KDE's own Breeze Mobile. An absolute
+  `@import` breaks Breeze's own relative imports, and Dolphin then segfaults.
+- **Colors live only in the color scheme.** Union reads them from it, so a new
+  scheme recolors running apps (tested): the hue / tint / depth / accent knobs
+  can be live without touching the style. `dev/palette.py` is the prototype
+  generator.
+- **No rounded "islands" with Union 6.8**: QtWidgets views (Dolphin) paint
+  their own background, and Kirigami pages take an inset but no radius. Only
+  square panes with gaps are possible, which reads as plain dividers.
+- **Line icons at 1 px**, per KDE's monochrome icon guidelines (16 and 22 px,
+  lines on the pixel grid): the Lucide stroke is computed per size.
+- **Testing never touches the session**: `dev/test.sh` runs an app in a
+  headless KWin with its own D-Bus and a copy of the config.
+
 ## Not in the repo yet
 
 - **VS Code** settings and extensions stay in VS Code Settings Sync for now,

@@ -1,0 +1,17 @@
+/*
+ * Nalthis: Breeze (Union) with our sizes and rules on top. Colors come from
+ * the color scheme, so the palette sliders never touch this file.
+ *
+ * Union keeps the first definition of a variable: ours go before the import.
+ */
+:root {
+    --corner-radius: 6px;
+}
+
+/* Breeze, relative to /usr/local/share/union/styles/nalthis/contents/css
+   (an absolute @import breaks Breeze's own relative imports). */
+@import "../../../../../../../share/union/styles/breeze/contents/css/style.css";
+
+/* No islands: Union 6.8 can't round Dolphin's views or Kirigami pages (see
+   docs/decisions.md). Widening the splitter for a gap clips Dolphin's status
+   bar label, so it stays as Breeze draws it. */
