@@ -1,3 +1,3 @@
 # Nalthis: our dark, rounded theme for Plasma 6.8 (design: docs/decisions.md
-# "Nalthis theme"). Not used by any host yet; dev/ holds the palette
-# generator and a headless test rig (dev/test.sh).
+# "Nalthis theme"). Not used by any host yet. pkg/ is the palette generator
+# (Go); dev/ holds the headless test rig (dev/test.sh) and control galleries.

@@ -28,9 +28,10 @@ rm -rf "$work"
 mkdir -p "$work/root/usr/local/share/union/styles" "$work/root/usr/share" "$work/data/color-schemes" "$work/config"
 cp -r "$module/system/usr/local/share/union/styles/nalthis" "$work/root/usr/local/share/union/styles/"
 ln -s /usr/share/union "$work/root/usr/share/union"
-python3 -I "$dev/palette.py" colors Nalthis $knobs > "$work/data/color-schemes/Nalthis.colors"
-[[ -n $then ]] && python3 -I "$dev/palette.py" colors NalthisThen $then > "$work/data/color-schemes/NalthisThen.colors"
-python3 -I "$dev/palette.py" merge "$HOME/.config/kdeglobals" "$work/data/color-schemes/Nalthis.colors" \
+(cd "$module/pkg" && go build -o "$work-bin/nalthis" .)
+"$work-bin/nalthis" colors Nalthis $knobs > "$work/data/color-schemes/Nalthis.colors"
+[[ -n $then ]] && "$work-bin/nalthis" colors NalthisThen $then > "$work/data/color-schemes/NalthisThen.colors"
+"$work-bin/nalthis" merge "$HOME/.config/kdeglobals" "$work/data/color-schemes/Nalthis.colors" \
     | sed '/^\[KDE\]$/a widgetStyle=Union\nunionStyle=nalthis' > "$work/config/kdeglobals"
 grep -q '^\[KDE\]$' "$work/config/kdeglobals" || printf '[KDE]\nwidgetStyle=Union\nunionStyle=nalthis\n' >> "$work/config/kdeglobals"
 

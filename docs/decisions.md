@@ -293,7 +293,7 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
   `@import` breaks Breeze's own relative imports, and Dolphin then segfaults.
 - **Colors live only in the color scheme.** Union reads them from it, so a new
   scheme recolors running apps (tested): the hue / tint / depth / accent knobs
-  can be live without touching the style. `dev/palette.py` is the prototype
+  can be live without touching the style. `pkg/` (Go, `nalthis colors`) is the
   generator.
 - **Calm chrome, not islands**: content views are the darkest surface,
   windows one step up, the header (toolbar merged with the title bar) one
