@@ -7,5 +7,5 @@ out=$(realpath -m "$1")
 mkdir -p "$out"
 XDG_CONFIG_HOME="$work/config" XDG_DATA_DIRS="$work/root/usr/local/share:$work/data:/usr/local/share:/usr/share" \
 QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=kde KDE_DEBUG=1 GALLERY_GRAB="$out" \
-    timeout 30 "$work-bin/widgets-gallery"
+    systemd-run --user --scope -q -p MemoryMax=1G -p MemorySwapMax=0 timeout 30 "$work-bin/widgets-gallery"
 ls "$out"

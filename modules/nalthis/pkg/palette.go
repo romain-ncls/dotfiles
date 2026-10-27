@@ -17,6 +17,35 @@ type Knobs struct {
 // Defaults is the "Custom from Nocturne" pick from the design page.
 var Defaults = Knobs{Hue: 255, Tint: 1, Depth: 0, Accent: 250}
 
+// Knob describes one knob for the sliders: range, step and how to show it.
+type Knob struct {
+	Name, Label   string
+	Min, Max      float64
+	Step, BigStep float64
+	Wrap          bool // hues go round
+	Get           func(*Knobs) *float64
+}
+
+var KnobList = []Knob{
+	{"hue", "Grey hue", 0, 360, 1, 10, true, func(k *Knobs) *float64 { return &k.Hue }},
+	{"tint", "Tint", 0, 3, 0.05, 0.25, false, func(k *Knobs) *float64 { return &k.Tint }},
+	{"depth", "Depth", -0.06, 0.08, 0.005, 0.02, false, func(k *Knobs) *float64 { return &k.Depth }},
+	{"accent", "Accent hue", 0, 360, 1, 10, true, func(k *Knobs) *float64 { return &k.Accent }},
+}
+
+// Clamp keeps every knob in its range (hues wrap) and rounds away float noise.
+func (k *Knobs) Clamp() {
+	for _, kn := range KnobList {
+		v := kn.Get(k)
+		if kn.Wrap {
+			*v = math.Mod(math.Mod(*v, kn.Max)+kn.Max, kn.Max)
+		} else {
+			*v = math.Min(kn.Max, math.Max(kn.Min, *v))
+		}
+		*v = math.Round(*v*1000) / 1000
+	}
+}
+
 // Surfaces are an OKLCH ramp: frame, base, pane, raised, overlay.
 var (
 	surfaceL   = [5]float64{0.199, 0.229, 0.266, 0.299, 0.341}
@@ -63,6 +92,41 @@ func mix(a, b RGB, t float64) RGB {
 	return out
 }
 
+// Palette is every color the knobs produce.
+type Palette struct {
+	Frame, Base, Pane, Raised, Overlay RGB
+	Text, Text2, Text3                 RGB
+	// Two accents of one hue: a deep one for fills (light text on it reaches
+	// ~4.5:1; Kirigami draws marks and text on fills in the scheme's light
+	// text, so fills can't be pale) and a light one for text and links.
+	Accent, AccentText                   RGB
+	Visited, Negative, Neutral, Positive RGB
+}
+
+func Compute(k Knobs) Palette {
+	c := baseChroma * k.Tint
+	var s [5]RGB
+	for i := range s {
+		s[i] = OKLCH(surfaceL[i]+k.Depth, c*chromaRamp[i], k.Hue)
+	}
+	return Palette{
+		Frame: s[0], Base: s[1], Pane: s[2], Raised: s[3], Overlay: s[4],
+		Text: OKLCH(0.94, c*0.8, k.Hue), Text2: OKLCH(0.76, c*1.5, k.Hue), Text3: OKLCH(0.58, c*1.5, k.Hue),
+		Accent: OKLCH(0.56, 0.13, k.Accent), AccentText: OKLCH(0.76, 0.12, k.Accent),
+		Visited:  OKLCH(0.74, 0.12, 305),
+		Negative: OKLCH(0.70, 0.14, 20), Neutral: OKLCH(0.80, 0.12, 75), Positive: OKLCH(0.78, 0.12, 150),
+	}
+}
+
+// Tokens are the palette's main colors as hex, for previews.
+func (p Palette) Tokens() map[string]string {
+	return map[string]string{
+		"frame": p.Frame.Hex(), "base": p.Base.Hex(), "pane": p.Pane.Hex(), "raised": p.Raised.Hex(),
+		"overlay": p.Overlay.Hex(), "text": p.Text.Hex(), "text2": p.Text2.Hex(), "text3": p.Text3.Hex(),
+		"accent": p.Accent.Hex(), "accentText": p.AccentText.Hex(),
+	}
+}
+
 // Group is one KDE color group: key -> value, in file order.
 type Group struct {
 	Name string
@@ -73,46 +137,33 @@ type Group struct {
 // content views are the darkest surface, windows and dialogs one step up,
 // the header (toolbar + title bar, merged) one more.
 func Scheme(name string, k Knobs) []Group {
-	c := baseChroma * k.Tint
-	var s [5]RGB
-	for i := range s {
-		s[i] = OKLCH(surfaceL[i]+k.Depth, c*chromaRamp[i], k.Hue)
-	}
-	_, base, pane, raised, overlay := s[0], s[1], s[2], s[3], s[4]
-	fg, fg2, fg3 := OKLCH(0.94, c*0.8, k.Hue), OKLCH(0.76, c*1.5, k.Hue), OKLCH(0.58, c*1.5, k.Hue)
-	// Two accents of one hue: a deep one for fills (light text on it reaches
-	// ~4.5:1; Kirigami draws marks and text on fills in the scheme's light
-	// text, so fills can't be pale) and a light one for text and links.
-	acc, accText := OKLCH(0.56, 0.13, k.Accent), OKLCH(0.76, 0.12, k.Accent)
-	visited := OKLCH(0.74, 0.12, 305)
-	neg, neu, pos := OKLCH(0.70, 0.14, 20), OKLCH(0.80, 0.12, 75), OKLCH(0.78, 0.12, 150)
-
+	p := Compute(k)
 	group := func(name string, bg, alt RGB) Group {
 		return Group{name, [][2]string{
 			{"BackgroundNormal", bg.String()}, {"BackgroundAlternate", alt.String()},
-			{"DecorationFocus", acc.String()}, {"DecorationHover", acc.String()},
-			{"ForegroundActive", accText.String()}, {"ForegroundInactive", fg2.String()},
-			{"ForegroundLink", accText.String()}, {"ForegroundNegative", neg.String()},
-			{"ForegroundNeutral", neu.String()}, {"ForegroundNormal", fg.String()},
-			{"ForegroundPositive", pos.String()}, {"ForegroundVisited", visited.String()},
+			{"DecorationFocus", p.Accent.String()}, {"DecorationHover", p.Accent.String()},
+			{"ForegroundActive", p.AccentText.String()}, {"ForegroundInactive", p.Text2.String()},
+			{"ForegroundLink", p.AccentText.String()}, {"ForegroundNegative", p.Negative.String()},
+			{"ForegroundNeutral", p.Neutral.String()}, {"ForegroundNormal", p.Text.String()},
+			{"ForegroundPositive", p.Positive.String()}, {"ForegroundVisited", p.Visited.String()},
 		}}
 	}
 	return []Group{
 		{"General", [][2]string{{"Name", name}, {"ColorScheme", name}}},
-		group("Colors:Window", pane, raised),
-		group("Colors:View", base, mix(base, pane, 0.5)),
-		group("Colors:Button", raised, overlay),
+		group("Colors:Window", p.Pane, p.Raised),
+		group("Colors:View", p.Base, mix(p.Base, p.Pane, 0.5)),
+		group("Colors:Button", p.Raised, p.Overlay),
 		// Selection is the deep accent with light text: KDE also uses it as
 		// "the accent" (Breeze folder icons, Plasma), so it can't be a dark
 		// tint. The style draws selected list rows as a tint itself.
-		group("Colors:Selection", acc, mix(acc, base, 0.4)),
-		group("Colors:Tooltip", overlay, raised),
-		group("Colors:Complementary", s[0], base),
-		group("Colors:Header", raised, overlay),
-		group("Colors:Header][Inactive", pane, raised),
+		group("Colors:Selection", p.Accent, mix(p.Accent, p.Base, 0.4)),
+		group("Colors:Tooltip", p.Overlay, p.Raised),
+		group("Colors:Complementary", p.Frame, p.Base),
+		group("Colors:Header", p.Raised, p.Overlay),
+		group("Colors:Header][Inactive", p.Pane, p.Raised),
 		{"WM", [][2]string{
-			{"activeBackground", raised.String()}, {"activeBlend", fg.String()}, {"activeForeground", fg.String()},
-			{"inactiveBackground", pane.String()}, {"inactiveBlend", fg3.String()}, {"inactiveForeground", fg3.String()},
+			{"activeBackground", p.Raised.String()}, {"activeBlend", p.Text.String()}, {"activeForeground", p.Text.String()},
+			{"inactiveBackground", p.Pane.String()}, {"inactiveBlend", p.Text3.String()}, {"inactiveForeground", p.Text3.String()},
 		}},
 	}
 }
