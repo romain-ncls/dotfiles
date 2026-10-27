@@ -26,6 +26,7 @@ packages:
   - noto-fonts-cjk
   - noto-fonts-emoji
   - ttf-jetbrains-mono
+  - ttf-liberation # or web stacks naming Liberation Mono get Courier New (ttf-ms-fonts' metric alias)
   # browsers
   - firefox
   - brave-bin
