@@ -295,9 +295,13 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
   scheme recolors running apps (tested): the hue / tint / depth / accent knobs
   can be live without touching the style. `dev/palette.py` is the prototype
   generator.
-- **No rounded "islands" with Union 6.8**: QtWidgets views (Dolphin) paint
-  their own background, and Kirigami pages take an inset but no radius. Only
-  square panes with gaps are possible, which reads as plain dividers.
+- **Calm chrome, not islands**: content views are the darkest surface,
+  windows one step up, the header (toolbar merged with the title bar) one
+  more. Rounded "islands" were the first pick, but Union 6.8 can't draw them:
+  QtWidgets views (Dolphin) paint their own background, and Kirigami pages
+  take an inset but no radius. Only square panes with gaps were possible,
+  which read as plain dividers and clipped Dolphin's status label. Worth
+  another look if a later Union rounds page backgrounds (Kirigami apps only).
 - **Line icons at 1 px**, per KDE's monochrome icon guidelines (16 and 22 px,
   lines on the pixel grid): the Lucide stroke is computed per size.
 - **Testing never touches the session**: `dev/test.sh` runs an app in a

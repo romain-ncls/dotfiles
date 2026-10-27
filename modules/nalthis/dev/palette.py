@@ -6,8 +6,9 @@
 
 The knobs are the ones from the design page: grey hue (degrees), tint (chroma
 multiplier), depth (lightness shift) and accent hue. Surfaces are an OKLCH
-ramp; the defaults are the "Custom from Nocturne" pick. Islands model:
-Window is the frame the panes float on, View is the pane.
+ramp; the defaults are the "Custom from Nocturne" pick. Calm chrome (layout A):
+content views are the darkest surface, windows and dialogs one step up, and
+the header (toolbar + title bar, merged) one more.
 """
 import math
 import re
@@ -57,16 +58,16 @@ def scheme(name, hue=255, tint=1, depth=0, accent_hue=250):
                      ForegroundLink=on_acc, ForegroundVisited=on_acc)
     return {
         "General": {"Name": name, "ColorScheme": name},
-        "Colors:Window": group(frame, base),
-        "Colors:View": group(pane, mix(pane, raised, 0.5)),
+        "Colors:Window": group(pane, raised),
+        "Colors:View": group(base, mix(base, pane, 0.5)),
         "Colors:Button": group(raised, overlay),
         "Colors:Selection": selection,
         "Colors:Tooltip": group(overlay, raised),
         "Colors:Complementary": group(frame, base),
-        "Colors:Header": group(frame, base),
-        "Colors:Header][Inactive": group(frame, base),
-        "WM": {"activeBackground": frame, "activeBlend": fg, "activeForeground": fg,
-               "inactiveBackground": frame, "inactiveBlend": fg3, "inactiveForeground": fg3},
+        "Colors:Header": group(raised, overlay),
+        "Colors:Header][Inactive": group(pane, raised),
+        "WM": {"activeBackground": raised, "activeBlend": fg, "activeForeground": fg,
+               "inactiveBackground": pane, "inactiveBlend": fg3, "inactiveForeground": fg3},
     }
 
 
