@@ -233,11 +233,19 @@ void Button::paintGlyph(QPainter *painter, const QRectF &box, const QColor &colo
     // Half a pixel in: a 1 px line on whole coordinates would straddle two
     // pixel rows and turn grey. Rectangles below are drawn at x.0 for this.
     painter->translate(box.topLeft() + QPointF(0.5, 0.5));
-    auto line = [painter](qreal x1, qreal y1, qreal x2, qreal y2) { painter->drawLine(QPointF(x1, y1), QPointF(x2, y2)); };
+    // Glyph coordinates are pixel centers. Straight lines are 1 px; diagonals
+    // get 1.3 px, or a 45° line smears into grey and looks lighter than the
+    // straight ones next to it. Glyphs with a middle vertical are 9 px wide
+    // (3–11, centered on 7) so that vertical lands on a pixel.
+    auto line = [painter, &pen](qreal x1, qreal y1, qreal x2, qreal y2) {
+        pen.setWidthF(x1 != x2 && y1 != y2 ? 1.3 : 1.0);
+        painter->setPen(pen);
+        painter->drawLine(QPointF(x1, y1), QPointF(x2, y2));
+    };
     auto d = qobject_cast<Decoration *>(decoration());
     switch (type()) {
     case DecorationButtonType::Minimize:
-        line(3.5, 8, 12.5, 8);
+        line(3, 8, 12, 8);
         break;
     case DecorationButtonType::Maximize:
         if (d && d->window()->isMaximized()) {
@@ -253,40 +261,43 @@ void Button::paintGlyph(QPainter *painter, const QRectF &box, const QColor &colo
         }
         break;
     case DecorationButtonType::Close:
-        line(4, 4, 12, 12);
-        line(12, 4, 4, 12);
+        line(3, 3, 12, 12);
+        line(12, 3, 3, 12);
         break;
-    case DecorationButtonType::KeepAbove:
-        line(4, 8.5, 8, 4.5), line(8, 4.5, 12, 8.5);
-        line(4, 12.5, 8, 8.5), line(8, 8.5, 12, 12.5);
+    case DecorationButtonType::KeepAbove: // arrow up to a bar
+        line(3, 3, 11, 3);
+        line(7, 6, 7, 13);
+        line(4, 9, 7, 6), line(10, 9, 7, 6);
         break;
-    case DecorationButtonType::KeepBelow:
-        line(4, 3.5, 8, 7.5), line(8, 7.5, 12, 3.5);
-        line(4, 7.5, 8, 11.5), line(8, 11.5, 12, 7.5);
+    case DecorationButtonType::KeepBelow: // arrow down to a bar
+        line(3, 12, 11, 12);
+        line(7, 2, 7, 9);
+        line(4, 6, 7, 9), line(10, 6, 7, 9);
         break;
-    case DecorationButtonType::OnAllDesktops: {
-        QPainterPath pin;
-        pin.moveTo(6, 2.5), pin.lineTo(10, 2.5);
-        pin.moveTo(7, 2.5), pin.lineTo(7, 6.5), pin.lineTo(5, 9), pin.lineTo(11, 9), pin.lineTo(9, 6.5), pin.lineTo(9, 2.5);
-        pin.moveTo(8, 9), pin.lineTo(8, 13.5);
-        painter->drawPath(pin);
+    case DecorationButtonType::OnAllDesktops: // push pin
+        line(4, 2, 10, 2);
+        line(5, 2, 5, 6), line(9, 2, 9, 6);
+        line(5, 6, 3, 9), line(9, 6, 11, 9);
+        line(3, 9, 11, 9);
+        line(7, 9, 7, 14);
         break;
-    }
     case DecorationButtonType::Shade:
-        line(4, 5, 12, 5);
-        line(4, 9, 8, 12), line(8, 12, 12, 9);
+        line(3, 4, 11, 4);
+        line(4, 7, 7, 10), line(10, 7, 7, 10);
         break;
     case DecorationButtonType::ContextHelp: {
+        pen.setWidthF(1.15);
+        painter->setPen(pen);
         QPainterPath q;
-        q.moveTo(5.5, 6);
-        q.cubicTo(5.5, 3, 10.5, 3, 10.5, 6);
-        q.cubicTo(10.5, 8, 8, 8, 8, 10);
+        q.moveTo(5, 6);
+        q.cubicTo(5, 3.5, 10, 3.5, 10, 6);
+        q.cubicTo(10, 8, 7, 8, 7, 10);
         painter->drawPath(q);
-        painter->drawPoint(QPointF(8, 12.5));
+        painter->drawPoint(QPointF(7, 12));
         break;
     }
     case DecorationButtonType::ApplicationMenu:
-        line(3.5, 4.5, 12.5, 4.5), line(3.5, 8, 12.5, 8), line(3.5, 11.5, 12.5, 11.5);
+        line(3, 4, 12, 4), line(3, 8, 12, 8), line(3, 12, 12, 12);
         break;
     default:
         break;
