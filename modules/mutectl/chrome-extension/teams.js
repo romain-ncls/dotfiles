@@ -46,7 +46,7 @@ function connect() {
   for (const event of ['mute', 'afk']) {
     eventSource.addEventListener(event, onEvent(() => {
       const btn = getMuteBtn()
-      if (btn?.dataset.state == 'mic') {
+      if (btn?.dataset.state == 'mic-volume-renderer') {
         btn.click()
       }
     }));
