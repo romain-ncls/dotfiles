@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+NoDisplay=true
+X-KDE-AliasFor=systemsettings
+Exec=systemsettings kcm_nalthis
+Icon=preferences-desktop-color
+Name=Nalthis Palette

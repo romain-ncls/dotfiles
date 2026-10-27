@@ -1,0 +1,26 @@
+# Local package: lodestar builds it when this folder changes.
+pkgname=nalthis
+pkgver=1
+pkgrel=1
+pkgdesc='Palette of the Nalthis theme: nalthis command and System Settings page'
+arch=(x86_64)
+url='https://github.com/romain-ncls/dotfiles'
+license=(MIT)
+options=(!debug)
+depends=(kcmutils kcoreaddons kirigami qt6-declarative plasma-workspace systemd)
+makedepends=(go gcc qt6-base)
+
+build() {
+	cd "$startdir" # local package: the sources sit next to this file
+	export GOPATH="$srcdir/gopath" GOTOOLCHAIN=local CGO_ENABLED=0
+	export GOFLAGS="-trimpath -mod=readonly -modcacherw"
+	go build -o "$srcdir/nalthis" .
+	kcm/build.sh "$srcdir/plugins"
+}
+
+package() {
+	install -Dm755 "$srcdir/nalthis" "$pkgdir/usr/bin/nalthis"
+	install -Dm755 "$srcdir/plugins/plasma/kcms/systemsettings/kcm_nalthis.so" \
+		"$pkgdir/usr/lib/qt6/plugins/plasma/kcms/systemsettings/kcm_nalthis.so"
+	install -Dm644 "$startdir/kcm/kcm_nalthis.desktop" "$pkgdir/usr/share/applications/kcm_nalthis.desktop"
+}

@@ -1,3 +1,17 @@
 # Nalthis: our dark, rounded theme for Plasma 6.8 (design: docs/decisions.md
-# "Nalthis theme"). Not used by any host yet. pkg/ is the palette generator
-# (Go); dev/ holds the headless test rig (dev/test.sh) and control galleries.
+# "Nalthis theme"). Not used by any host yet.
+#   pkg/     the nalthis command (palette: get/set/apply/tune) and the
+#            "Nalthis Palette" page in System Settings (kcm/)
+#   system/  the Union application style
+#   dev/     headless test rig (dev/test.sh) and control galleries
+# The palette's knobs are in palette.json (defaults when it's missing), written
+# by the page and by `nalthis tune`.
+kde:
+  kdeglobals:
+    KDE:
+      widgetStyle: Union
+      unionStyle: nalthis
+
+hooks:
+  - run: apply-palette # the color scheme from palette.json
+    when: changed

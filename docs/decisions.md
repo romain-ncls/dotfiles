@@ -295,6 +295,21 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
   scheme recolors running apps (tested): the hue / tint / depth / accent knobs
   can be live without touching the style. `pkg/` (Go, `nalthis colors`) is the
   generator.
+- **Two ways to move the knobs, one engine**: the "Nalthis Palette" page in
+  System Settings (Colors & Themes) and `nalthis tune` in a terminal. Both
+  call `nalthis`, preview live and save to `modules/nalthis/palette.json` in
+  the repo, so a tweak is never only on the machine. A lodestar hook applies
+  the palette when the module changes.
+- **Live apply without `plasma-apply-colorscheme`**: it refuses to re-apply
+  the scheme already set. `nalthis apply` merges the color groups into
+  kdeglobals itself and sends what KDE sends: KConfig's `ConfigChanged`
+  (signature `a{saay}`, recorded with `busctl monitor`; with any other
+  signature apps keep their cached colors) and KGlobalSettings'
+  `notifyChange(0, 0)`.
+- **The settings page is C++ only where KDE requires it**: a System Settings
+  page must be a compiled plugin, so `pkg/kcm/` is a thin C++ shell around
+  QML that runs `nalthis`. It builds with Qt's moc and rcc plus g++ (no CMake);
+  moc needs KDE's include paths to expand the plugin macro.
 - **Calm chrome, not islands**: content views are the darkest surface,
   windows one step up, the header (toolbar merged with the title bar) one
   more. Rounded "islands" were the first pick, but Union 6.8 can't draw them:
