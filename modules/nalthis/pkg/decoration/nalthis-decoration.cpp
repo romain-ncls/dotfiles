@@ -186,7 +186,8 @@ void Button::paint(QPainter *painter, const QRectF &repaintArea)
         bg = close ? d->closeColor().darker(115) : QColor(fg.red(), fg.green(), fg.blue(), 38);
     } else if (isHovered()) {
         bg = close ? d->closeColor() : QColor(fg.red(), fg.green(), fg.blue(), 24);
-    } else if (isChecked()) {
+    } else if (isChecked() && type() != DecorationButtonType::Maximize) {
+        // Maximize is "checked" while maximized: its restore glyph says so.
         bg = QColor(fg.red(), fg.green(), fg.blue(), 30);
         glyph = d->window()->palette().highlight().color().lighter(150);
     }
