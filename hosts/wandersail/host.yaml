@@ -48,6 +48,7 @@ vars:
   name: Romain Nicolas
   email: nicolasromain0@gmail.com
   secureboot: "yes" # Limine's config hash enrolled (modules/boot)
+  konsole_colors: Nalthis # modules/konsole; DarkOneNuanced without nalthis
 
 user:
   name: romain

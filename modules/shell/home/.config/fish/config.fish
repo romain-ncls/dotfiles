@@ -103,10 +103,15 @@ if status is-interactive
 
     abbr doc docker compose
 
+    # Konsole's usual colors: the profile's (modules/konsole).
+    function konsole-colors
+        string replace -rf '^ColorScheme=' '' <~/.local/share/konsole/"Local default.profile"
+    end
+
     # Konsole's colors back to normal after a session that changed them.
     function ssh
         command ssh -oPermitLocalCommand=yes $argv
-        konsoleprofile colors=Nalthis
+        konsoleprofile colors=(konsole-colors)
     end
 
     # A bare number is a host on the home network: `42` is ssh root@192.168.1.42.
