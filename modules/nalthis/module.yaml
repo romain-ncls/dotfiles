@@ -1,7 +1,9 @@
 # Nalthis: our dark, rounded theme for Plasma 6.8 (design: docs/decisions.md
-# "Nalthis theme"). Not used by any host yet.
+# "Nalthis theme").
 #   pkg/     the nalthis command (palette: get/set/apply/tune) and the
-#            "Nalthis Palette" page in System Settings (kcm/)
+#            "Nalthis Palette" page in System Settings (kcm/), the window
+#            decoration (decoration/) and the Plasma style: panel, popups,
+#            generated at build time by `nalthis plasma-theme` (plasma.go)
 #   system/  the Union application style
 #   dev/     headless test rig (dev/test.sh) and control galleries
 # The palette's knobs are in palette.json (defaults when it's missing), written
@@ -10,6 +12,9 @@ kde:
   kwinrc:
     org.kde.kdecoration2:
       library: org.kde.nalthis # our decoration (pkg/decoration)
+  plasmarc:
+    Theme:
+      name: nalthis # the Plasma style (pkg/plasma.go)
   kdeglobals:
     KDE:
       widgetStyle: Union

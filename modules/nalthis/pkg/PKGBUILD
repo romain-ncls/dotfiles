@@ -2,7 +2,7 @@
 pkgname=nalthis
 pkgver=1
 pkgrel=1
-pkgdesc='Nalthis theme: palette command, System Settings page, window decoration'
+pkgdesc='Nalthis theme: palette command, System Settings page, window decoration, Plasma style'
 arch=(x86_64)
 url='https://github.com/romain-ncls/dotfiles'
 license=(MIT)
@@ -21,6 +21,7 @@ build() {
 
 package() {
 	install -Dm755 "$srcdir/nalthis" "$pkgdir/usr/bin/nalthis"
+	"$srcdir/nalthis" plasma-theme "$pkgdir/usr/share/plasma/desktoptheme/nalthis"
 	install -Dm755 "$srcdir/plugins/plasma/kcms/systemsettings/kcm_nalthis.so" \
 		"$pkgdir/usr/lib/qt6/plugins/plasma/kcms/systemsettings/kcm_nalthis.so"
 	install -Dm755 "$srcdir/plugins/org.kde.kdecoration3/org.kde.nalthis.so" \

@@ -3,7 +3,8 @@
 # its own D-Bus and a copy of the config, screenshots it, and exits. Nothing on
 # the machine or the live session changes.
 #
-#   dev/test.sh <out.png> [--knobs "hue tint depth accent"] [--then "..."] <app> [args...]
+#   dev/test.sh <out.png> [--knobs "hue tint depth accent"] [--then "..."]
+#       [--decoration] [--plasma] [--wait seconds] <app> [args...]
 #
 # --then applies other knobs while the app runs, with `nalthis apply` (as the
 # sliders do), and takes a second screenshot, <out>-then.png: checks live recolor.
@@ -13,12 +14,14 @@ dev=$(cd "$(dirname "$0")" && pwd)
 module=$(dirname "$dev")
 work=${NALTHIS_DEV:-$XDG_RUNTIME_DIR/nalthis-dev}
 out=$(realpath -m "$1"); shift
-knobs="255 1 0 250" then="" decoration=""
+knobs="255 1 0 250" then="" decoration="" plasma="" wait=6
 while [[ $1 == --* ]]; do
     case $1 in
         --knobs) knobs=$2; shift ;;
         --then) then=$2; shift ;;
         --decoration) decoration=1 ;; # KWin uses our decoration (built by pkg/decoration/build.sh)
+        --plasma) plasma=1 ;; # our Plasma style (run plasmashell as the app)
+        --wait) wait=$2; shift ;; # seconds before the screenshot
     esac
     shift
 done
@@ -34,6 +37,13 @@ ln -s /usr/share/union "$work/root/usr/share/union"
 "$work-bin/nalthis" merge "$HOME/.config/kdeglobals" "$work/data/color-schemes/Nalthis.colors" \
     | sed '/^\[KDE\]$/a widgetStyle=Union\nunionStyle=nalthis' > "$work/config/kdeglobals"
 grep -q '^\[KDE\]$' "$work/config/kdeglobals" || printf '[KDE]\nwidgetStyle=Union\nunionStyle=nalthis\n' >> "$work/config/kdeglobals"
+if [[ -n $plasma ]]; then
+    "$work-bin/nalthis" plasma-theme "$work/data/plasma/desktoptheme/nalthis"
+    kwriteconfig6 --file "$work/config/plasmarc" --group Theme --key name nalthis
+    # Docked, always glass: as on wandersail (hosts/wandersail/host.yaml).
+    kwriteconfig6 --file "$work/config/plasmashellrc" --group PlasmaViews --group "Panel 2" --key floating 0
+    kwriteconfig6 --file "$work/config/plasmashellrc" --group PlasmaViews --group "Panel 2" --key panelOpacity 2
+fi
 kwin_env=()
 if [[ -n $decoration ]]; then
     "$module/pkg/decoration/build.sh" "$work-bin/plugins" > /dev/null
@@ -48,7 +58,7 @@ inner="$work/inner.sh"
     printf 'export XDG_CONFIG_HOME=%q XDG_DATA_HOME=%q XDG_DATA_DIRS=%q QT_QPA_PLATFORM=wayland KDE_DEBUG=1\n' \
         "$work/config" "$work/datahome" "$work/root/usr/local/share:$work/data:/usr/local/share:/usr/share"
     printf '%q ' "$@"; printf '>%q 2>&1 &\n' "$out.log"
-    echo 'sleep 6'
+    echo "sleep $wait"
     printf 'spectacle -b -n -f -o %q\n' "$out"
     if [[ -n $then ]]; then
         printf '%q apply %s >>%q 2>&1\n' "$work-bin/nalthis" "$then" "$out.log"

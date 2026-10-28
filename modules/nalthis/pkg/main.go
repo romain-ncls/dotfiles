@@ -21,6 +21,7 @@ const usage = `usage:
   nalthis tokens hue tint depth accent            print these knobs' colors (JSON)
   nalthis colors <name> [hue tint depth accent]   print a .colors file
   nalthis merge <kdeglobals> <scheme.colors>       print kdeglobals with the scheme's color groups
+  nalthis plasma-theme <dir>                      write the Plasma style (panel, popups) into dir
 `
 
 func main() {
@@ -117,6 +118,11 @@ func run(args []string, out io.Writer) error {
 			}
 		}
 		return writeINI(out, Scheme(args[1], k))
+	case "plasma-theme":
+		if len(args) != 2 {
+			return fmt.Errorf("plasma-theme takes a folder\n%s", usage)
+		}
+		return writePlasmaTheme(args[1])
 	case "merge":
 		if len(args) != 3 {
 			return fmt.Errorf("merge takes two files\n%s", usage)

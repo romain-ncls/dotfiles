@@ -277,8 +277,8 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 
 ## Nalthis theme (in progress)
 
-Our dark, rounded theme for Plasma 6.8, in `modules/nalthis/`, not used by a
-host yet. Design page with the research and choices so far:
+Our dark, rounded theme for Plasma 6.8, in `modules/nalthis/`, used by
+wandersail. Design page with the research and choices so far:
 https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
 
 - **Choices so far** (Oct 2026): Nocturne greys (hue 255, low tint), blue accent
@@ -315,6 +315,19 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
   shadows can't blur. Colors come from the scheme, so the sliders recolor
   it. It honors Breeze's "hide title bar" window exceptions (breezerc), so
   `breeze-exceptions:` still works for Konsole, mpv and Spotify.
+  Its glyphs are drawn at 1.5 px: the 1 px of KDE's icon rule looked too
+  thin next to the title text.
+- **Plasma style generated, not drawn** (`pkg/plasma.go`, `nalthis
+  plasma-theme`, run at package build): panel, popups (10 px), tooltips
+  (6 px) and the popup header are SVG frames computed from a radius, an
+  opacity and a shadow size, with the decoration's hairline outline. Only
+  those files: everything else (buttons, highlights) falls back to Breeze.
+  Colors come from the scheme's classes, so the sliders recolor them live
+  (tested). Glass (80%) only in the `translucent/` variant, used when KWin
+  blurs; without blur it would be hard to read, so the others are opaque.
+  The popup header is the popup's own glass with a hairline, like the
+  windows' merged header. The panel is docked and always translucent
+  (`plasmashellrc` in the host file: the panel's number is the machine's).
 - **The settings page is C++ only where KDE requires it**: a System Settings
   page must be a compiled plugin, so `pkg/kcm/` is a thin C++ shell around
   QML that runs `nalthis`. It builds with Qt's moc and rcc plus g++ (no CMake);

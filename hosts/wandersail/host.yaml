@@ -74,6 +74,10 @@ packages:
   - tesseract-data-fra
 
 kde:
+  plasmashellrc:
+    PlasmaViews/Panel 2: # the bottom panel (its number is this machine's)
+      floating: 0 # docked (nalthis)
+      panelOpacity: 2 # always the glass, even with a maximized window
   kwinrc:
     Effect-blur:
       BlurStrength: 11
