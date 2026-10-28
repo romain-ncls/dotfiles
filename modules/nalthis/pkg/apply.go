@@ -110,6 +110,10 @@ func apply(k Knobs) error {
 	if err != nil {
 		return err
 	}
+	// GTK: our layer over KDE's colors.css (gtk.go).
+	if err := writeGTK(cfg, k); err != nil {
+		return err
+	}
 	globals := filepath.Join(cfg, "kdeglobals")
 	current, err := readINI(globals)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {

@@ -4,7 +4,7 @@
 # the machine or the live session changes.
 #
 #   dev/test.sh <out.png> [--knobs "hue tint depth accent"] [--then "..."]
-#       [--decoration] [--plasma] [--icons themes-dir] [--wait seconds] <app> [args...]
+#       [--decoration] [--plasma] [--icons themes-dir] [--gtk] [--wait seconds] <app> [args...]
 #
 # --then applies other knobs while the app runs, with `nalthis apply` (as the
 # sliders do), and takes a second screenshot, <out>-then.png: checks live recolor.
@@ -14,7 +14,7 @@ dev=$(cd "$(dirname "$0")" && pwd)
 module=$(dirname "$dev")
 work=${NALTHIS_DEV:-$XDG_RUNTIME_DIR/nalthis-dev}
 out=$(realpath -m "$1"); shift
-knobs="255 1 0 250" then="" decoration="" plasma="" icons="" wait=6
+knobs="255 1 0 250" then="" decoration="" plasma="" icons="" gtk="" wait=6
 while [[ $1 == --* ]]; do
     case $1 in
         --knobs) knobs=$2; shift ;;
@@ -22,6 +22,7 @@ while [[ $1 == --* ]]; do
         --decoration) decoration=1 ;; # KWin uses our decoration (built by pkg/decoration/build.sh)
         --plasma) plasma=1 ;; # our Plasma style (run plasmashell as the app)
         --wait) wait=$2; shift ;; # seconds before the screenshot
+        --gtk) gtk=1 ;; # GTK: a copy of ~/.config/gtk-3.0 and gtk-4.0 with our nalthis.css
         --icons) icons=$2; shift ;; # a folder of icon themes holding nalthis (built with nalthis icon-theme)
     esac
     shift
@@ -40,6 +41,10 @@ printf "[Appearance]\nColorScheme=Nalthis\nFont=Fira Code Retina,11,-1,5,53,0,0,
 "$work-bin/nalthis" merge "$HOME/.config/kdeglobals" "$work/data/color-schemes/Nalthis.colors" \
     | sed '/^\[KDE\]$/a widgetStyle=Union\nunionStyle=nalthis' > "$work/config/kdeglobals"
 grep -q '^\[KDE\]$' "$work/config/kdeglobals" || printf '[KDE]\nwidgetStyle=Union\nunionStyle=nalthis\n' >> "$work/config/kdeglobals"
+if [[ -n $gtk ]]; then
+    cp -r "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0" "$HOME/.config/dconf" "$work/config/" # dconf: GTK 3 on Wayland takes its theme from GSettings
+    "$work-bin/nalthis" gtk "$work/config" $knobs
+fi
 if [[ -n $icons ]]; then
     ln -s "$(realpath "$icons")" "$work/data/icons"
     kwriteconfig6 --file "$work/config/kdeglobals" --group Icons --key Theme nalthis

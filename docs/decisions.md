@@ -371,6 +371,20 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
   serve the rest. Lucide comes from npm at build time (pinned, checksummed);
   Tela from the AUR, which is why lodestar now installs AUR packages before
   building local ones.
+- **GTK: a layer over Breeze-GTK, not a theme** (`pkg/gtk.go`): `nalthis apply`
+  writes `nalthis.css` next to the `colors.css` KDE generates and imports it
+  from `gtk.css` the way KDE imports its own. GTK 3 apps get our radii,
+  accent-filled checks, radios and switches, the tinted selection and thin
+  scrollbars; libadwaita apps get our palette through its named colors (KDE's
+  `colors.css` only defines Breeze's names, so they had none of it) and keep
+  Adwaita's shapes, which libadwaita doesn't let a theme change. A full GTK
+  theme would be thousands of lines to follow GTK releases.
+- **Konsole: One Dark's hues on our greys** (`pkg/konsole.go`): the
+  background is the views' surface, the six colors keep One Dark's hue and
+  chroma at one OKLCH lightness, with tinted Blue and Red variants for kube
+  and ssh. The scheme is the host variable `konsole_colors`, so a host
+  without the theme keeps DarkOneNuanced. VS Code stays on One Dark Pro: a
+  theme of years, not to be replaced.
 - **Testing never touches the session**: `dev/test.sh` runs an app in a
   headless KWin with its own D-Bus and a copy of the config. Galleries of
   every control: `dev/gallery/kirigami.sh` (QtQuick, run through test.sh)

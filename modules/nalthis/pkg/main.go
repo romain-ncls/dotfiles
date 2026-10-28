@@ -22,6 +22,7 @@ const usage = `usage:
   nalthis colors <name> [hue tint depth accent]   print a .colors file
   nalthis merge <kdeglobals> <scheme.colors>       print kdeglobals with the scheme's color groups
   nalthis konsole <dir> [hue tint depth accent]    write the Konsole color schemes into dir
+  nalthis gtk <config-dir> [hue tint depth accent] write nalthis.css for GTK 3 and 4 (and its import)
   nalthis plasma-theme <dir>                      write the Plasma style (panel, popups) into dir
   nalthis icon-theme <lucide> <tela> <dir>        write the icon theme into dir: Lucide icons, linked Tela theme
 `
@@ -125,6 +126,18 @@ func run(args []string, out io.Writer) error {
 			return fmt.Errorf("plasma-theme takes a folder\n%s", usage)
 		}
 		return writePlasmaTheme(args[1])
+	case "gtk":
+		if len(args) != 2 && len(args) != 6 {
+			return fmt.Errorf("gtk takes a folder and optionally 4 knobs\n%s", usage)
+		}
+		k, err := loadKnobs()
+		if len(args) == 6 {
+			k, err = parseKnobs(args[2:])
+		}
+		if err != nil {
+			return err
+		}
+		return writeGTK(args[1], k)
 	case "konsole":
 		if len(args) != 2 && len(args) != 6 {
 			return fmt.Errorf("konsole takes a folder and optionally 4 knobs\n%s", usage)

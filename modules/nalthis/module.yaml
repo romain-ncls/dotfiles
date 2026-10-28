@@ -4,8 +4,9 @@
 #            "Nalthis Palette" page in System Settings (kcm/), the window
 #            decoration (decoration/) and the Plasma style: panel, popups,
 #            generated at build time by `nalthis plasma-theme` (plasma.go),
-#            and the icon theme: Tela with Lucide line icons (icons.go,
-#            icons.txt)
+#            the icon theme: Tela with Lucide line icons (icons.go,
+#            icons.txt), and, written by `nalthis apply` with the palette,
+#            the Konsole schemes (konsole.go) and the GTK layer (gtk.go)
 #   system/  the Union application style
 #   dev/     headless test rig (dev/test.sh) and control galleries
 # The palette's knobs are in palette.json (defaults when it's missing), written
