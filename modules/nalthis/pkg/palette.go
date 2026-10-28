@@ -150,6 +150,16 @@ func Scheme(name string, k Knobs) []Group {
 	}
 	return []Group{
 		{"General", [][2]string{{"Name", name}, {"ColorScheme", name}}},
+		// Breeze Dark's effects: defined here so a previous scheme's don't linger
+		// in kdeglobals (merge only replaces the groups a scheme has).
+		{"ColorEffects:Disabled", [][2]string{
+			{"Color", p.Raised.String()}, {"ColorAmount", "0"}, {"ColorEffect", "0"},
+			{"ContrastAmount", "0.65"}, {"ContrastEffect", "1"}, {"IntensityAmount", "0.1"}, {"IntensityEffect", "2"},
+		}},
+		{"ColorEffects:Inactive", [][2]string{
+			{"ChangeSelectionColor", "true"}, {"Color", p.Overlay.String()}, {"ColorAmount", "0.025"}, {"ColorEffect", "2"},
+			{"ContrastAmount", "0.1"}, {"ContrastEffect", "2"}, {"Enable", "false"}, {"IntensityAmount", "0"}, {"IntensityEffect", "0"},
+		}},
 		group("Colors:Window", p.Pane, p.Raised),
 		group("Colors:View", p.Base, mix(p.Base, p.Pane, 0.5)),
 		group("Colors:Button", p.Raised, p.Overlay),

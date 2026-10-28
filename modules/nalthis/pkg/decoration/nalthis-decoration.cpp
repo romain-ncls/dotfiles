@@ -96,10 +96,12 @@ private:
     // corners stay rounded and the shadow stays.
     bool frameless() const { return style() == KDecoration3::Style::Shadow || m_hideTitleBar; }
     void readExceptions();
+    void createButtons();
 
     KDecoration3::DecorationButtonGroup *m_left = nullptr;
     KDecoration3::DecorationButtonGroup *m_right = nullptr;
     bool m_hideTitleBar = false;
+    bool m_buttonsHidden = false; // hidden while frameless: recreated after
 };
 
 // ---------------------------------------------------------------------------
@@ -305,10 +307,25 @@ void Button::paintGlyph(QPainter *painter, const QRectF &box, const QColor &colo
 
 // ---------------------------------------------------------------------------
 
-bool Decoration::init()
+namespace
 {
+void loadExceptions(); // below, with readExceptions
+}
+
+// The buttons are recreated rather than shown again after a frameless spell:
+// each one's visibility follows the window's abilities (no close button on a
+// window that can't be closed), which a plain setVisible(true) would undo.
+void Decoration::createButtons()
+{
+    delete m_left;
+    delete m_right;
     m_left = new KDecoration3::DecorationButtonGroup(KDecoration3::DecorationButtonGroup::Position::Left, this, &Button::create);
     m_right = new KDecoration3::DecorationButtonGroup(KDecoration3::DecorationButtonGroup::Position::Right, this, &Button::create);
+}
+
+bool Decoration::init()
+{
+    createButtons();
 
     const auto w = window();
     const auto relayout = [this] { updateLayout(); };
@@ -334,6 +351,7 @@ bool Decoration::init()
     connect(s.get(), &KDecoration3::DecorationSettings::decorationButtonsRightChanged, this, relayout);
     connect(s.get(), &KDecoration3::DecorationSettings::fontChanged, this, repaint);
     connect(s.get(), &KDecoration3::DecorationSettings::reconfigured, this, [this] {
+        loadExceptions(); // once per window: rare enough
         readExceptions();
         updateLayout();
     });
@@ -354,10 +372,20 @@ bool Decoration::init()
 // The window exceptions are Breeze's (breezerc, written by lodestar's
 // breeze-exceptions:), so one list serves both decorations. Only their
 // "hide title bar" matters here; matched like Breeze: the pattern is a regular
-// expression on the window class (type 0) or title (type 1).
-void Decoration::readExceptions()
+// expression on the window class (type 0) or title (type 1). Parsed once for
+// all windows, again when the settings change; titles change all the time.
+namespace
 {
-    m_hideTitleBar = false;
+struct Exception {
+    bool onTitle;
+    QRegularExpression pattern;
+};
+QList<Exception> g_exceptions;
+bool g_exceptionsLoaded = false;
+
+void loadExceptions()
+{
+    g_exceptions.clear();
     const auto config = KSharedConfig::openConfig(QStringLiteral("breezerc"));
     config->reparseConfiguration();
     for (const QString &name : config->groupList()) {
@@ -369,8 +397,20 @@ void Decoration::readExceptions()
         if (!g.readEntry("Enabled", true) || !g.readEntry("HideTitleBar", false) || pattern.isEmpty()) {
             continue;
         }
-        const QString value = g.readEntry("ExceptionType", 0) == 1 ? window()->caption() : window()->windowClass();
-        if (QRegularExpression(pattern).match(value).hasMatch()) {
+        g_exceptions.append({g.readEntry("ExceptionType", 0) == 1, QRegularExpression(pattern)});
+    }
+    g_exceptionsLoaded = true;
+}
+}
+
+void Decoration::readExceptions()
+{
+    if (!g_exceptionsLoaded) {
+        loadExceptions();
+    }
+    m_hideTitleBar = false;
+    for (const Exception &e : std::as_const(g_exceptions)) {
+        if (e.pattern.match(e.onTitle ? window()->caption() : window()->windowClass()).hasMatch()) {
             m_hideTitleBar = true;
             return;
         }
@@ -407,7 +447,12 @@ void Decoration::updateLayout()
                 b->setVisible(false);
             }
         }
+        m_buttonsHidden = true;
         return;
+    }
+    if (m_buttonsHidden) {
+        createButtons();
+        m_buttonsHidden = false;
     }
     // Ghost buttons on the left, vertically centered; tiles on the right,
     // full height, touching the window's right edge.
@@ -518,7 +563,9 @@ static void boxBlur(QImage &img, int radius)
     }
 }
 
-void Decoration::updateShadow()
+// One shadow per state, shared by every window: building one blurs two
+// layers, too much to redo for each window at each focus change.
+static std::shared_ptr<KDecoration3::DecorationShadow> makeShadow(bool active)
 {
     // Two layers, like Breeze's "medium" shadow: a wide soft one and a tight
     // one that grounds the window. Half as strong behind inactive windows.
@@ -526,7 +573,7 @@ void Decoration::updateShadow()
         qreal offsetY, blur, opacity;
     };
     const Layer layers[] = {{8, 32, 0.55}, {2, 8, 0.25}};
-    const qreal strength = window()->isActive() ? 1.0 : 0.5;
+    const qreal strength = active ? 1.0 : 0.5;
     const int pad = 64;
     const QSize box(2 * CornerRadius + 4, 2 * CornerRadius + 4);
     QImage image(box + QSize(2 * pad, 2 * pad), QImage::Format_ARGB32_Premultiplied);
@@ -558,6 +605,16 @@ void Decoration::updateShadow()
     shadow->setPadding(padding);
     shadow->setInnerShadowRect(QRectF(QRectF(image.rect()).center(), QSizeF(1, 1)));
     shadow->setShadow(image);
+    return shadow;
+}
+
+void Decoration::updateShadow()
+{
+    static std::shared_ptr<KDecoration3::DecorationShadow> shadows[2];
+    auto &shadow = shadows[window()->isActive()];
+    if (!shadow) {
+        shadow = makeShadow(window()->isActive());
+    }
     setShadow(shadow);
 }
 

@@ -28,6 +28,17 @@ public:
         // Live preview, after a short pause so dragging doesn't flood KDE.
         m_preview.setSingleShot(true);
         m_preview.setInterval(250);
+        // The swatches follow sooner, but still not at every slider step: each
+        // refresh runs `nalthis tokens`.
+        m_refresh.setSingleShot(true);
+        m_refresh.setInterval(60);
+        connect(&m_refresh, &QTimer::timeout, this, [this] {
+            QByteArray out;
+            if (run({QStringLiteral("tokens"), num(m_knobs[0]), num(m_knobs[1]), num(m_knobs[2]), num(m_knobs[3])}, &out)) {
+                m_tokens = QJsonDocument::fromJson(out).object().toVariantMap();
+                Q_EMIT knobsChanged();
+            }
+        });
         connect(&m_preview, &QTimer::timeout, this, [this] {
             if (run({QStringLiteral("apply"), num(m_knobs[0]), num(m_knobs[1]), num(m_knobs[2]), num(m_knobs[3])})) {
                 m_previewed = true;
@@ -67,6 +78,7 @@ public:
         m_tokens = json[QStringLiteral("tokens")].toObject().toVariantMap();
         if (m_previewed) { // Reset or Discard: undo the live preview
             m_preview.stop();
+            m_refresh.stop();
             run({QStringLiteral("apply")});
             m_previewed = false;
         }
@@ -113,12 +125,9 @@ private:
             return;
         }
         m_knobs[i] = v;
-        QByteArray out;
-        if (run({QStringLiteral("tokens"), num(m_knobs[0]), num(m_knobs[1]), num(m_knobs[2]), num(m_knobs[3])}, &out)) {
-            m_tokens = QJsonDocument::fromJson(out).object().toVariantMap();
-        }
         Q_EMIT knobsChanged();
         updateState();
+        m_refresh.start();
         m_preview.start();
     }
 
@@ -162,7 +171,7 @@ private:
     Knobs m_knobs{255, 1, 0, 250}, m_saved = m_knobs, m_defaults = m_knobs;
     QVariantMap m_tokens;
     QString m_error;
-    QTimer m_preview;
+    QTimer m_preview, m_refresh;
     bool m_previewed = false;
 };
 

@@ -1,6 +1,11 @@
 package main
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
 
 // The default knobs must give the surfaces picked on the design page.
 func TestDefaultSurfaces(t *testing.T) {
@@ -30,5 +35,25 @@ func TestOKLCHRoundTrip(t *testing.T) {
 		if got := OKLCH(l, ch, h); got != c {
 			t.Errorf("%v → (%.3f %.3f %.1f) → %v", c, l, ch, h, got)
 		}
+	}
+}
+
+func TestINIRoundTrip(t *testing.T) {
+	in := "Default=1\n# a comment\n[A]\nk=v\n# inside\n\n[B][C]\nx=a=b\n\n"
+	path := filepath.Join(t.TempDir(), "rc")
+	if err := os.WriteFile(path, []byte(in), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	groups, err := readINI(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out strings.Builder
+	if err := writeINI(&out, groups); err != nil {
+		t.Fatal(err)
+	}
+	want := "Default=1\n# a comment\n\n[A]\nk=v\n# inside\n\n[B][C]\nx=a=b\n\n"
+	if out.String() != want {
+		t.Errorf("got %q, want %q", out.String(), want)
 	}
 }

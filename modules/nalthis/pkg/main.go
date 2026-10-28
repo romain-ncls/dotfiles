@@ -210,6 +210,9 @@ func merge(base, scheme []Group) []Group {
 	return out
 }
 
+// rawLine marks a line kept as it is (a comment, a line without "=").
+const rawLine = "\x00raw"
+
 func readINI(path string) ([]Group, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -218,14 +221,24 @@ func readINI(path string) ([]Group, error) {
 	defer f.Close()
 	var groups []Group
 	sc := bufio.NewScanner(f)
+	sc.Buffer(nil, 16<<20) // KDE values can be long (window states)
 	for sc.Scan() {
 		line := sc.Text()
 		switch {
 		case strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]"):
 			groups = append(groups, Group{Name: line[1 : len(line)-1]})
-		case len(groups) > 0 && strings.Contains(line, "="):
-			k, v, _ := strings.Cut(line, "=")
+		case strings.TrimSpace(line) == "":
+		default:
+			// Keys before any group (KConfig's default group) go in a group with
+			// no name; comments are kept as they are.
+			if len(groups) == 0 {
+				groups = append(groups, Group{})
+			}
 			g := &groups[len(groups)-1]
+			k, v, ok := strings.Cut(line, "=")
+			if !ok || strings.HasPrefix(line, "#") {
+				k, v = line, rawLine
+			}
 			g.Keys = append(g.Keys, [2]string{k, v})
 		}
 	}
@@ -235,8 +248,14 @@ func readINI(path string) ([]Group, error) {
 func writeINI(w io.Writer, groups []Group) error {
 	bw := bufio.NewWriter(w)
 	for _, g := range groups {
-		fmt.Fprintf(bw, "[%s]\n", g.Name)
+		if g.Name != "" {
+			fmt.Fprintf(bw, "[%s]\n", g.Name)
+		}
 		for _, kv := range g.Keys {
+			if kv[1] == rawLine {
+				fmt.Fprintln(bw, kv[0])
+				continue
+			}
 			fmt.Fprintf(bw, "%s=%s\n", kv[0], kv[1])
 		}
 		fmt.Fprintln(bw)

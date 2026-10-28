@@ -40,6 +40,7 @@ func tune() error {
 	}()
 
 	k, row, status := saved, 0, ""
+	applied := false // the session shows something other than saved
 	var pending <-chan time.Time
 	for {
 		draw(k, saved, row, status)
@@ -47,6 +48,7 @@ func tune() error {
 		case <-pending:
 			pending = nil
 			status = ""
+			applied = true
 			if err := apply(k); err != nil {
 				status = "apply failed: " + err.Error()
 			}
@@ -65,9 +67,9 @@ func tune() error {
 				*kn.Get(&k) -= kn.Step
 			case "\x1b[C", "l":
 				*kn.Get(&k) += kn.Step
-			case "\x1b[5~", "H":
+			case "\x1b[5~", "L": // PgUp, or Shift with vim's right
 				*kn.Get(&k) += kn.BigStep
-			case "\x1b[6~", "L":
+			case "\x1b[6~", "H":
 				*kn.Get(&k) -= kn.BigStep
 			case "d":
 				k = Defaults
@@ -78,7 +80,7 @@ func tune() error {
 				}
 				return apply(k)
 			case "\x1b", "q", "\x03":
-				if k == saved {
+				if !applied { // k may equal saved with a preview of another value showing
 					return nil
 				}
 				return apply(saved)
