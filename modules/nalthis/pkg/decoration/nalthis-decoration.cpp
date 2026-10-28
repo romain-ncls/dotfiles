@@ -221,24 +221,23 @@ void Button::paint(QPainter *painter, const QRectF &repaintArea)
     painter->restore();
 }
 
-// Line glyphs on a 16 px box, 1 px strokes: KDE's rule for small monochrome
-// icons, and the weight of our Lucide line icons.
+// Line glyphs on a 16 px box, 1.5 px strokes: 1 px (KDE's rule for small
+// icons) looked too thin next to the title text.
 void Button::paintGlyph(QPainter *painter, const QRectF &box, const QColor &color) const
 {
-    QPen pen(color, 1.0);
+    QPen pen(color, 1.5);
     pen.setCapStyle(Qt::RoundCap);
     pen.setJoinStyle(Qt::RoundJoin);
     painter->setPen(pen);
     painter->setBrush(Qt::NoBrush);
-    // Half a pixel in: a 1 px line on whole coordinates would straddle two
-    // pixel rows and turn grey. Rectangles below are drawn at x.0 for this.
+    // Half a pixel in: glyph coordinates are pixel centers, so a line fills
+    // its pixel row and spreads evenly onto both neighbours.
     painter->translate(box.topLeft() + QPointF(0.5, 0.5));
-    // Glyph coordinates are pixel centers. Straight lines are 1 px; diagonals
-    // get 1.3 px, or a 45° line smears into grey and looks lighter than the
-    // straight ones next to it. Glyphs with a middle vertical are 9 px wide
+    // Diagonals get 1.7 px, or a 45° line smears into grey and looks lighter
+    // than the straight ones next to it. Glyphs with a middle vertical are 9 px wide
     // (3–11, centered on 7) so that vertical lands on a pixel.
     auto line = [painter, &pen](qreal x1, qreal y1, qreal x2, qreal y2) {
-        pen.setWidthF(x1 != x2 && y1 != y2 ? 1.3 : 1.0);
+        pen.setWidthF(x1 != x2 && y1 != y2 ? 1.7 : 1.5);
         painter->setPen(pen);
         painter->drawLine(QPointF(x1, y1), QPointF(x2, y2));
     };
@@ -286,7 +285,7 @@ void Button::paintGlyph(QPainter *painter, const QRectF &box, const QColor &colo
         line(4, 7, 7, 10), line(10, 7, 7, 10);
         break;
     case DecorationButtonType::ContextHelp: {
-        pen.setWidthF(1.15);
+        pen.setWidthF(1.6);
         painter->setPen(pen);
         QPainterPath q;
         q.moveTo(5, 6);
