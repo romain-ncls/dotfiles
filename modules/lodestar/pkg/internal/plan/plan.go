@@ -263,9 +263,6 @@ func (p *Plan) packages(in Input) error {
 			}
 		}
 	}
-	if err := p.localPackages(in, installed); err != nil {
-		return err
-	}
 	if len(repo) > 0 {
 		p.add(&Action{Op: OpInstall, Phase: PhasePackages, Names: repo})
 	}
@@ -275,7 +272,9 @@ func (p *Plan) packages(in Input) error {
 	if len(aur) > 0 {
 		p.add(&Action{Op: OpInstallAUR, Phase: PhaseAUR, Names: aur})
 	}
-	return nil
+	// After the AUR packages: a local package may need one to build (nalthis
+	// reads Tela's index).
+	return p.localPackages(in, installed)
 }
 
 // file compares one declared file with the machine.
