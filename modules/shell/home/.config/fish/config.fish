@@ -106,7 +106,7 @@ if status is-interactive
     # Konsole's colors back to normal after a session that changed them.
     function ssh
         command ssh -oPermitLocalCommand=yes $argv
-        konsoleprofile colors=DarkOneNuanced
+        konsoleprofile colors=Nalthis
     end
 
     # A bare number is a host on the home network: `42` is ssh root@192.168.1.42.

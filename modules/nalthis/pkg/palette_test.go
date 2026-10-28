@@ -23,3 +23,12 @@ func TestMergeKeepsOtherGroups(t *testing.T) {
 		t.Errorf("KDE group changed: %v", out[1])
 	}
 }
+
+func TestOKLCHRoundTrip(t *testing.T) {
+	for _, c := range oneDark {
+		l, ch, h := toOKLCH(c)
+		if got := OKLCH(l, ch, h); got != c {
+			t.Errorf("%v → (%.3f %.3f %.1f) → %v", c, l, ch, h, got)
+		}
+	}
+}

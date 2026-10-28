@@ -35,6 +35,8 @@ cp -r "$module/system/usr/local/share/union/styles/nalthis" "$work/root/usr/loca
 ln -s /usr/share/union "$work/root/usr/share/union"
 (cd "$module/pkg" && go build -o "$work-bin/nalthis" .)
 "$work-bin/nalthis" colors Nalthis $knobs > "$work/data/color-schemes/Nalthis.colors"
+"$work-bin/nalthis" konsole "$work/data/konsole" $knobs # and a profile using it, for konsole --profile Nalthis
+printf "[Appearance]\nColorScheme=Nalthis\nFont=Fira Code Retina,11,-1,5,53,0,0,0,0,0,Regular\n[General]\nName=Nalthis\nParent=FALLBACK/\nTerminalMargin=8\n" > "$work/data/konsole/Nalthis.profile"
 "$work-bin/nalthis" merge "$HOME/.config/kdeglobals" "$work/data/color-schemes/Nalthis.colors" \
     | sed '/^\[KDE\]$/a widgetStyle=Union\nunionStyle=nalthis' > "$work/config/kdeglobals"
 grep -q '^\[KDE\]$' "$work/config/kdeglobals" || printf '[KDE]\nwidgetStyle=Union\nunionStyle=nalthis\n' >> "$work/config/kdeglobals"

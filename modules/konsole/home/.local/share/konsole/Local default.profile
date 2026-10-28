@@ -1,7 +1,7 @@
 [Appearance]
 AntiAliasFonts=true
 BoldIntense=true
-ColorScheme=DarkOneNuanced
+ColorScheme=Nalthis
 DimmValue=128
 Font=Fira Code Retina,11,-1,5,53,0,0,0,0,0,Regular
 LineSpacing=0

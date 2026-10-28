@@ -101,6 +101,10 @@ func apply(k Knobs) error {
 	if err := writeAtomic(filepath.Join(data, "color-schemes", schemeName+".colors"), buf.Bytes()); err != nil {
 		return err
 	}
+	// Konsole reads its own schemes; new tabs and windows take the change.
+	if err := writeKonsoleSchemes(filepath.Join(data, "konsole"), k); err != nil {
+		return err
+	}
 
 	cfg, err := configDir()
 	if err != nil {
