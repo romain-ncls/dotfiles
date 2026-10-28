@@ -1,0 +1,257 @@
+# KDE (freedesktop) icon name → Lucide icon, for `nalthis icon-theme`, by
+# folder ([actions], [places], [devices], [categories]).
+# Commands (toolbars, menus, buttons), and places and devices at small sizes
+# (sidebars), where Tela draws lines too. Apps, file types and large places
+# stay Tela's color icons. Names not here fall back to Tela's own line
+# icons, then Breeze.
+
+[actions]
+
+# navigation
+go-previous           arrow-left
+go-next               arrow-right
+go-up                 arrow-up
+go-down               arrow-down
+go-home               house
+go-first              arrow-left-to-line
+go-last               arrow-right-to-line
+go-top                arrow-up-to-line
+go-bottom             arrow-down-to-line
+go-previous-view      chevron-left
+go-next-view          chevron-right
+go-up-search          chevron-up
+go-down-search        chevron-down
+go-jump-today         calendar-check
+arrow-left            chevron-left
+arrow-right           chevron-right
+arrow-up              chevron-up
+arrow-down            chevron-down
+view-refresh          refresh-cw
+process-stop          x
+
+# editing
+edit-copy             copy
+edit-cut              scissors
+edit-paste            clipboard-paste
+edit-delete           trash-2
+delete                trash-2
+trash-empty           trash
+edit-undo             undo-2
+edit-redo             redo-2
+edit-find             search
+search                search
+system-search         search
+edit-find-replace     replace
+edit-clear            delete
+edit-clear-all        eraser
+edit-clear-history    history
+edit-select-all       square-dashed
+edit-rename           pencil-line
+document-edit         pencil
+edit-link             link
+insert-link           link
+insert-image          image-plus
+insert-table          table
+insert-text           type
+color-picker          pipette
+crop                  crop
+transform-crop        crop
+transform-move        move
+transform-scale       scaling
+object-rotate-left    rotate-ccw
+object-rotate-right   rotate-cw
+object-flip-horizontal flip-horizontal-2
+object-flip-vertical  flip-vertical-2
+exchange-positions    arrow-left-right
+merge                 merge
+
+# documents and files
+document-new          file-plus
+document-open         folder-open
+document-open-recent  history
+document-save         save
+document-save-as      save-all
+document-save-all     save-all
+document-print        printer
+document-properties   file-cog
+document-export       file-output
+document-import       file-input
+document-share        share-2
+document-send         send
+document-revert       rotate-ccw
+document-duplicate    copy-plus
+document-preview      eye
+document-encrypt      lock
+document-decrypt      lock-open
+folder-new            folder-plus
+list-add              plus
+list-remove           minus
+list-add-user         user-plus
+contact-new           user-plus
+download              download
+upload                upload
+tag                   tag
+bookmark-new          bookmark-plus
+bookmark-remove       bookmark-minus
+bookmarks             bookmark
+favorites             bookmark
+applications-all-symbolic layout-grid
+open-link             external-link
+
+# views
+view-list-icons       layout-grid
+view-list-details     list
+view-list-tree        list-tree
+view-list-text        columns-3
+view-split-left-right columns-2
+view-split-top-bottom rows-2
+view-preview          eye
+view-visible          eye
+view-hidden           eye-off
+view-filter           list-filter
+view-sort             arrow-up-down
+view-sort-ascending   arrow-up-narrow-wide
+view-sort-descending  arrow-down-wide-narrow
+view-fullscreen       maximize
+view-restore          minimize
+view-close            x
+view-calendar         calendar
+view-statistics       chart-column
+view-left-close       panel-left-close
+view-right-close      panel-right-close
+sidebar-show          panel-left
+zoom-in               zoom-in
+zoom-out              zoom-out
+application-menu      menu
+open-menu             menu
+overflow-menu         ellipsis-vertical
+view-more-horizontal  ellipsis
+tab-new               plus
+tab-close             x
+window-new            app-window
+window-close          x
+window-pin            pin
+window-unpin          pin-off
+
+# settings and help
+configure             settings
+settings-configure    settings
+configure-shortcuts   keyboard
+configure-toolbars    settings-2
+help-about            info
+help-contents         circle-help
+help-whatsthis        circle-help
+help-hint             lightbulb
+hint                  lightbulb
+tools-report-bug      bug
+run-build             hammer
+
+# session
+system-lock-screen    lock
+system-log-out        log-out
+application-exit      log-out
+system-shutdown       power
+system-reboot         rotate-cw
+system-suspend        moon
+system-hibernate      snowflake
+system-suspend-hibernate snowflake
+system-switch-user    users
+
+# media
+media-playback-start  play
+media-playback-pause  pause
+media-playback-stop   square
+media-skip-forward    skip-forward
+media-skip-backward   skip-back
+media-seek-forward    fast-forward
+media-seek-backward   rewind
+media-record          circle-dot
+media-playlist-shuffle shuffle
+media-playlist-repeat repeat
+media-eject           eject
+
+# communication
+mail-send             send
+mail-reply-sender     reply
+mail-forward          forward
+mail-mark-read        mail-open
+message-new           message-square-plus
+call-start            phone
+call-stop             phone-off
+news-subscribe        rss
+network-connect       plug
+network-disconnect    unplug
+appointment-new       calendar-plus
+mark-location         map-pin
+
+# text formatting
+format-text-bold      bold
+format-text-italic    italic
+format-text-underline underline
+format-text-strikethrough strikethrough
+format-justify-left   align-left
+format-justify-center align-center
+format-justify-right  align-right
+format-justify-fill   align-justify
+format-list-unordered list
+format-list-ordered   list-ordered
+format-indent-more    list-indent-increase
+format-indent-less    list-indent-decrease
+
+# dialogs
+dialog-ok             check
+dialog-ok-apply       check
+dialog-cancel         x
+dialog-close          x
+checkmark             check
+object-locked         lock
+object-unlocked       lock-open
+
+[places]
+user-home             house
+user-desktop          monitor
+folder-documents      file-text
+folder-download       download
+folder-downloads      download
+folder-music          music
+folder-pictures       image
+folder-videos         clapperboard
+folder-templates      layout-template
+folder-publicshare    share-2
+folder-open-recent    folder-clock
+user-trash            trash-2
+user-trash-full       trash-2
+network-workgroup     globe
+folder-network        globe
+folder-remote         globe
+
+[devices]
+drive-harddisk        hard-drive
+drive-removable-media usb
+media-removable       usb
+drive-optical         disc
+media-optical         disc
+phone                 smartphone
+
+# The application menu's categories (and Kickoff's), as -symbolic names.
+[categories]
+applications-development-symbolic   code
+applications-games-symbolic         gamepad-2
+applications-graphics-symbolic      palette
+applications-internet-symbolic      globe
+applications-network-symbolic       globe
+applications-multimedia-symbolic    clapperboard
+applications-office-symbolic        briefcase
+applications-system-symbolic        monitor-cog
+applications-utilities-symbolic     wrench
+applications-education-symbolic     graduation-cap
+applications-science-symbolic       flask-conical
+applications-toys-symbolic          toy-brick
+applications-other-symbolic         circle-ellipsis
+help-about-symbolic                 circle-help
+preferences-system-symbolic         settings
+utilities-terminal-symbolic         square-terminal
+system-file-manager-symbolic        folder
+accessories-text-editor-symbolic    file-pen-line
+office-calendar-symbolic            calendar
+preferences-desktop-accessibility-symbolic accessibility

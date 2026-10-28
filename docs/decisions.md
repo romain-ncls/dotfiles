@@ -355,8 +355,22 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
 - **CSS variables**: a color variable defined from another variable in the
   same `:root` doesn't resolve for text, so text colors spell out their
   `custom-color(...)`.
-- **Line icons at 1 px**, per KDE's monochrome icon guidelines (16 and 22 px,
-  lines on the pixel grid): the Lucide stroke is computed per size.
+- **Icons: color for things, lines for commands** (`pkg/icons.go`, names in
+  `pkg/icons.txt`). Apps, file types and large folders are Tela's (square,
+  dark variant); commands (toolbars, menus, buttons), the menu categories and
+  the small place and device icons (sidebars, where Tela draws lines too)
+  are Lucide, redrawn per size with lines on pixel centers (the 22 px size is
+  Lucide's 24 grid minus its empty border: exact) and recolored by KDE like
+  Breeze's. Strokes are 1.5 px, not KDE's 1 px: 1 px looked thin next to
+  Tela and the text, and 1.5 matches the title bar glyphs. Unmapped names
+  fall back to Tela's own line icons, then Breeze Dark.
+- **Tela is linked inside our icon theme, not inherited**: icon lookups take
+  the closest size within a theme before trying the next one, so with Tela
+  inherited, a folder at 64 px would get our 16 px line icon scaled up. Inside
+  one theme, our fixed 16/22/24 folders come first and Tela's scalable ones
+  serve the rest. Lucide comes from npm at build time (pinned, checksummed);
+  Tela from the AUR, which is why lodestar now installs AUR packages before
+  building local ones.
 - **Testing never touches the session**: `dev/test.sh` runs an app in a
   headless KWin with its own D-Bus and a copy of the config. Galleries of
   every control: `dev/gallery/kirigami.sh` (QtQuick, run through test.sh)

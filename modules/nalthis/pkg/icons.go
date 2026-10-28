@@ -1,0 +1,157 @@
+package main
+
+import (
+	_ "embed"
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+)
+
+// The icon theme: Tela's color icons with our line icons for commands and
+// the small (16–24 px) place and device icons, where Tela draws lines too,
+// drawn from Lucide (icons.txt maps the names). Tela is linked inside our
+// theme rather than inherited: lookups pick the closest size within a theme
+// before trying the next, so an inherited Tela would lose its large place
+// icons to our small ones wherever a name is in both.
+
+//go:embed icons.txt
+var iconMap string
+
+// lineSizes are the sizes KDE draws line icons at (menus and sidebars 16,
+// toolbars 22, GTK 24). Lucide is drawn on a 24 grid with 2 px strokes
+// centered on whole coordinates; we put lines on pixel centers instead and
+// draw them 1.5 px, the title bar glyphs' weight (1 px, KDE's rule, looked
+// thin next to Tela's icons and the text).
+var lineSizes = []struct {
+	size     int
+	scale    float64 // from Lucide's 24 grid
+	shift    float64 // translation in pixels, before scaling
+	strokePx float64
+}{
+	{16, 2.0 / 3, 0.5, 1.5}, // whole Lucide coordinates that are multiples of 3 land on pixels
+	{22, 1, -0.5, 1.5},      // the 24 grid minus its empty 1 px border
+	{24, 1, 0.5, 1.5},
+}
+
+// iconContexts are the folders icons.txt's [sections] fill.
+var iconContexts = map[string]string{"actions": "Actions", "places": "Places", "devices": "Devices", "categories": "Categories"}
+
+const lineColorStyle = `<style id="current-color-scheme" type="text/css">.ColorScheme-Text { color:#fcfcfc; }</style>`
+
+var svgBody = regexp.MustCompile(`(?s)<svg[^>]*>(.*)</svg>`)
+
+// lineIcon redraws one Lucide SVG at a size. KDE recolors it through the
+// ColorScheme-Text class, like Breeze's monochrome icons.
+func lineIcon(lucide []byte, size int, scale, shift, strokePx float64) (string, error) {
+	m := svgBody.FindSubmatch(lucide)
+	if m == nil {
+		return "", fmt.Errorf("no <svg> element")
+	}
+	return fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d">
+%s
+<g class="ColorScheme-Text" fill="none" stroke="currentColor" stroke-width="%.4g" stroke-linecap="round" stroke-linejoin="round" transform="translate(%g %g) scale(%.6g)">%s</g>
+</svg>
+`, size, size, size, size, lineColorStyle, strokePx/scale, shift, shift, scale, strings.TrimSpace(string(m[1]))), nil
+}
+
+// writeIconTheme writes the theme to dir: our line icons, a link to Tela
+// (telaDir, which must also exist at the same name next to dir once
+// installed) and an index.theme listing ours first.
+func writeIconTheme(lucideDir, telaDir, dir string) error {
+	tela, err := readINI(filepath.Join(telaDir, "index.theme"))
+	if err != nil {
+		return err
+	}
+	var dirs []string
+	var sections []Group
+	for _, s := range lineSizes {
+		for _, ctx := range []string{"actions", "places", "devices", "categories"} {
+			sub := fmt.Sprintf("line/%d/%s", s.size, ctx)
+			dirs = append(dirs, sub)
+			sections = append(sections, Group{Name: sub, Keys: [][2]string{
+				{"Size", fmt.Sprint(s.size)}, {"Context", iconContexts[ctx]}, {"Type", "Fixed"},
+			}})
+			if err := os.MkdirAll(filepath.Join(dir, sub), 0o755); err != nil {
+				return err
+			}
+		}
+	}
+	ctx := ""
+	for _, line := range strings.Split(iconMap, "\n") {
+		f := strings.Fields(line)
+		if len(f) == 0 || strings.HasPrefix(f[0], "#") {
+			continue
+		}
+		if c, ok := strings.CutPrefix(f[0], "["); ok {
+			ctx = strings.TrimSuffix(c, "]")
+			if iconContexts[ctx] == "" {
+				return fmt.Errorf("icons.txt: unknown section %q", f[0])
+			}
+			continue
+		}
+		if len(f) != 2 || ctx == "" {
+			return fmt.Errorf("icons.txt: bad line %q (or no [section] before it)", line)
+		}
+		src, err := os.ReadFile(filepath.Join(lucideDir, f[1]+".svg"))
+		if err != nil {
+			return err
+		}
+		for _, s := range lineSizes {
+			svg, err := lineIcon(src, s.size, s.scale, s.shift, s.strokePx)
+			if err != nil {
+				return fmt.Errorf("%s: %w", f[1], err)
+			}
+			path := filepath.Join(dir, fmt.Sprintf("line/%d/%s", s.size, ctx), f[0]+".svg")
+			if err := os.WriteFile(path, []byte(svg), 0o644); err != nil {
+				return err
+			}
+		}
+	}
+
+	// Tela's folders, prefixed with the link's name.
+	head := Group{Name: "Icon Theme", Keys: [][2]string{
+		{"Name", "Nalthis"},
+		{"Comment", "Tela's color icons, Lucide line icons for commands"},
+		{"Inherits", "breeze-dark,hicolor"},
+	}}
+	var scaled []string
+	for _, g := range tela {
+		if g.Name != "Icon Theme" {
+			g.Name = "tela/" + g.Name
+			sections = append(sections, g)
+			continue
+		}
+		for _, kv := range g.Keys {
+			switch kv[0] {
+			case "Name", "Comment", "Inherits":
+			case "Directories", "ScaledDirectories":
+				for _, d := range strings.Split(kv[1], ",") {
+					if kv[0] == "Directories" {
+						dirs = append(dirs, "tela/"+d)
+					} else {
+						scaled = append(scaled, "tela/"+d)
+					}
+				}
+			default:
+				head.Keys = append(head.Keys, kv)
+			}
+		}
+	}
+	head.Keys = append(head.Keys, [2]string{"Directories", strings.Join(dirs, ",")})
+	if len(scaled) > 0 {
+		head.Keys = append(head.Keys, [2]string{"ScaledDirectories", strings.Join(scaled, ",")})
+	}
+	link := filepath.Join(dir, "tela")
+	os.Remove(link)
+	if err := os.Symlink(filepath.Join("..", filepath.Base(telaDir)), link); err != nil {
+		return err
+	}
+	f, err := os.Create(filepath.Join(dir, "index.theme"))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return writeINI(f, append([]Group{head}, sections...))
+}

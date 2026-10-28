@@ -2,13 +2,16 @@
 pkgname=nalthis
 pkgver=1
 pkgrel=1
-pkgdesc='Nalthis theme: palette command, System Settings page, window decoration, Plasma style'
+pkgdesc='Nalthis theme: palette command, System Settings page, window decoration, Plasma style, icons'
 arch=(x86_64)
 url='https://github.com/romain-ncls/dotfiles'
-license=(MIT)
+license=(MIT ISC) # ISC: the Lucide icons
 options=(!debug)
-depends=(kcmutils kcoreaddons kcolorscheme kconfig kdecoration kirigami qt6-declarative plasma-workspace systemd)
+depends=(kcmutils kcoreaddons kcolorscheme kconfig kdecoration kirigami qt6-declarative plasma-workspace systemd tela-icon-theme) # tela: AUR, linked into our icon theme
 makedepends=(go gcc qt6-base)
+_lucide=1.56.0
+source=("lucide-static-$_lucide.tgz::https://registry.npmjs.org/lucide-static/-/lucide-static-$_lucide.tgz")
+sha256sums=(176ce6fb71be02910852cc5e243cac2399e85c13465ae1e742cb7a534eacb44a)
 
 build() {
 	cd "$startdir" # local package: the sources sit next to this file
@@ -17,9 +20,11 @@ build() {
 	go build -o "$srcdir/nalthis" .
 	kcm/build.sh "$srcdir/plugins"
 	decoration/build.sh "$srcdir/plugins"
+	"$srcdir/nalthis" icon-theme "$srcdir/package/icons" /usr/share/icons/Tela-dark "$srcdir/icons/nalthis"
 }
 
 package() {
+	install -d "$pkgdir/usr/share/icons"
 	install -Dm755 "$srcdir/nalthis" "$pkgdir/usr/bin/nalthis"
 	"$srcdir/nalthis" plasma-theme "$pkgdir/usr/share/plasma/desktoptheme/nalthis"
 	install -Dm755 "$srcdir/plugins/plasma/kcms/systemsettings/kcm_nalthis.so" \
@@ -27,4 +32,6 @@ package() {
 	install -Dm755 "$srcdir/plugins/org.kde.kdecoration3/org.kde.nalthis.so" \
 		"$pkgdir/usr/lib/qt6/plugins/org.kde.kdecoration3/org.kde.nalthis.so"
 	install -Dm644 "$startdir/kcm/kcm_nalthis.desktop" "$pkgdir/usr/share/applications/kcm_nalthis.desktop"
+	cp -a "$srcdir/icons/nalthis" "$pkgdir/usr/share/icons/"
+	install -Dm644 "$srcdir/package/LICENSE" "$pkgdir/usr/share/licenses/nalthis/lucide-LICENSE"
 }

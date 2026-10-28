@@ -4,7 +4,7 @@
 # the machine or the live session changes.
 #
 #   dev/test.sh <out.png> [--knobs "hue tint depth accent"] [--then "..."]
-#       [--decoration] [--plasma] [--wait seconds] <app> [args...]
+#       [--decoration] [--plasma] [--icons themes-dir] [--wait seconds] <app> [args...]
 #
 # --then applies other knobs while the app runs, with `nalthis apply` (as the
 # sliders do), and takes a second screenshot, <out>-then.png: checks live recolor.
@@ -14,7 +14,7 @@ dev=$(cd "$(dirname "$0")" && pwd)
 module=$(dirname "$dev")
 work=${NALTHIS_DEV:-$XDG_RUNTIME_DIR/nalthis-dev}
 out=$(realpath -m "$1"); shift
-knobs="255 1 0 250" then="" decoration="" plasma="" wait=6
+knobs="255 1 0 250" then="" decoration="" plasma="" icons="" wait=6
 while [[ $1 == --* ]]; do
     case $1 in
         --knobs) knobs=$2; shift ;;
@@ -22,6 +22,7 @@ while [[ $1 == --* ]]; do
         --decoration) decoration=1 ;; # KWin uses our decoration (built by pkg/decoration/build.sh)
         --plasma) plasma=1 ;; # our Plasma style (run plasmashell as the app)
         --wait) wait=$2; shift ;; # seconds before the screenshot
+        --icons) icons=$2; shift ;; # a folder of icon themes holding nalthis (built with nalthis icon-theme)
     esac
     shift
 done
@@ -37,6 +38,10 @@ ln -s /usr/share/union "$work/root/usr/share/union"
 "$work-bin/nalthis" merge "$HOME/.config/kdeglobals" "$work/data/color-schemes/Nalthis.colors" \
     | sed '/^\[KDE\]$/a widgetStyle=Union\nunionStyle=nalthis' > "$work/config/kdeglobals"
 grep -q '^\[KDE\]$' "$work/config/kdeglobals" || printf '[KDE]\nwidgetStyle=Union\nunionStyle=nalthis\n' >> "$work/config/kdeglobals"
+if [[ -n $icons ]]; then
+    ln -s "$(realpath "$icons")" "$work/data/icons"
+    kwriteconfig6 --file "$work/config/kdeglobals" --group Icons --key Theme nalthis
+fi
 if [[ -n $plasma ]]; then
     "$work-bin/nalthis" plasma-theme "$work/data/plasma/desktoptheme/nalthis"
     kwriteconfig6 --file "$work/config/plasmarc" --group Theme --key name nalthis

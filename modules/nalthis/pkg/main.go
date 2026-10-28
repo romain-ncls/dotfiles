@@ -22,6 +22,7 @@ const usage = `usage:
   nalthis colors <name> [hue tint depth accent]   print a .colors file
   nalthis merge <kdeglobals> <scheme.colors>       print kdeglobals with the scheme's color groups
   nalthis plasma-theme <dir>                      write the Plasma style (panel, popups) into dir
+  nalthis icon-theme <lucide> <tela> <dir>        write the icon theme into dir: Lucide icons, linked Tela theme
 `
 
 func main() {
@@ -123,6 +124,11 @@ func run(args []string, out io.Writer) error {
 			return fmt.Errorf("plasma-theme takes a folder\n%s", usage)
 		}
 		return writePlasmaTheme(args[1])
+	case "icon-theme":
+		if len(args) != 4 {
+			return fmt.Errorf("icon-theme takes three folders\n%s", usage)
+		}
+		return writeIconTheme(args[1], args[2], args[3])
 	case "merge":
 		if len(args) != 3 {
 			return fmt.Errorf("merge takes two files\n%s", usage)
