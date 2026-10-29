@@ -8,7 +8,8 @@ import (
 )
 
 // Konsole color schemes from the palette: the terminal's background is the
-// views' surface, so it sits in the window like Dolphin's file view, and the
+// raised surface (headers, toolbars), lighter than the views' and close to
+// One Dark's own (the views' looked too dark for a terminal), and the
 // greys are the palette's. The six colors keep One Dark's hues and chroma
 // (Romain's terminal and editor colors for years) at one lightness, so none
 // is dimmer than another on our background. Blue and Red are the same with
@@ -50,17 +51,19 @@ func toOKLCH(c RGB) (l, ch, h float64) {
 
 // KonsoleScheme is one .colorscheme file.
 func KonsoleScheme(p Palette, k Knobs, suffix string, tintC, tintH float64) []Group {
-	bg := p.Base
+	bg := p.Raised
 	if tintC > 0 {
-		bg = OKLCH(surfaceL[1]+k.Depth+0.06, tintC, tintH)
+		bg = OKLCH(surfaceL[3]+k.Depth, tintC, tintH)
 	}
+	// Black sits a step above the overlay, as the overlay above raised.
+	black := OKLCH(surfaceL[4]+k.Depth+0.042, baseChroma*k.Tint*1.7, k.Hue)
 	color := func(name string, c RGB) Group { return Group{Name: name, Keys: [][2]string{{"Color", c.String()}}} }
 	groups := []Group{
 		color("Background", bg), color("BackgroundFaint", bg), color("BackgroundIntense", bg),
 		color("Foreground", p.Text2), color("ForegroundFaint", p.Text3), color("ForegroundIntense", p.Text),
-		// Black: a raised surface (prompts' segments); bright black is the
+		// Black: a step above the background (prompts' segments); bright black is the
 		// hint grey, readable for comments and autosuggestions.
-		color("Color0", p.Overlay), color("Color0Faint", p.Raised), color("Color0Intense", p.Text3),
+		color("Color0", black), color("Color0Faint", p.Overlay), color("Color0Intense", p.Text3),
 	}
 	for i, c := range oneDark {
 		_, ch, h := toOKLCH(c)
