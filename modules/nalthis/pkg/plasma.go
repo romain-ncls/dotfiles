@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -47,6 +49,9 @@ func writePlasmaTheme(dir string) error {
 		// Adaptive: a panel goes opaque (solid/) while a window is maximized.
 		"plasmarc":                    "[AdaptiveTransparency]\nenabled=true\n",
 		"widgets/plasmoidheading.svg": headingSVG(popup.radius),
+		"widgets/tasks.svg":           tasksSVG(),
+		"widgets/viewitem.svg":        viewItemSVG(),
+		"widgets/pager.svg":           pagerSVG(),
 	}
 	for _, v := range variants {
 		for name, f := range map[string]frame{
@@ -335,4 +340,197 @@ func headingSVG(r float64) string {
 		d.add(`<rect id="hint-%s-margin" x="0" y="0" width="6" height="6" fill="#f0f"/>`, side)
 	}
 	return d.String(2*(full+8), full, "")
+}
+
+// --- Highlights: task buttons, list items, pager desktops ---
+//
+// Calm, as the windows' hover and selection: a wash of the text color on
+// hover, an accent tint when selected, no outlines. The taskbar marks
+// running apps with a bar on the panel's edge, long and accent for the
+// active one, short and dim for the others.
+
+// look is one state of a highlight frame.
+type look struct {
+	bg     string  // ColorScheme class of the fill ("" = none)
+	bgOp   float64 // its opacity
+	ring   float64 // opacity of a 1 px ring in the fill's class (square corners only)
+	bar    string  // ColorScheme class of the edge bar ("" = none)
+	barOp  float64
+	barCut float64 // the corner slices' length along the bar: the bar is the frame minus twice this
+}
+
+const (
+	hoverWash = 0.07 // the mockup's hover: text at 7%
+	selTint   = 0.22 // its selection: accent at 22%
+	barGap    = 2    // between the bar and the panel's edge
+	barSize   = 3
+)
+
+// highlight draws one frame at (ox, 0) under prefix: 3×3 slices, corners of
+// radius r; edge is where the bar goes (bottom, top, left, right). Each
+// slice keeps a transparent rectangle so its box holds when it draws nothing.
+func highlight(d *svgDoc, ox float64, prefix string, r float64, l look, edge string) (w, h float64) {
+	cw, ch := r, r // corner slice size
+	if l.bar != "" {
+		if edge == "top" || edge == "bottom" {
+			cw = l.barCut
+		} else {
+			ch = l.barCut
+		}
+	}
+	w, h = 2*cw+tile, 2*ch+tile
+	clear := `fill="#000" fill-opacity="0"`
+	cols := []struct {
+		name string
+		x, w float64
+	}{{"left", 0, cw}, {"", cw, tile}, {"right", cw + tile, cw}}
+	rows := []struct {
+		name string
+		y, h float64
+	}{{"top", 0, ch}, {"", ch, tile}, {"bottom", ch + tile, ch}}
+	for _, row := range rows {
+		for _, col := range cols {
+			name := row.name + col.name
+			if name == "" {
+				name = "center"
+			}
+			x, y := ox+col.x, row.y
+			d.add(`<g id="%s%s"><rect %s x="%g" y="%g" width="%g" height="%g"/>`, prefix, name, clear, x, y, col.w, row.h)
+			if l.bg != "" {
+				shape := fmt.Sprintf(`<rect %s x="%g" y="%g" width="%g" height="%g"/>`, fill(l.bg, l.bgOp), x, y, col.w, row.h)
+				if row.name != "" && col.name != "" {
+					c := corner{x, y, 1, 1}
+					if col.name == "right" {
+						c.cx, c.dx = x+col.w, -1
+					}
+					if row.name == "bottom" {
+						c.cy, c.dy = y+row.h, -1
+					}
+					shape = fmt.Sprintf(`<path %s d="M%s A%g,%g 0 0 %d %s L%s L%s L%s Z"/>`, fill(l.bg, l.bgOp),
+						c.p(0, r), r, r, c.sweep(false), c.p(r, 0), c.p(col.w, 0), c.p(col.w, row.h), c.p(0, row.h))
+					if l.ring > 0 {
+						shape += fmt.Sprintf(`<path %s d="%s"/>`, fill(l.bg, l.ring), c.ring(r))
+					}
+				} else if l.ring > 0 && name != "center" {
+					rx, ry, rw, rh := x, y, col.w, 1.0
+					switch name {
+					case "bottom":
+						ry = y + row.h - 1
+					case "left":
+						rw, rh = 1, row.h
+					case "right":
+						rx, rw, rh = x+col.w-1, 1, row.h
+					}
+					shape += fmt.Sprintf(`<rect %s x="%g" y="%g" width="%g" height="%g"/>`, fill(l.bg, l.ring), rx, ry, rw, rh)
+				}
+				d.add("%s", shape)
+			}
+			if l.bar != "" && name == edge {
+				bx, by, bw, bh := x, y, col.w, row.h
+				switch edge {
+				case "bottom":
+					by, bh = y+row.h-barGap-barSize, barSize
+				case "top":
+					by, bh = y+barGap, barSize
+				case "left":
+					bx, bw = x+barGap, barSize
+				case "right":
+					bx, bw = x+col.w-barGap-barSize, barSize
+				}
+				d.add(`<rect %s x="%g" y="%g" width="%g" height="%g"/>`, fill(l.bar, l.barOp), bx, by, bw, bh)
+			}
+			d.add(`</g>`)
+		}
+	}
+	return w, h
+}
+
+// hints sets a frame's content margins (the hint rectangle's size is the value).
+func hints(d *svgDoc, prefix string, m float64) {
+	for _, side := range []string{"top", "bottom", "left", "right"} {
+		d.add(`<rect id="%shint-%s-margin" x="0" y="0" width="%g" height="%g" fill="#f0f"/>`, prefix, side, m, m)
+	}
+}
+
+// tasksSVG: the task manager asks for "<state>" and, under the pointer,
+// "<state>-hover" then "hover", each first with the panel's side in front
+// (north-, west-, east-; south- falls back to the plain name). Launchers
+// have no state: they get no frame, and "hover" under the pointer.
+func tasksSVG() string {
+	const (
+		long  = 12 // the mockup's bars on a 38 px task: 14 px active,
+		short = 17 // 4 px for the others
+	)
+	text, accent, warn := "ColorScheme-Text", "ColorScheme-Highlight", "ColorScheme-NeutralText"
+	states := map[string]look{
+		"normal":          {bar: text, barOp: 0.40, barCut: short},
+		"normal-hover":    {bg: text, bgOp: hoverWash, bar: text, barOp: 0.40, barCut: short},
+		"minimized":       {bar: text, barOp: 0.22, barCut: short},
+		"minimized-hover": {bg: text, bgOp: hoverWash, bar: text, barOp: 0.22, barCut: short},
+		"focus":           {bg: text, bgOp: hoverWash, bar: accent, barOp: 1, barCut: long},
+		"focus-hover":     {bg: text, bgOp: 0.11, bar: accent, barOp: 1, barCut: long},
+		"attention":       {bg: warn, bgOp: 0.16, bar: warn, barOp: 1, barCut: long},
+		"attention-hover": {bg: warn, bgOp: 0.22, bar: warn, barOp: 1, barCut: long},
+		"hover":           {bg: text, bgOp: hoverWash},
+		"progress":        {bg: accent, bgOp: selTint}, // clipped to the progress by the task manager
+	}
+	var d svgDoc
+	ox, height := 0.0, 0.0
+	for _, side := range []struct{ prefix, edge string }{{"", "bottom"}, {"north-", "top"}, {"west-", "left"}, {"east-", "right"}} {
+		for _, name := range slices.Sorted(maps.Keys(states)) {
+			prefix := side.prefix + name + "-"
+			w, h := highlight(&d, ox, prefix, 6, states[name], side.edge)
+			hints(&d, prefix, 4)
+			ox += w + 4
+			height = max(height, h)
+		}
+	}
+	// The badge on a group of windows: a dot with a plus.
+	for _, side := range []string{"top", "bottom", "left", "right"} {
+		d.add(`<g id="group-expander-%s"><circle %s cx="%g" cy="6" r="6"/>`, side, fill(accent, 1), ox+6)
+		d.add(`<path class="ColorScheme-HighlightedText" fill="none" stroke="currentColor" stroke-width="1.5" d="M%g,6 h6 M%g,3 v6"/></g>`, ox+3, ox+6)
+		ox += 16
+	}
+	return d.String(ox, height, "")
+}
+
+// viewItemSVG: list highlights in Plasma popups (Kickoff, the tray…).
+func viewItemSVG() string {
+	text, accent := "ColorScheme-Text", "ColorScheme-Highlight"
+	var d svgDoc
+	ox := 0.0
+	for _, s := range []struct {
+		prefix string
+		l      look
+	}{
+		{"normal-", look{}},
+		{"hover-", look{bg: text, bgOp: hoverWash}},
+		{"selected-", look{bg: accent, bgOp: selTint}},
+		{"selected+hover-", look{bg: accent, bgOp: 0.30}},
+	} {
+		w, _ := highlight(&d, ox, s.prefix, 6, s.l, "")
+		ox += w + 4
+	}
+	d.add(`<rect id="hint-tile-center" x="0" y="0" width="5" height="5" fill="#f60"/>`)
+	return d.String(ox, 2*6+tile, "")
+}
+
+// pagerSVG: the virtual desktops in the pager, small rounded tiles.
+func pagerSVG() string {
+	text, accent := "ColorScheme-Text", "ColorScheme-Highlight"
+	var d svgDoc
+	ox := 0.0
+	for _, s := range []struct {
+		prefix string
+		l      look
+	}{
+		{"normal-", look{bg: text, bgOp: hoverWash}},
+		{"hover-", look{bg: text, bgOp: 0.11}},
+		{"active-", look{bg: accent, bgOp: selTint, ring: 0.6}},
+	} {
+		w, _ := highlight(&d, ox, s.prefix, 3, s.l, "")
+		ox += w + 4
+	}
+	d.add(`<rect id="hint-tile-center" x="0" y="0" width="5" height="5" fill="#f60"/>`)
+	return d.String(ox, 2*3+tile, "")
 }
