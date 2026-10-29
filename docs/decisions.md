@@ -285,16 +285,20 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
   (hue 250), radii 12 window / 10 popup / 6 controls, glass only on Plasma's
   panel and popups, Tela (square) color icons with our own line icons drawn
   from Lucide, Breeze cursor.
-- **Application style = Darkly, tuned** (Oct 2026), not our own: a C++ fork
-  of Breeze (by way of Lightly), maintained upstream, that draws every widget
-  itself; Kirigami apps get it through KDE's desktop QtQuick style. We set
-  its options (`darklyrc:` in module.yaml) toward the mockup and would patch
-  it only where no option reaches. It replaced a Union (CSS) style over
-  Breeze: Union 6.8 reaches only what Breeze's CSS exposes, so Breeze kept
-  showing through (accent borders, Dolphin's frames, the places inset), and
-  Darkly untuned already looked closer to the mockup. A full fork of our own
-  was rejected: 18,000 lines to merge with Breeze and Darkly forever. Union is
-  KDE's direction: worth another look once it matures.
+- **Application style = Darkly, the rest ours** (Oct 2026): Darkly, a C++
+  fork of Breeze (by way of Lightly) maintained upstream, draws every app
+  widget; Kirigami apps get it through KDE's desktop QtQuick style. Ours:
+  the colors (Darkly reads every color from the scheme, so the palette
+  sliders still recolor it live), the title bar (Darkly's is too close to
+  Breeze's), the Plasma style (taskbar, popups), icons, splash, GTK and
+  Konsole. Darkly stays at its defaults; its options (`darklyrc:` in
+  module.yaml) only where something clashes, patches only where no option
+  reaches. It replaced a Union (CSS) style over Breeze: Union 6.8 reaches
+  only what Breeze's CSS exposes, so Breeze kept showing through (accent
+  borders, Dolphin's frames, the places inset), and Darkly untuned already
+  looked closer to the mockup. A full fork of our own was rejected: 18,000
+  lines to merge with Breeze and Darkly forever. Union is KDE's direction:
+  worth another look once it matures.
 - **Colors live only in the color scheme.** The style reads them from it, so a new
   scheme recolors running apps (tested): the hue / tint / depth / accent knobs
   can be live without touching the style. `pkg/` (Go, `nalthis colors`) is the

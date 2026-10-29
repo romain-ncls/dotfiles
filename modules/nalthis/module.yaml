@@ -8,7 +8,8 @@
 #            icons.txt), the global theme with our splash (lookandfeel/),
 #            and, written by `nalthis apply` with the palette, the Konsole
 #            schemes (konsole.go) and the GTK layer (gtk.go)
-#   (the application style is Darkly, configured below: darklyrc)
+#   (the application style is Darkly, at its defaults; settings of its own
+#   would go in a darklyrc: block under kde:, which dev/test.sh reads too)
 #   dev/     headless test rig (dev/test.sh) and control galleries
 # The palette's knobs are in palette.json (defaults when it's missing), written
 # by the page and by `nalthis tune`.
@@ -40,13 +41,6 @@ kde:
     IconsMode:
       IconSize: 48 # (64)
       PreviewSize: 48
-  # Darkly toward the mockup; its other settings stay its defaults.
-  darklyrc:
-    Common:
-      CornerRadius: 6 # the controls' radius (Darkly: 9)
-    Style:
-      ViewDrawFocusIndicator: false # no underline on the current item
-      DisableDolphinUrlNavigatorBackground: false # the location bar is a field
 
 hooks:
   - run: apply-palette # the color scheme from palette.json
