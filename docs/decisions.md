@@ -285,13 +285,17 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
   (hue 250), radii 12 window / 10 popup / 6 controls, glass only on Plasma's
   panel and popups, Tela (square) color icons with our own line icons drawn
   from Lucide, Breeze cursor.
-- **Application style = Breeze (Union) plus overrides**, not a fork: the Union
-  style imports Breeze and changes variables and a few rules. A fork would be
-  3,000 lines to merge every Plasma release.
-- **Installed in `/usr/local/share/union/styles/nalthis`** so it can import
-  Breeze by a relative path, like KDE's own Breeze Mobile. An absolute
-  `@import` breaks Breeze's own relative imports, and Dolphin then segfaults.
-- **Colors live only in the color scheme.** Union reads them from it, so a new
+- **Application style = Darkly, tuned** (Oct 2026), not our own: a C++ fork
+  of Breeze (by way of Lightly), maintained upstream, that draws every widget
+  itself; Kirigami apps get it through KDE's desktop QtQuick style. We set
+  its options (`darklyrc:` in module.yaml) toward the mockup and would patch
+  it only where no option reaches. It replaced a Union (CSS) style over
+  Breeze: Union 6.8 reaches only what Breeze's CSS exposes, so Breeze kept
+  showing through (accent borders, Dolphin's frames, the places inset), and
+  Darkly untuned already looked closer to the mockup. A full fork of our own
+  was rejected: 18,000 lines to merge with Breeze and Darkly forever. Union is
+  KDE's direction: worth another look once it matures.
+- **Colors live only in the color scheme.** The style reads them from it, so a new
   scheme recolors running apps (tested): the hue / tint / depth / accent knobs
   can be live without touching the style. `pkg/` (Go, `nalthis colors`) is the
   generator.
@@ -346,15 +350,6 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
   says. The scheme's selection color is the deep accent too, since KDE uses
   it as "the accent" (Breeze folders, Plasma); the style draws selected list
   rows as a dark accent tint under normal text instead.
-- **No filled primary button**: Union's QtWidgets backend reports every
-  dialog button as highlighted (Qt makes them all auto-default), so System
-  Settings' Help / Defaults / Reset would fill like Apply.
-- **Union 6.8 bugs we live with**: QtWidgets menus misalign entries without
-  an icon (they start at the left edge), and QtWidgets progress bars draw
-  their percentage over the bar.
-- **CSS variables**: a color variable defined from another variable in the
-  same `:root` doesn't resolve for text, so text colors spell out their
-  `custom-color(...)`.
 - **Icons: color for things, lines for commands** (`pkg/icons.go`, names in
   `pkg/icons.txt`). Apps, file types and large folders are Tela's (square,
   dark variant); commands (toolbars, menus, buttons), the menu categories and
@@ -391,7 +386,7 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
   what is active (the taskbar's app, the current desktop, the open tab).
   So the Plasma style ships every widget SVG Plasma 6.8 still uses
   (`pkg/plasma_widgets.go`): a missing file falls back to Breeze whole.
-  Applet settings windows are Union, not the Plasma style.
+  Applet settings windows are the application style, not the Plasma style.
 - **Icon sizes from the icon theme**: KDE 6 ignores kdeglobals'
   `[MainToolbarIcons]`; toolbars take `MainToolbarDefault` from the theme's
   `index.theme`, so ours says 16. Tray icons are an 18 px drawing in their
@@ -401,9 +396,9 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
   drawing, not a scalable Tela icon of the same name.
 - **Dolphin's places spacing stays KDE's**: kio's places view draws its
   icon 4 px into the row and the label 4 px after it, hard-coded; a style
-  only paints the row (no theme, Breeze's forks included, changes it).
-  We span the highlight across the row so the icon gets those 4 px. A
-  patched kio was rejected: a core framework rebuilt on every update.
+  only paints the row (no theme, Breeze's forks included, changes it);
+  Darkly at least insets the highlight from the pane. A patched kio was
+  rejected: a core framework rebuilt on every update.
 - **Testing never touches the session**: `dev/test.sh` runs an app in a
   headless KWin with its own D-Bus and a copy of the config. Galleries of
   every control: `dev/gallery/kirigami.sh` (QtQuick, run through test.sh)

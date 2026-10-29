@@ -61,7 +61,7 @@ const gtk4CSS = `/* Nalthis: written by nalthis apply from the palette (modules/
 @define-color error_color {{.Negative}};
 `
 
-// The GTK 3 file: shapes over Breeze-GTK, as the Union style draws them.
+// The GTK 3 file: shapes over Breeze-GTK, as the application style draws them.
 const gtk3CSS = `/* Nalthis: written by nalthis apply from the palette (modules/nalthis). */
 button, entry, spinbutton, combobox button, .linked > button,
 textview, frame > border, scrolledwindow.frame, .view.frame {
@@ -142,7 +142,7 @@ func writeGTK(configDir string, k Knobs) error {
 		"Accent": hex(p.Accent), "AccentText": hex(p.AccentText),
 		"Base": hex(p.Base), "Pane": hex(p.Pane), "Raised": hex(p.Raised), "Overlay": hex(p.Overlay),
 		"Text": hex(p.Text),
-		// As the Union style: the view's color, 35% of the way to the accent.
+		// The view's color, 35% of the way to the accent.
 		"SelectionTint": hex(mix(p.Base, p.Accent, 0.35)),
 		"Negative":      hex(p.Negative), "Neutral": hex(p.Neutral), "Positive": hex(p.Positive),
 		// Fills carry white text, so they're deeper than the text colors.

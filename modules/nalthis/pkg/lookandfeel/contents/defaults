@@ -1,6 +1,5 @@
 [kdeglobals][KDE]
-widgetStyle=Union
-unionStyle=nalthis
+widgetStyle=Darkly
 
 [kdeglobals][General]
 ColorScheme=Nalthis
