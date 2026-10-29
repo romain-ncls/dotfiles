@@ -25,12 +25,14 @@ var iconMap string
 // centered on whole coordinates; we put lines on pixel centers instead and
 // draw them 1.5 px, the title bar glyphs' weight (1 px, KDE's rule, looked
 // thin next to Tela's icons and the text).
-// Plasma also asks for 32 px and more (tray popups, the panel): there the
-// 22 px drawing sits centered, as Tela pads its own status icons, so a
-// panel slot doesn't fill with a giant glyph. Status icons (the tray) are
-// the mockup's 18 px drawing at every size from 22 up, centered. Places
-// and devices stop at 24: larger, they are Tela's color icons (Dolphin's
-// folders).
+// Plasma also asks for 32 px and more (tray popups, the panel). At 22 and
+// 24 every line icon is the mockup's 18 px drawing, centered: at full size
+// they looked heavy next to the text (popup headers, Kickoff). At 32 (the
+// tray's grid of hidden items, list rows) the 22 px drawing sits centered,
+// as Tela pads its own icons, so a slot doesn't fill with a giant glyph;
+// [panel] names, glyphs sitting in the panel itself, stay at 18 there too.
+// Places and devices stop at 24: larger, they are Tela's color icons
+// (Dolphin's folders).
 type lineSize struct {
 	dir      string  // folder under line/
 	size     int     // canvas
@@ -42,20 +44,18 @@ type lineSize struct {
 }
 
 var lineSizes = []lineSize{
-	{"16", 16, 2.0 / 3, 0.5, 1.5, nil, 12, 18},                                               // whole Lucide coordinates that are multiples of 3 land on pixels
-	{"22", 22, 1, -0.5, 1.5, []string{"actions", "places", "devices", "categories"}, 19, 23}, // the 24 grid minus its empty 1 px border
-	{"22", 22, 0.75, 2, 1.5, []string{"status"}, 19, 23},                                     // the tray: the mockup's 18 px, centered
-	{"24", 24, 1, 0.5, 1.5, []string{"actions", "places", "devices", "categories"}, 24, 27},
-	{"24", 24, 0.75, 3, 1.5, []string{"status"}, 24, 27},
-	{"32", 32, 1, 4.5, 1.5, []string{"actions", "categories"}, 28, 40}, // the 22 drawing, centered
-	{"32", 32, 0.75, 7, 1.5, []string{"status"}, 28, 40},               // the tray's 18 px, centered
-	{"scalable", 32, 0.75, 7, 1.5, []string{"status"}, 41, 512},
+	{"16", 16, 2.0 / 3, 0.5, 1.5, nil, 12, 18}, // whole Lucide coordinates that are multiples of 3 land on pixels
+	{"22", 22, 0.75, 2, 1.5, nil, 19, 23},      // the mockup's 18 px, centered
+	{"24", 24, 0.75, 3, 1.5, nil, 24, 27},
+	{"32", 32, 1, 4.5, 1.5, []string{"actions", "categories", "status"}, 28, 40}, // the 24 grid minus its empty 1 px border, centered
+	{"32", 32, 0.75, 7, 1.5, []string{"panel"}, 28, 40},
+	{"scalable", 32, 0.75, 7, 1.5, []string{"status", "panel"}, 41, 512},
 }
 
 func (s lineSize) has(ctx string) bool { return s.contexts == nil || slices.Contains(s.contexts, ctx) }
 
 // iconContexts are the folders icons.txt's [sections] fill.
-var iconContexts = map[string]string{"actions": "Actions", "places": "Places", "devices": "Devices", "categories": "Categories", "status": "Status"}
+var iconContexts = map[string]string{"actions": "Actions", "places": "Places", "devices": "Devices", "categories": "Categories", "status": "Status", "panel": "Status"}
 
 const lineColorStyle = `<style id="current-color-scheme" type="text/css">.ColorScheme-Text { color:#fcfcfc; }</style>`
 
@@ -86,7 +86,7 @@ func writeIconTheme(lucideDir, telaDir, dir string) error {
 	var dirs []string
 	var sections []Group
 	for _, s := range lineSizes {
-		for _, ctx := range []string{"actions", "places", "devices", "categories", "status"} {
+		for _, ctx := range []string{"actions", "places", "devices", "categories", "status", "panel"} {
 			if !s.has(ctx) {
 				continue
 			}

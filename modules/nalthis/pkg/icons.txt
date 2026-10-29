@@ -1,5 +1,5 @@
 # KDE (freedesktop) icon name → Lucide icon, for `nalthis icon-theme`, by
-# folder ([actions], [places], [devices], [categories]).
+# folder ([actions], [places], [devices], [categories], [status], [panel]).
 # Commands (toolbars, menus, buttons), and places and devices at small sizes
 # (sidebars), where Tela draws lines too. Apps, file types and large places
 # stay Tela's color icons. Names not here fall back to Tela's own line
@@ -389,7 +389,6 @@ plasmavault_error     vault
 preferences-desktop-display-randr monitor
 video-display         monitor
 printer               printer
-user-desktop-symbolic monitor
 weather-clear         sun
 weather-clear-night   moon
 weather-few-clouds    cloud-sun
@@ -406,3 +405,8 @@ weather-none-available cloud-off
 input-keyboard        keyboard
 camera-on             camera
 camera-off            camera-off
+
+[panel]
+# Glyphs in the panel itself (show desktop), which asks for 32: the tray's
+# 18 px at every size.
+user-desktop-symbolic monitor
