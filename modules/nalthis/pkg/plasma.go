@@ -47,16 +47,32 @@ func writePlasmaTheme(dir string) error {
 	files := map[string]string{
 		"metadata.json": plasmaMetadata,
 		// Adaptive: a panel goes opaque (solid/) while a window is maximized.
-		"plasmarc":                    "[AdaptiveTransparency]\nenabled=true\n",
-		"widgets/plasmoidheading.svg": headingSVG(popup.radius),
-		"widgets/tasks.svg":           tasksSVG(),
-		"widgets/viewitem.svg":        viewItemSVG(),
-		"widgets/pager.svg":           pagerSVG(),
-		"widgets/tabbar.svg":          tabbarSVG(),
+		"plasmarc":                         "[AdaptiveTransparency]\nenabled=true\n",
+		"widgets/plasmoidheading.svg":      headingSVG(popup.radius),
+		"widgets/tasks.svg":                tasksSVG(),
+		"widgets/viewitem.svg":             viewItemSVG(),
+		"widgets/pager.svg":                pagerSVG(),
+		"widgets/tabbar.svg":               tabbarSVG(),
+		"widgets/button.svg":               buttonSVG(),
+		"widgets/lineedit.svg":             lineeditSVG(),
+		"widgets/listitem.svg":             listitemSVG(),
+		"widgets/menubaritem.svg":          menubaritemSVG(),
+		"widgets/frame.svg":                plainFrameSVG(),
+		"widgets/toolbar.svg":              toolbarSVG(),
+		"widgets/line.svg":                 lineSVG(),
+		"widgets/scrollbar.svg":            scrollbarSVG(),
+		"widgets/slider.svg":               sliderSVG(),
+		"widgets/switch.svg":               switchSVG(),
+		"widgets/checkmarks.svg":           checkmarksSVG(),
+		"widgets/radiobutton.svg":          radiobuttonSVG(),
+		"widgets/arrows.svg":               arrowsSVG(),
+		"widgets/bar_meter_horizontal.svg": barMeterSVG(),
+		"widgets/busywidget.svg":           busywidgetSVG(),
 	}
 	for _, v := range variants {
 		for name, f := range map[string]frame{
 			"dialogs/background.svg":       popup,
+			"widgets/background.svg":       popup, // PlasmaComponents popups, desktop widgets
 			"widgets/tooltip.svg":          tooltip,
 			"widgets/panel-background.svg": panel,
 		} {
@@ -352,12 +368,13 @@ func headingSVG(r float64) string {
 
 // look is one state of a highlight frame.
 type look struct {
-	bg     string  // ColorScheme class of the fill ("" = none)
-	bgOp   float64 // its opacity
-	ring   float64 // opacity of a 1 px ring in the fill's class (square corners only)
-	bar    string  // ColorScheme class of the edge bar ("" = none)
-	barOp  float64
-	barCut float64 // the corner slices' length along the bar: the bar is the frame minus twice this
+	bg        string  // ColorScheme class of the fill ("" = none)
+	bgOp      float64 // its opacity
+	ring      float64 // opacity of a 1 px ring (square corners only)
+	ringClass string  // its ColorScheme class ("" = the fill's)
+	bar       string  // ColorScheme class of the edge bar ("" = none)
+	barOp     float64
+	barCut    float64 // the corner slices' length along the bar: the bar is the frame minus twice this
 }
 
 const (
@@ -397,22 +414,31 @@ func highlight(d *svgDoc, ox float64, prefix string, r float64, l look, edge str
 			}
 			x, y := ox+col.x, row.y
 			d.add(`<g id="%s%s"><rect %s x="%g" y="%g" width="%g" height="%g"/>`, prefix, name, clear, x, y, col.w, row.h)
+			corners := row.name != "" && col.name != ""
+			c := corner{x, y, 1, 1}
+			if col.name == "right" {
+				c.cx, c.dx = x+col.w, -1
+			}
+			if row.name == "bottom" {
+				c.cy, c.dy = y+row.h, -1
+			}
 			if l.bg != "" {
-				shape := fmt.Sprintf(`<rect %s x="%g" y="%g" width="%g" height="%g"/>`, fill(l.bg, l.bgOp), x, y, col.w, row.h)
-				if row.name != "" && col.name != "" {
-					c := corner{x, y, 1, 1}
-					if col.name == "right" {
-						c.cx, c.dx = x+col.w, -1
-					}
-					if row.name == "bottom" {
-						c.cy, c.dy = y+row.h, -1
-					}
-					shape = fmt.Sprintf(`<path %s d="M%s A%g,%g 0 0 %d %s L%s L%s L%s Z"/>`, fill(l.bg, l.bgOp),
+				if corners {
+					d.add(`<path %s d="M%s A%g,%g 0 0 %d %s L%s L%s L%s Z"/>`, fill(l.bg, l.bgOp),
 						c.p(0, r), r, r, c.sweep(false), c.p(r, 0), c.p(col.w, 0), c.p(col.w, row.h), c.p(0, row.h))
-					if l.ring > 0 {
-						shape += fmt.Sprintf(`<path %s d="%s"/>`, fill(l.bg, l.ring), c.ring(r))
-					}
-				} else if l.ring > 0 && name != "center" {
+				} else {
+					d.add(`<rect %s x="%g" y="%g" width="%g" height="%g"/>`, fill(l.bg, l.bgOp), x, y, col.w, row.h)
+				}
+			}
+			if l.ring > 0 {
+				class := l.ringClass
+				if class == "" {
+					class = l.bg
+				}
+				switch {
+				case corners:
+					d.add(`<path %s d="%s"/>`, fill(class, l.ring), c.ring(r))
+				case name != "center":
 					rx, ry, rw, rh := x, y, col.w, 1.0
 					switch name {
 					case "bottom":
@@ -422,9 +448,8 @@ func highlight(d *svgDoc, ox float64, prefix string, r float64, l look, edge str
 					case "right":
 						rx, rw, rh = x+col.w-1, 1, row.h
 					}
-					shape += fmt.Sprintf(`<rect %s x="%g" y="%g" width="%g" height="%g"/>`, fill(l.bg, l.ring), rx, ry, rw, rh)
+					d.add(`<rect %s x="%g" y="%g" width="%g" height="%g"/>`, fill(class, l.ring), rx, ry, rw, rh)
 				}
-				d.add("%s", shape)
 			}
 			if l.bar != "" && name == edge {
 				bx, by, bw, bh := x, y, col.w, row.h
@@ -516,26 +541,6 @@ func viewItemSVG() string {
 	return d.String(ox, 2*6+tile, "")
 }
 
-// pagerSVG: the virtual desktops in the pager, small rounded tiles.
-func pagerSVG() string {
-	text, accent := "ColorScheme-Text", "ColorScheme-Highlight"
-	var d svgDoc
-	ox := 0.0
-	for _, s := range []struct {
-		prefix string
-		l      look
-	}{
-		{"normal-", look{bg: text, bgOp: hoverWash}},
-		{"hover-", look{bg: text, bgOp: 0.11}},
-		{"active-", look{bg: accent, bgOp: selTint, ring: 0.6}},
-	} {
-		w, _ := highlight(&d, ox, s.prefix, 3, s.l, "")
-		ox += w + 4
-	}
-	d.add(`<rect id="hint-tile-center" x="0" y="0" width="5" height="5" fill="#f60"/>`)
-	return d.String(ox, 2*3+tile, "")
-}
-
 // tabbarSVG: the current tab (Kickoff's footer, popups) and the open
 // widget in the panel. Breeze's line on the same edge, in the accent, over
 // the hover wash; south tabs carry it on top, as Breeze.
@@ -556,6 +561,31 @@ func tabbarSVG() string {
 			}
 			d.add(`<rect id="%shint-%s-margin" x="0" y="0" width="%g" height="%g" fill="#f0f"/>`, prefix, side, m, m)
 		}
+		ox += w + 4
+		height = max(height, h)
+	}
+	d.add(`<rect id="hint-tile-center" x="0" y="0" width="5" height="5" fill="#f60"/>`)
+	return d.String(ox, height, "")
+}
+
+// pagerSVG: the virtual desktops, as the taskbar's buttons: a faint cell,
+// the hover wash, and the current desktop marked by the accent bar under
+// it. Plasma draws the number itself, in the text color, inset by the
+// hover frame's margins: 1 px, or the number shrinks.
+func pagerSVG() string {
+	text, accent := "ColorScheme-Text", "ColorScheme-Highlight"
+	var d svgDoc
+	ox, height := 0.0, 0.0
+	for _, s := range []struct {
+		prefix string
+		l      look
+	}{
+		{"normal-", look{bg: text, bgOp: 0.04}},
+		{"hover-", look{bg: text, bgOp: hoverWash}},
+		{"active-", look{bg: text, bgOp: pressWash, bar: accent, barOp: 1, barCut: 8}},
+	} {
+		w, h := highlight(&d, ox, s.prefix, 5, s.l, "bottom") // 5: room for the bar
+		hints(&d, s.prefix, 1)
 		ox += w + 4
 		height = max(height, h)
 	}

@@ -385,6 +385,22 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
   and ssh. The scheme is the host variable `konsole_colors`, so a host
   without the theme keeps DarkOneNuanced. VS Code stays on One Dark Pro: a
   theme of years, not to be replaced.
+- **One look for every surface, Plasma included** (Oct 2026): hover is a
+  wash of the text color, pressed a stronger one, selected the accent tint;
+  the accent line only marks keyboard focus, a focused text field, and
+  what is active (the taskbar's app, the current desktop, the open tab).
+  So the Plasma style ships every widget SVG Plasma 6.8 still uses
+  (`pkg/plasma_widgets.go`): a missing file falls back to Breeze whole.
+  Applet settings windows are Union, not the Plasma style.
+- **Icon sizes from the icon theme**: KDE 6 ignores kdeglobals'
+  `[MainToolbarIcons]`; toolbars take `MainToolbarDefault` from the theme's
+  `index.theme`, so ours says 16. Tray icons are an 18 px drawing in their
+  22 px slot (and padded at 32 and up), the mockup's weight.
+- **Dolphin's places spacing stays KDE's**: kio's places view draws its
+  icon 4 px into the row and the label 4 px after it, hard-coded; a style
+  only paints the row (no theme, Breeze's forks included, changes it).
+  We span the highlight across the row so the icon gets those 4 px. A
+  patched kio was rejected: a core framework rebuilt on every update.
 - **Testing never touches the session**: `dev/test.sh` runs an app in a
   headless KWin with its own D-Bus and a copy of the config. Galleries of
   every control: `dev/gallery/kirigami.sh` (QtQuick, run through test.sh)

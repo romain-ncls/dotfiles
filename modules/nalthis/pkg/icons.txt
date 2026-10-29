@@ -295,6 +295,11 @@ network-wireless-signal-good wifi
 network-wireless-signal-ok wifi-high
 network-wireless-signal-weak wifi-low
 network-wireless-signal-none wifi-zero
+network-wireless-signal-excellent-locked wifi
+network-wireless-signal-good-locked wifi
+network-wireless-signal-ok-locked wifi-high
+network-wireless-signal-weak-locked wifi-low
+network-wireless-signal-none-locked wifi-zero
 network-wireless-connected-100 wifi
 network-wireless-connected-75 wifi
 network-wireless-connected-50 wifi-high

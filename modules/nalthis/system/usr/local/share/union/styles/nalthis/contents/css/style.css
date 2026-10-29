@@ -262,8 +262,116 @@ toolbutton {
     icon-size: var(--icon-size-small);
 }
 
-/* Plain lists (Dolphin's places): the mockup's 28 px rows, 30 with the
-   inset, not 36. */
+
+/* --- Every other Breeze accent border on hover or press. The rule
+   throughout: hover = a wash (or a brighter frame on framed controls),
+   pressed = a stronger wash, selected = the accent tint; the accent line
+   is kept for keyboard focus and for a text field being typed in. --- */
+button,
+combobox,
+roundbutton,
+delaybutton,
+toolbutton.raised {
+    &:pressed {
+        border-color: modify-color(var(--window-text-color) set-alpha 0.28);
+        background-color: mix(var(--button-active-background-color), var(--window-text-color), 0.08);
+    }
+}
+
+combobox.editable,
+combobox.flat.editable {
+    &:hovered,
+    &:pressed {
+        border-color: modify-color(var(--window-text-color) set-alpha 0.28);
+        & > indicator {
+            icon-color: var(--button-active-text-color);
+        }
+    }
+}
+
+/* Drop-down lists: items as menus' rows, without the accent fill. */
+popup.combobox {
+    border-radius: var(--popup-radius);
+    padding: 4px;
+    itemviewitem,
+    itemdelegate {
+        border-radius: var(--corner-radius);
+        &:hovered,
+        &:highlighted {
+            background-color: modify-color(var(--window-text-color) set-alpha 0.07);
+            border: none;
+            color: var(--window-text-color);
+        }
+    }
+}
+
+textfield,
+textarea,
+spinbox,
+searchfield {
+    &:hovered {
+        border: 1px solid modify-color(var(--window-text-color) set-alpha 0.28);
+    }
+    &:active-focus {
+        border: 1px solid var(--accent-color);
+    }
+}
+
+menubaritem {
+    &:hovered,
+    &:highlighted {
+        background-color: modify-color(var(--window-text-color) set-alpha 0.07);
+        border: none;
+    }
+    &:pressed {
+        background-color: modify-color(var(--window-text-color) set-alpha 0.11);
+        color: var(--window-text-color);
+    }
+}
+
+/* Kirigami side navigation (settings dialogs' categories). */
+navigationtabbutton {
+    &:hovered,
+    &:pressed {
+        background-color: modify-color(var(--window-text-color) set-alpha 0.07);
+        border: none;
+    }
+    &:checked {
+        background-color: var(--selection-color);
+        border: none;
+    }
+}
+
+chip {
+    &:hovered {
+        border-color: modify-color(var(--window-text-color) set-alpha 0.28);
+    }
+    &:pressed {
+        border-color: modify-color(var(--window-text-color) set-alpha 0.28);
+        background-color: modify-color(var(--window-text-color) set-alpha 0.11);
+    }
+}
+
+/* Split-style tool buttons (Dolphin's "Split" once split): the arrow half
+   lights up with the button, without Breeze's accent box. */
+toolbutton.menu-open > indicator,
+toolbutton.with-menu-button > indicator {
+    border: none;
+    background: none;
+}
+
+/* Plain lists (Dolphin's places): the highlight spans the row, so the
+   icon, which the list places 4 px into the row, sits 4 px inside it
+   (Breeze's 2 px inset left it 2 px from the edge). */
+itemviewitem.inside-list.hover-enabled {
+    inset: 1px 0px;
+}
 listview itemviewitem {
     height: 30px;
+}
+
+/* Dolphin's file view keeps a styled-panel frame whose 1 px border shows
+   next to the pane divider: two lines. The divider alone. */
+tabwidget frame[shape="panel"] {
+    border: none;
 }

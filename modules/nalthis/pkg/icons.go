@@ -27,8 +27,10 @@ var iconMap string
 // thin next to Tela's icons and the text).
 // Plasma also asks for 32 px and more (tray popups, the panel): there the
 // 22 px drawing sits centered, as Tela pads its own status icons, so a
-// panel slot doesn't fill with a giant glyph. Places and devices stop at
-// 24: larger, they are Tela's color icons (Dolphin's folders).
+// panel slot doesn't fill with a giant glyph. Status icons (the tray) are
+// the mockup's 18 px drawing at every size from 22 up, centered. Places
+// and devices stop at 24: larger, they are Tela's color icons (Dolphin's
+// folders).
 type lineSize struct {
 	dir      string  // folder under line/
 	size     int     // canvas
@@ -40,11 +42,14 @@ type lineSize struct {
 }
 
 var lineSizes = []lineSize{
-	{"16", 16, 2.0 / 3, 0.5, 1.5, nil, false}, // whole Lucide coordinates that are multiples of 3 land on pixels
-	{"22", 22, 1, -0.5, 1.5, nil, false},      // the 24 grid minus its empty 1 px border
-	{"24", 24, 1, 0.5, 1.5, nil, false},
-	{"32", 32, 1, 4.5, 1.5, []string{"actions", "categories", "status"}, false}, // the 22 drawing, centered
-	{"scalable", 32, 1, 4.5, 1.5, []string{"status"}, true},
+	{"16", 16, 2.0 / 3, 0.5, 1.5, nil, false},                                               // whole Lucide coordinates that are multiples of 3 land on pixels
+	{"22", 22, 1, -0.5, 1.5, []string{"actions", "places", "devices", "categories"}, false}, // the 24 grid minus its empty 1 px border
+	{"22", 22, 0.75, 2, 1.5, []string{"status"}, false},                                     // the tray: the mockup's 18 px, centered
+	{"24", 24, 1, 0.5, 1.5, []string{"actions", "places", "devices", "categories"}, false},
+	{"24", 24, 0.75, 3, 1.5, []string{"status"}, false},
+	{"32", 32, 1, 4.5, 1.5, []string{"actions", "categories"}, false}, // the 22 drawing, centered
+	{"32", 32, 0.75, 7, 1.5, []string{"status"}, false},               // the tray's 18 px, centered
+	{"scalable", 32, 0.75, 7, 1.5, []string{"status"}, true},
 }
 
 func (s lineSize) has(ctx string) bool { return s.contexts == nil || slices.Contains(s.contexts, ctx) }
