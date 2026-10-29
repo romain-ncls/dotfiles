@@ -1,0 +1,11 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Authors": [{ "Name": "Romain Nicolas" }],
+        "Description": "Nalthis: dark and rounded, colors from a live palette",
+        "Id": "nalthis",
+        "License": "MIT",
+        "Name": "Nalthis",
+        "Version": "1"
+    }
+}

@@ -33,5 +33,7 @@ package() {
 		"$pkgdir/usr/lib/qt6/plugins/org.kde.kdecoration3/org.kde.nalthis.so"
 	install -Dm644 "$startdir/kcm/kcm_nalthis.desktop" "$pkgdir/usr/share/applications/kcm_nalthis.desktop"
 	cp -a "$srcdir/icons/nalthis" "$pkgdir/usr/share/icons/"
+	install -d "$pkgdir/usr/share/plasma/look-and-feel"
+	cp -a "$startdir/lookandfeel" "$pkgdir/usr/share/plasma/look-and-feel/nalthis"
 	install -Dm644 "$srcdir/package/LICENSE" "$pkgdir/usr/share/licenses/nalthis/lucide-LICENSE"
 }

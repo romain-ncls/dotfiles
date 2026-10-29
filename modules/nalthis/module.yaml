@@ -5,8 +5,9 @@
 #            decoration (decoration/) and the Plasma style: panel, popups,
 #            generated at build time by `nalthis plasma-theme` (plasma.go),
 #            the icon theme: Tela with Lucide line icons (icons.go,
-#            icons.txt), and, written by `nalthis apply` with the palette,
-#            the Konsole schemes (konsole.go) and the GTK layer (gtk.go)
+#            icons.txt), the global theme with our splash (lookandfeel/),
+#            and, written by `nalthis apply` with the palette, the Konsole
+#            schemes (konsole.go) and the GTK layer (gtk.go)
 #   system/  the Union application style
 #   dev/     headless test rig (dev/test.sh) and control galleries
 # The palette's knobs are in palette.json (defaults when it's missing), written
@@ -21,10 +22,16 @@ kde:
   plasmarc:
     Theme:
       name: nalthis # the Plasma style (pkg/plasma.go)
+  ksplashrc:
+    KSplash:
+      Theme: nalthis # our splash (pkg/lookandfeel/contents/splash)
   kdeglobals:
     KDE:
       widgetStyle: Union
       unionStyle: nalthis
+      # Our global theme (pkg/lookandfeel): the splash, and "Nalthis" selected
+      # in System Settings, whose defaults are this module's settings.
+      LookAndFeelPackage: nalthis
     Icons:
       Theme: nalthis # Tela + our Lucide line icons (pkg/icons.go)
   dolphinrc:
