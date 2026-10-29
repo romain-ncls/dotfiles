@@ -86,7 +86,7 @@ kde:
       autoFontAndSize: false # (it fills the panel's height)
       fontSize: 10
     Containments/2/Applets/4/Configuration/General: # the pager
-      displayedText: 0 # desktop numbers
+      displayedText: 2 # no text: the current desktop is the accent cell
       showWindowOutlines: false
     Containments/2/Applets/3/Configuration/General: # the launcher
       compactMode: true # tighter rows (its icons stay Plasma's 22 px)

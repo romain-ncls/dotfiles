@@ -69,22 +69,11 @@ tableviewdelegate {
     &:pressed,
     &.selected {
         background-color: var(--selection-color);
+        border: none;
         color: var(--selection-text-color);
     }
     &.selected > label {
         color: var(--selection-text-color);
-    }
-}
-
-/* Multi-column views draw each cell on its own: an outline per cell would
-   leave seams between columns. */
-itemviewitem,
-treeviewdelegate,
-tableviewdelegate {
-    &:highlighted,
-    &:pressed,
-    &.selected {
-        border: none;
     }
 }
 

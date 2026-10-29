@@ -568,10 +568,9 @@ func tabbarSVG() string {
 	return d.String(ox, height, "")
 }
 
-// pagerSVG: the virtual desktops, as the taskbar's buttons: a faint cell,
-// the hover wash, and the current desktop marked by the accent bar under
-// it. Plasma draws the number itself, in the text color, inset by the
-// hover frame's margins: 1 px, or the number shrinks.
+// pagerSVG: the virtual desktops as small cells: a faint wash, stronger
+// on hover, the current desktop filled with the accent (no numbers: the
+// host turns the pager's text off).
 func pagerSVG() string {
 	text, accent := "ColorScheme-Text", "ColorScheme-Highlight"
 	var d svgDoc
@@ -580,11 +579,11 @@ func pagerSVG() string {
 		prefix string
 		l      look
 	}{
-		{"normal-", look{bg: text, bgOp: 0.04}},
-		{"hover-", look{bg: text, bgOp: hoverWash}},
-		{"active-", look{bg: text, bgOp: pressWash, bar: accent, barOp: 1, barCut: 8}},
+		{"normal-", look{bg: text, bgOp: hoverWash}},
+		{"hover-", look{bg: text, bgOp: 0.16}},
+		{"active-", look{bg: accent, bgOp: 1}},
 	} {
-		w, h := highlight(&d, ox, s.prefix, 5, s.l, "bottom") // 5: room for the bar
+		w, h := highlight(&d, ox, s.prefix, 4, s.l, "")
 		hints(&d, s.prefix, 1)
 		ox += w + 4
 		height = max(height, h)
