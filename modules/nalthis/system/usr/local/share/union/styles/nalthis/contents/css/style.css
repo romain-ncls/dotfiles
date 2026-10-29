@@ -195,3 +195,12 @@ scrollbar {
         }
     }
 }
+
+/* --- Focus frame (Dolphin's current item): the mockup's selection line,
+   1 px of the accent at 35%, not Breeze's full-accent ring. --- */
+focusframe {
+    border: 1px solid modify-color(var(--accent-color) set-alpha 0.35);
+    &:highlighted {
+        border: 1px solid modify-color(var(--accent-color) set-alpha 0.35);
+    }
+}

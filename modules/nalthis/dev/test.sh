@@ -8,6 +8,9 @@
 #
 # --then applies other knobs while the app runs, with `nalthis apply` (as the
 # sliders do), and takes a second screenshot, <out>-then.png: checks live recolor.
+# Hover: run the app on X11 (QT_QPA_PLATFORM=xcb) and move the pointer with
+# xdotool, after kwriteconfig6 --file kwinrc --group Xwayland --key
+# XwaylandEisNoPrompt true and a KWin reconfigure (else KWin asks first).
 # Work files go to $NALTHIS_DEV (default $XDG_RUNTIME_DIR/nalthis-dev).
 set -euo pipefail
 dev=$(cd "$(dirname "$0")" && pwd)
@@ -82,6 +85,6 @@ inner="$work/inner.sh"
 chmod +x "$inner"
 # Capped (memory-heavy: a whole KWin plus the app); one run at a time.
 systemd-run --user --scope -q -p MemoryMax=3G -p MemorySwapMax=0 nice -n 10 \
-    timeout 60 dbus-run-session -- "${kwin_env[@]}" kwin_wayland --virtual --width 1280 --height 800 --no-lockscreen \
+    timeout 60 dbus-run-session -- "${kwin_env[@]}" kwin_wayland --virtual --xwayland --width 1280 --height 800 --no-lockscreen \
         --socket "wl-nalthis-$$" --exit-with-session "$inner" > "$work/kwin.log" 2>&1
 echo "$out"
