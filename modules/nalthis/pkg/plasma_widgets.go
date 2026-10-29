@@ -92,6 +92,11 @@ func lineeditSVG() string {
 		{"hover-", look{ring: ringHover, ringClass: text}, 0},
 		{"focus-", look{ring: 1, ringClass: accent}, 0},
 	})
+	// TextFieldFocus grows these two frames by their margins (by default
+	// the corners); 1 px puts the ring on the field's edge (an empty hint
+	// counts as none).
+	hints(&d, "hover-", 1)
+	hints(&d, "focus-", 1)
 	d.add(`<rect id="hint-focus-over-base" x="0" y="0" width="2" height="2" fill="#f0f"/>`)
 	tileHint(&d)
 	return d.String(w, h, "")
