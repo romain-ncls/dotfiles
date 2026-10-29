@@ -27,10 +27,11 @@ var iconMap string
 // thin next to Tela's icons and the text).
 // Plasma also asks for 32 px and more (tray popups, the panel). At 22 and
 // 24 every line icon is the mockup's 18 px drawing, centered: at full size
-// they looked heavy next to the text (popup headers, Kickoff). At 32 (the
+// they looked heavy next to the text (popup headers, Kickoff); status
+// icons (the tray) are 20 px there, 18 looked small in the panel. At 32 (the
 // tray's grid of hidden items, list rows) the 22 px drawing sits centered,
 // as Tela pads its own icons, so a slot doesn't fill with a giant glyph;
-// [panel] names, glyphs sitting in the panel itself, stay at 18 there too.
+// [panel] names, glyphs sitting in the panel itself, stay the tray's 20.
 // Places and devices stop at 24: larger, they are Tela's color icons
 // (Dolphin's folders).
 type lineSize struct {
@@ -44,11 +45,13 @@ type lineSize struct {
 }
 
 var lineSizes = []lineSize{
-	{"16", 16, 2.0 / 3, 0.5, 1.5, nil, 12, 18}, // whole Lucide coordinates that are multiples of 3 land on pixels
-	{"22", 22, 0.75, 2, 1.5, nil, 19, 23},      // the mockup's 18 px, centered
-	{"24", 24, 0.75, 3, 1.5, nil, 24, 27},
+	{"16", 16, 2.0 / 3, 0.5, 1.5, nil, 12, 18},                                               // whole Lucide coordinates that are multiples of 3 land on pixels
+	{"22", 22, 0.75, 2, 1.5, []string{"actions", "places", "devices", "categories"}, 19, 23}, // the mockup's 18 px, centered
+	{"22", 22, 5.0 / 6, 1, 1.5, []string{"status", "panel"}, 19, 23},                         // the tray: 20 px (18 looked small in the panel)
+	{"24", 24, 0.75, 3, 1.5, []string{"actions", "places", "devices", "categories"}, 24, 27},
+	{"24", 24, 5.0 / 6, 2, 1.5, []string{"status", "panel"}, 24, 27},
 	{"32", 32, 1, 4.5, 1.5, []string{"actions", "categories", "status"}, 28, 40}, // the 24 grid minus its empty 1 px border, centered
-	{"32", 32, 0.75, 7, 1.5, []string{"panel"}, 28, 40},
+	{"32", 32, 5.0 / 6, 6, 1.5, []string{"panel"}, 28, 40},
 	{"scalable", 32, 0.75, 7, 1.5, []string{"status", "panel"}, 41, 512},
 }
 

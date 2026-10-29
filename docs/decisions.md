@@ -393,10 +393,11 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
   Applet settings windows are the application style, not the Plasma style.
 - **Icon sizes from the icon theme**: KDE 6 ignores kdeglobals'
   `[MainToolbarIcons]`; toolbars take `MainToolbarDefault` from the theme's
-  `index.theme`, so ours says 16. At 22 and 24 every line icon is an 18 px drawing
+  `index.theme`, so ours says 16. At 22 and 24 line icons are an 18 px drawing
   (the mockup's weight; full size looked heavy in popup headers and
-  Kickoff); at 32 (the tray's grid, list rows) the 22 px one, padded, except
-  glyphs in the panel itself (`[panel]`: show desktop), which stay 18.
+  Kickoff), status icons 20 px (the panel's tray; 18 looked small). At 32
+  (the tray's grid, list rows) they are the 22 px one, padded, except
+  glyphs in the panel itself (`[panel]`: show desktop), the tray's 20.
   Dolphin's icon view keeps its own 64 px. Our folders are
   Scalable with adjoining size ranges (16: 12–18, 22: 19–23, 24: 24–27, 32:
   28–40), so in-between requests (Kirigami asks for 20) take our nearest

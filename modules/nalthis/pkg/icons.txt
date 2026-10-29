@@ -408,5 +408,5 @@ camera-off            camera-off
 
 [panel]
 # Glyphs in the panel itself (show desktop), which asks for 32: the tray's
-# 18 px at every size.
+# 20 px there too.
 user-desktop-symbolic monitor
