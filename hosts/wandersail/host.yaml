@@ -91,16 +91,12 @@ kde:
     Containments/2/Applets/3/Configuration/General: # the launcher
       compactMode: true # tighter rows (its icons stay Plasma's 22 px)
   kwinrc:
-    Effect-blur:
-      BlurStrength: 11
-      NoiseStrength: 4
     Effect-wobblywindows:
       AdvancedMode: true
       Stiffness: 20
     Effect-kwin4_effect_translucency:
       Inactive: 52
     Plugins:
-      blurEnabled: true
       wobblywindowsEnabled: true
       shakecursorEnabled: false
   kcminputrc:

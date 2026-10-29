@@ -21,6 +21,11 @@ kde:
   kwinrc:
     org.kde.kdecoration2:
       library: org.kde.nalthis # our decoration (pkg/decoration)
+    Effect-blur: # the glass behind the panel, popups and Konsole
+      BlurStrength: 11
+      NoiseStrength: 4
+    Plugins:
+      blurEnabled: true
   plasmarc:
     Theme:
       name: nalthis # the Plasma style (pkg/plasma.go)
