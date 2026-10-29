@@ -375,20 +375,25 @@ type look struct {
 	bar       string  // ColorScheme class of the edge bar ("" = none)
 	barOp     float64
 	barCut    float64 // the corner slices' length along the bar: the bar is the frame minus twice this
+	inset     float64 // a clear margin around it all, in px
 }
 
 const (
 	hoverWash = 0.07 // the mockup's hover: text at 7%
 	selTint   = 0.22 // its selection: accent at 22%
-	barGap    = 2    // between the bar and the panel's edge
+	barGap    = 2    // between the bar and its highlight's edge
 	barSize   = 3
+	taskInset = 3 // around a task's highlight: its neighbors and the panel's edges show
 )
 
 // highlight draws one frame at (ox, 0) under prefix: 3×3 slices, corners of
 // radius r; edge is where the bar goes (bottom, top, left, right). Each
 // slice keeps a transparent rectangle so its box holds when it draws nothing.
+// l.inset leaves a clear band around the drawing (bar included), inside the
+// slices: frames fill their item, so a margin has to be drawn.
 func highlight(d *svgDoc, ox float64, prefix string, r float64, l look, edge string) (w, h float64) {
-	cw, ch := r, r // corner slice size
+	in := l.inset
+	cw, ch := r+in, r+in // corner slice size
 	if l.bar != "" {
 		if edge == "top" || edge == "bottom" {
 			cw = l.barCut
@@ -415,19 +420,33 @@ func highlight(d *svgDoc, ox float64, prefix string, r float64, l look, edge str
 			x, y := ox+col.x, row.y
 			d.add(`<g id="%s%s"><rect %s x="%g" y="%g" width="%g" height="%g"/>`, prefix, name, clear, x, y, col.w, row.h)
 			corners := row.name != "" && col.name != ""
-			c := corner{x, y, 1, 1}
+			// The slice minus the inset band on its outer sides.
+			ix, iy, iw, ih := x, y, col.w, row.h
+			switch col.name {
+			case "left":
+				ix, iw = x+in, col.w-in
+			case "right":
+				iw = col.w - in
+			}
+			switch row.name {
+			case "top":
+				iy, ih = y+in, row.h-in
+			case "bottom":
+				ih = row.h - in
+			}
+			c := corner{ix, iy, 1, 1}
 			if col.name == "right" {
-				c.cx, c.dx = x+col.w, -1
+				c.cx, c.dx = ix+iw, -1
 			}
 			if row.name == "bottom" {
-				c.cy, c.dy = y+row.h, -1
+				c.cy, c.dy = iy+ih, -1
 			}
 			if l.bg != "" {
 				if corners {
 					d.add(`<path %s d="M%s A%g,%g 0 0 %d %s L%s L%s L%s Z"/>`, fill(l.bg, l.bgOp),
-						c.p(0, r), r, r, c.sweep(false), c.p(r, 0), c.p(col.w, 0), c.p(col.w, row.h), c.p(0, row.h))
+						c.p(0, r), r, r, c.sweep(false), c.p(r, 0), c.p(iw, 0), c.p(iw, ih), c.p(0, ih))
 				} else {
-					d.add(`<rect %s x="%g" y="%g" width="%g" height="%g"/>`, fill(l.bg, l.bgOp), x, y, col.w, row.h)
+					d.add(`<rect %s x="%g" y="%g" width="%g" height="%g"/>`, fill(l.bg, l.bgOp), ix, iy, iw, ih)
 				}
 			}
 			if l.ring > 0 {
@@ -439,29 +458,29 @@ func highlight(d *svgDoc, ox float64, prefix string, r float64, l look, edge str
 				case corners:
 					d.add(`<path %s d="%s"/>`, fill(class, l.ring), c.ring(r))
 				case name != "center":
-					rx, ry, rw, rh := x, y, col.w, 1.0
+					rx, ry, rw, rh := ix, iy, iw, 1.0
 					switch name {
 					case "bottom":
-						ry = y + row.h - 1
+						ry = iy + ih - 1
 					case "left":
-						rw, rh = 1, row.h
+						rw, rh = 1, ih
 					case "right":
-						rx, rw, rh = x+col.w-1, 1, row.h
+						rx, rw, rh = ix+iw-1, 1, ih
 					}
 					d.add(`<rect %s x="%g" y="%g" width="%g" height="%g"/>`, fill(class, l.ring), rx, ry, rw, rh)
 				}
 			}
 			if l.bar != "" && name == edge {
-				bx, by, bw, bh := x, y, col.w, row.h
+				bx, by, bw, bh := ix, iy, iw, ih
 				switch edge {
 				case "bottom":
-					by, bh = y+row.h-barGap-barSize, barSize
+					by, bh = iy+ih-barGap-barSize, barSize
 				case "top":
-					by, bh = y+barGap, barSize
+					by, bh = iy+barGap, barSize
 				case "left":
-					bx, bw = x+barGap, barSize
+					bx, bw = ix+barGap, barSize
 				case "right":
-					bx, bw = x+col.w-barGap-barSize, barSize
+					bx, bw = ix+iw-barGap-barSize, barSize
 				}
 				d.add(`<rect %s x="%g" y="%g" width="%g" height="%g"/>`, fill(l.bar, l.barOp), bx, by, bw, bh)
 			}
@@ -505,7 +524,9 @@ func tasksSVG() string {
 	for _, side := range []struct{ prefix, edge string }{{"", "bottom"}, {"north-", "top"}, {"west-", "left"}, {"east-", "right"}} {
 		for _, name := range slices.Sorted(maps.Keys(states)) {
 			prefix := side.prefix + name + "-"
-			w, h := highlight(&d, ox, prefix, 6, states[name], side.edge)
+			l := states[name]
+			l.inset = taskInset
+			w, h := highlight(&d, ox, prefix, 6, l, side.edge)
 			hints(&d, prefix, 5) // 28 px icons in the mockup's 38 px task
 			ox += w + 4
 			height = max(height, h)
