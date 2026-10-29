@@ -259,6 +259,14 @@ phone                 smartphone
 audio-input-microphone mic
 network-wireless-hotspot radio-tower
 drive-harddisk-root   hard-drive
+input-mouse           mouse
+input-gaming          gamepad-2
+input-tablet          tablet
+audio-headset         headset
+audio-headphones      headphones
+audio-speakers        speaker
+computer-laptop       laptop
+camera-photo          camera
 
 # The application menu's categories (and Kickoff's), as -symbolic names.
 [categories]
