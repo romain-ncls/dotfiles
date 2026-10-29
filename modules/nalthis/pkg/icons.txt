@@ -201,6 +201,19 @@ format-indent-more    list-indent-increase
 format-indent-less    list-indent-decrease
 
 # windows and misc (Plasma asks for these in popups)
+question              circle-help
+help-info             info
+dialog-information-symbolic info
+dialog-warning-symbolic triangle-alert
+dialog-error-symbolic circle-x
+dialog-question-symbolic circle-help
+dialog-messages       message-square
+quickopen             search
+cm_runterm            square-terminal
+document-open-folder  folder-open
+pan-down              chevron-down
+pan-up                chevron-up
+virtual-desktops      layout-grid
 window-minimize       minus
 im-user               user
 compass               compass

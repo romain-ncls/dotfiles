@@ -395,7 +395,10 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
 - **Icon sizes from the icon theme**: KDE 6 ignores kdeglobals'
   `[MainToolbarIcons]`; toolbars take `MainToolbarDefault` from the theme's
   `index.theme`, so ours says 16. Tray icons are an 18 px drawing in their
-  22 px slot (and padded at 32 and up), the mockup's weight.
+  22 px slot (and padded at 32 and up), the mockup's weight. Our folders are
+  Scalable with adjoining size ranges (16: 12–18, 22: 19–23, 24: 24–27, 32:
+  28–40), so in-between requests (Kirigami asks for 20) take our nearest
+  drawing, not a scalable Tela icon of the same name.
 - **Dolphin's places spacing stays KDE's**: kio's places view draws its
   icon 4 px into the row and the label 4 px after it, hard-coded; a style
   only paints the row (no theme, Breeze's forks included, changes it).

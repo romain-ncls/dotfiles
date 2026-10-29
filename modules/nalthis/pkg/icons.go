@@ -38,18 +38,18 @@ type lineSize struct {
 	shift    float64 // translation in pixels, after scaling
 	strokePx float64
 	contexts []string // nil: every context
-	scalable bool     // a Scalable folder for every size above 32
+	min, max int      // the sizes it serves (see writeIconTheme)
 }
 
 var lineSizes = []lineSize{
-	{"16", 16, 2.0 / 3, 0.5, 1.5, nil, false},                                               // whole Lucide coordinates that are multiples of 3 land on pixels
-	{"22", 22, 1, -0.5, 1.5, []string{"actions", "places", "devices", "categories"}, false}, // the 24 grid minus its empty 1 px border
-	{"22", 22, 0.75, 2, 1.5, []string{"status"}, false},                                     // the tray: the mockup's 18 px, centered
-	{"24", 24, 1, 0.5, 1.5, []string{"actions", "places", "devices", "categories"}, false},
-	{"24", 24, 0.75, 3, 1.5, []string{"status"}, false},
-	{"32", 32, 1, 4.5, 1.5, []string{"actions", "categories"}, false}, // the 22 drawing, centered
-	{"32", 32, 0.75, 7, 1.5, []string{"status"}, false},               // the tray's 18 px, centered
-	{"scalable", 32, 0.75, 7, 1.5, []string{"status"}, true},
+	{"16", 16, 2.0 / 3, 0.5, 1.5, nil, 12, 18},                                               // whole Lucide coordinates that are multiples of 3 land on pixels
+	{"22", 22, 1, -0.5, 1.5, []string{"actions", "places", "devices", "categories"}, 19, 23}, // the 24 grid minus its empty 1 px border
+	{"22", 22, 0.75, 2, 1.5, []string{"status"}, 19, 23},                                     // the tray: the mockup's 18 px, centered
+	{"24", 24, 1, 0.5, 1.5, []string{"actions", "places", "devices", "categories"}, 24, 27},
+	{"24", 24, 0.75, 3, 1.5, []string{"status"}, 24, 27},
+	{"32", 32, 1, 4.5, 1.5, []string{"actions", "categories"}, 28, 40}, // the 22 drawing, centered
+	{"32", 32, 0.75, 7, 1.5, []string{"status"}, 28, 40},               // the tray's 18 px, centered
+	{"scalable", 32, 0.75, 7, 1.5, []string{"status"}, 41, 512},
 }
 
 func (s lineSize) has(ctx string) bool { return s.contexts == nil || slices.Contains(s.contexts, ctx) }
@@ -92,11 +92,12 @@ func writeIconTheme(lucideDir, telaDir, dir string) error {
 			}
 			sub := fmt.Sprintf("line/%s/%s", s.dir, ctx)
 			dirs = append(dirs, sub)
-			keys := [][2]string{{"Size", fmt.Sprint(s.size)}, {"Context", iconContexts[ctx]}, {"Type", "Fixed"}}
-			if s.scalable {
-				keys = [][2]string{{"Size", fmt.Sprint(s.size)}, {"MinSize", fmt.Sprint(s.size + 1)}, {"MaxSize", "512"},
-					{"Context", iconContexts[ctx]}, {"Type", "Scalable"}}
-			}
+			// Scalable folders with adjoining ranges, not Fixed ones: a 20 or
+			// 28 px request (Kirigami asks for those) takes our nearest
+			// drawing, not a scalable Tela icon of the same name (often an
+			// app's color icon). Lookups take the first folder that fits.
+			keys := [][2]string{{"Size", fmt.Sprint(s.size)}, {"MinSize", fmt.Sprint(s.min)}, {"MaxSize", fmt.Sprint(s.max)},
+				{"Context", iconContexts[ctx]}, {"Type", "Scalable"}}
 			sections = append(sections, Group{Name: sub, Keys: keys})
 			if err := os.MkdirAll(filepath.Join(dir, sub), 0o755); err != nil {
 				return err
