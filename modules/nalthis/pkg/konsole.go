@@ -18,6 +18,10 @@ import (
 // oneDark is One Dark's red, green, yellow, blue, magenta and cyan.
 var oneDark = [6]RGB{{224, 108, 117}, {152, 195, 121}, {209, 154, 102}, {97, 175, 239}, {198, 120, 221}, {86, 182, 194}}
 
+// konsoleOpacity: the terminal is glass, as the panel: KWin blurs what is
+// behind it (its blur effect, on in the host file), so text stays readable.
+const konsoleOpacity = "0.88"
+
 // Lightness of the six colors: normal, intense (bold), faint.
 const ansiL, ansiIntenseL, ansiFaintL = 0.72, 0.80, 0.60
 
@@ -76,7 +80,7 @@ func KonsoleScheme(p Palette, k Knobs, suffix string, tintC, tintH float64) []Gr
 		name += " " + suffix
 	}
 	return append(groups, Group{Name: "General", Keys: [][2]string{
-		{"Description", name}, {"Opacity", "1"}, {"Blur", "false"}, {"ColorRandomization", "false"},
+		{"Description", name}, {"Opacity", konsoleOpacity}, {"Blur", "true"}, {"ColorRandomization", "false"},
 	}})
 }
 
