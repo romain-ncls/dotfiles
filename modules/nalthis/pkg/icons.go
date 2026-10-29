@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -24,19 +25,32 @@ var iconMap string
 // centered on whole coordinates; we put lines on pixel centers instead and
 // draw them 1.5 px, the title bar glyphs' weight (1 px, KDE's rule, looked
 // thin next to Tela's icons and the text).
-var lineSizes = []struct {
-	size     int
+// Plasma also asks for 32 px and more (tray popups, the panel): there the
+// 22 px drawing sits centered, as Tela pads its own status icons, so a
+// panel slot doesn't fill with a giant glyph. Places and devices stop at
+// 24: larger, they are Tela's color icons (Dolphin's folders).
+type lineSize struct {
+	dir      string  // folder under line/
+	size     int     // canvas
 	scale    float64 // from Lucide's 24 grid
-	shift    float64 // translation in pixels, before scaling
+	shift    float64 // translation in pixels, after scaling
 	strokePx float64
-}{
-	{16, 2.0 / 3, 0.5, 1.5}, // whole Lucide coordinates that are multiples of 3 land on pixels
-	{22, 1, -0.5, 1.5},      // the 24 grid minus its empty 1 px border
-	{24, 1, 0.5, 1.5},
+	contexts []string // nil: every context
+	scalable bool     // a Scalable folder for every size above 32
 }
 
+var lineSizes = []lineSize{
+	{"16", 16, 2.0 / 3, 0.5, 1.5, nil, false}, // whole Lucide coordinates that are multiples of 3 land on pixels
+	{"22", 22, 1, -0.5, 1.5, nil, false},      // the 24 grid minus its empty 1 px border
+	{"24", 24, 1, 0.5, 1.5, nil, false},
+	{"32", 32, 1, 4.5, 1.5, []string{"actions", "categories", "status"}, false}, // the 22 drawing, centered
+	{"scalable", 32, 1, 4.5, 1.5, []string{"status"}, true},
+}
+
+func (s lineSize) has(ctx string) bool { return s.contexts == nil || slices.Contains(s.contexts, ctx) }
+
 // iconContexts are the folders icons.txt's [sections] fill.
-var iconContexts = map[string]string{"actions": "Actions", "places": "Places", "devices": "Devices", "categories": "Categories"}
+var iconContexts = map[string]string{"actions": "Actions", "places": "Places", "devices": "Devices", "categories": "Categories", "status": "Status"}
 
 const lineColorStyle = `<style id="current-color-scheme" type="text/css">.ColorScheme-Text { color:#fcfcfc; }</style>`
 
@@ -67,12 +81,18 @@ func writeIconTheme(lucideDir, telaDir, dir string) error {
 	var dirs []string
 	var sections []Group
 	for _, s := range lineSizes {
-		for _, ctx := range []string{"actions", "places", "devices", "categories"} {
-			sub := fmt.Sprintf("line/%d/%s", s.size, ctx)
+		for _, ctx := range []string{"actions", "places", "devices", "categories", "status"} {
+			if !s.has(ctx) {
+				continue
+			}
+			sub := fmt.Sprintf("line/%s/%s", s.dir, ctx)
 			dirs = append(dirs, sub)
-			sections = append(sections, Group{Name: sub, Keys: [][2]string{
-				{"Size", fmt.Sprint(s.size)}, {"Context", iconContexts[ctx]}, {"Type", "Fixed"},
-			}})
+			keys := [][2]string{{"Size", fmt.Sprint(s.size)}, {"Context", iconContexts[ctx]}, {"Type", "Fixed"}}
+			if s.scalable {
+				keys = [][2]string{{"Size", fmt.Sprint(s.size)}, {"MinSize", fmt.Sprint(s.size + 1)}, {"MaxSize", "512"},
+					{"Context", iconContexts[ctx]}, {"Type", "Scalable"}}
+			}
+			sections = append(sections, Group{Name: sub, Keys: keys})
 			if err := os.MkdirAll(filepath.Join(dir, sub), 0o755); err != nil {
 				return err
 			}
@@ -98,14 +118,25 @@ func writeIconTheme(lucideDir, telaDir, dir string) error {
 		if err != nil {
 			return err
 		}
+		// Each name also as its -symbolic twin, which Plasma asks for and
+		// which Tela has (as its own line icons).
+		names := []string{f[0]}
+		if !strings.HasSuffix(f[0], "-symbolic") {
+			names = append(names, f[0]+"-symbolic")
+		}
 		for _, s := range lineSizes {
+			if !s.has(ctx) {
+				continue
+			}
 			svg, err := lineIcon(src, s.size, s.scale, s.shift, s.strokePx)
 			if err != nil {
 				return fmt.Errorf("%s: %w", f[1], err)
 			}
-			path := filepath.Join(dir, fmt.Sprintf("line/%d/%s", s.size, ctx), f[0]+".svg")
-			if err := os.WriteFile(path, []byte(svg), 0o644); err != nil {
-				return err
+			for _, name := range names {
+				path := filepath.Join(dir, fmt.Sprintf("line/%s/%s", s.dir, ctx), name+".svg")
+				if err := os.WriteFile(path, []byte(svg), 0o644); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -134,6 +165,10 @@ func writeIconTheme(lucideDir, telaDir, dir string) error {
 						scaled = append(scaled, "tela/"+d)
 					}
 				}
+			case "ToolbarDefault", "MainToolbarDefault":
+				// The mockup's 16 px toolbars (Tela, as Breeze: 22). KDE 6 takes
+				// these sizes from the icon theme only.
+				head.Keys = append(head.Keys, [2]string{kv[0], "16"})
 			default:
 				head.Keys = append(head.Keys, kv)
 			}

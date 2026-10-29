@@ -31,7 +31,7 @@ const glass = 0.80
 var (
 	popup   = frame{radius: 10, opacity: glass, margin: 6, shadow: 16, depth: 0.35, outline: true}
 	tooltip = frame{radius: 6, opacity: glass, margin: 4, shadow: 10, depth: 0.30, outline: true}
-	panel   = frame{radius: 10, opacity: glass, margin: 2, shadow: 10, depth: 0.25, outline: true}
+	panel   = frame{radius: 10, opacity: glass, margin: 4, shadow: 10, depth: 0.25, outline: true}
 )
 
 // Plasma picks a variant folder: translucent/ when KWin blurs behind (the
@@ -52,6 +52,7 @@ func writePlasmaTheme(dir string) error {
 		"widgets/tasks.svg":           tasksSVG(),
 		"widgets/viewitem.svg":        viewItemSVG(),
 		"widgets/pager.svg":           pagerSVG(),
+		"widgets/tabbar.svg":          tabbarSVG(),
 	}
 	for _, v := range variants {
 		for name, f := range map[string]frame{
@@ -480,7 +481,7 @@ func tasksSVG() string {
 		for _, name := range slices.Sorted(maps.Keys(states)) {
 			prefix := side.prefix + name + "-"
 			w, h := highlight(&d, ox, prefix, 6, states[name], side.edge)
-			hints(&d, prefix, 4)
+			hints(&d, prefix, 5) // 28 px icons in the mockup's 38 px task
 			ox += w + 4
 			height = max(height, h)
 		}
@@ -533,4 +534,31 @@ func pagerSVG() string {
 	}
 	d.add(`<rect id="hint-tile-center" x="0" y="0" width="5" height="5" fill="#f60"/>`)
 	return d.String(ox, 2*3+tile, "")
+}
+
+// tabbarSVG: the current tab (Kickoff's footer, popups) and the open
+// widget in the panel. Breeze's line on the same edge, in the accent, over
+// the hover wash; south tabs carry it on top, as Breeze.
+func tabbarSVG() string {
+	var d svgDoc
+	ox, height := 0.0, 0.0
+	for _, s := range []struct {
+		prefix, edge string
+		lr, tb       float64 // content margins: left and right, top and bottom (Breeze's)
+	}{{"south-", "top", 6, 10}, {"north-", "bottom", 6, 10}, {"west-", "right", 10, 6}, {"east-", "left", 10, 6}} {
+		prefix := s.prefix + "active-tab-"
+		l := look{bg: "ColorScheme-Text", bgOp: hoverWash, bar: "ColorScheme-Highlight", barOp: 1, barCut: 12}
+		w, h := highlight(&d, ox, prefix, 6, l, s.edge)
+		for _, side := range []string{"top", "bottom", "left", "right"} {
+			m := s.tb
+			if side == "left" || side == "right" {
+				m = s.lr
+			}
+			d.add(`<rect id="%shint-%s-margin" x="0" y="0" width="%g" height="%g" fill="#f0f"/>`, prefix, side, m, m)
+		}
+		ox += w + 4
+		height = max(height, h)
+	}
+	d.add(`<rect id="hint-tile-center" x="0" y="0" width="5" height="5" fill="#f60"/>`)
+	return d.String(ox, height, "")
 }

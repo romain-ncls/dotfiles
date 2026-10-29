@@ -27,6 +27,12 @@ kde:
       unionStyle: nalthis
     Icons:
       Theme: nalthis # Tela + our Lucide line icons (pkg/icons.go)
+  dolphinrc:
+    PlacesPanel:
+      IconSize: 16 # as the toolbar (auto: 22)
+    IconsMode:
+      IconSize: 48 # (64)
+      PreviewSize: 48
 
 hooks:
   - run: apply-palette # the color scheme from palette.json

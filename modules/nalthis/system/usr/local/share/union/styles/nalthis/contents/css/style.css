@@ -27,7 +27,6 @@
     --highlight-text-color: var(--on-accent-color);
     --selection-color: mix(custom-color("kcolorscheme", "active", "view", "background", "normal"), custom-color("kcolorscheme", "active", "window", "decoration", "focus"), 0.35);
     --selection-text-color: custom-color("kcolorscheme", "active", "view", "foreground", "text");
-    --selection-border-color: modify-color(var(--accent-color) set-alpha 0.45);
     --focus-outline-alpha: 0.4;
 }
 
@@ -70,7 +69,6 @@ tableviewdelegate {
     &:pressed,
     &.selected {
         background-color: var(--selection-color);
-        border: 1px solid var(--selection-border-color);
         color: var(--selection-text-color);
     }
     &.selected > label {
@@ -203,4 +201,69 @@ focusframe {
     &:highlighted {
         border: 1px solid modify-color(var(--accent-color) set-alpha 0.35);
     }
+}
+
+/* --- Buttons: flat ones (toolbars) light up with the hover wash, as list
+   items do; raised ones keep their frame and brighten it. The accent
+   border stays for keyboard focus only. --- */
+toolbutton,
+button.flat,
+combobox.flat,
+roundbutton.flat {
+    &:hovered {
+        border: none;
+        background-color: modify-color(var(--window-text-color) set-alpha 0.07);
+    }
+    &:pressed,
+    &.menu-open {
+        border: none;
+        background-color: modify-color(var(--window-text-color) set-alpha 0.11);
+    }
+    &:checked,
+    toolbar.header &:checked,
+    applicationheader &:checked {
+        border: none;
+        background-color: var(--selection-color);
+    }
+    &.with-menu-button > indicator,
+    &.with-menu-button > indicator:hovered,
+    &.menu-open > indicator {
+        border-left: none;
+    }
+}
+
+button,
+combobox,
+roundbutton,
+delaybutton {
+    &:hovered {
+        border-color: modify-color(var(--window-text-color) set-alpha 0.28);
+    }
+}
+
+/* --- Panes: a faint line between them (the mockup's 7%), not the frame
+   color. --- */
+splitter {
+    background-color: modify-color(var(--window-text-color) set-alpha 0.07);
+}
+
+/* --- Icon sizes: 16 px in lists, as in toolbars and menus. --- */
+itemdelegate,
+checkdelegate,
+radiodelegate,
+switchdelegate,
+swipedelegate {
+    icon-size: var(--icon-size-small);
+}
+
+/* Tool buttons: 16 px icons in Kirigami apps (Breeze: 24). QtWidgets
+   toolbars take theirs from the icon theme (pkg/icons.go). */
+toolbutton {
+    icon-size: var(--icon-size-small);
+}
+
+/* Plain lists (Dolphin's places): the mockup's 28 px rows, 30 with the
+   inset, not 36. */
+listview itemviewitem {
+    height: 30px;
 }

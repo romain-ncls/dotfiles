@@ -85,6 +85,6 @@ inner="$work/inner.sh"
 chmod +x "$inner"
 # Capped (memory-heavy: a whole KWin plus the app); one run at a time.
 systemd-run --user --scope -q -p MemoryMax=3G -p MemorySwapMax=0 nice -n 10 \
-    timeout 60 dbus-run-session -- "${kwin_env[@]}" kwin_wayland --virtual --xwayland --width 1280 --height 800 --no-lockscreen \
+    timeout ${NALTHIS_TIMEOUT:-60} dbus-run-session -- "${kwin_env[@]}" kwin_wayland --virtual --xwayland --width 1280 --height 800 --no-lockscreen \
         --socket "wl-nalthis-$$" --exit-with-session "$inner" > "$work/kwin.log" 2>&1
 echo "$out"
