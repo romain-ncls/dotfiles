@@ -1,0 +1,34 @@
+# Local package: lodestar builds it when this folder changes. To update
+# Darkly, change pkgver and the checksum, and check the patch still applies.
+pkgname=nalthis-darkly
+_name=Darkly
+pkgver=0.5.42
+pkgrel=1
+pkgdesc='Darkly application style, patched for Nalthis: list hover and selection as tints'
+arch=(x86_64)
+url='https://github.com/Bali10050/Darkly'
+license=(GPL-2.0-or-later)
+options=(!debug)
+depends=(frameworkintegration kcmutils kcolorscheme kconfig kcoreaddons kguiaddons kiconthemes kirigami kwindowsystem qt6-declarative)
+makedepends=(cmake extra-cmake-modules)
+provides=(darkly)
+conflicts=(darkly darkly-bin darkly-git)
+source=("$_name-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz"
+        view-items.patch)
+sha256sums=(96bdc7bca88de2071345b118e51f530123983e7b38256a160cd233f925e83732
+            e61e07936199b9d8990848b10a48b0de55fe34c981fec02c3cb3be4e3e02657d)
+
+prepare() {
+	patch -d "$_name-$pkgver" -p1 < view-items.patch
+}
+
+build() {
+	# The style and its settings page only: the windows use our decoration.
+	cmake -B build -S "$_name-$pkgver" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
+		-DBUILD_QT5=OFF -DBUILD_QT6=ON -DWITH_DECORATIONS=OFF -DBUILD_TESTING=OFF
+	cmake --build build
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --install build
+}

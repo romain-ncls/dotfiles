@@ -1,0 +1,57 @@
+diff --git a/kstyle/darklystyle.cpp b/kstyle/darklystyle.cpp
+index 65b0b43..71f1f40 100644
+--- a/kstyle/darklystyle.cpp
++++ b/kstyle/darklystyle.cpp
+@@ -4764,13 +4764,30 @@ bool Style::drawPanelItemViewItemPrimitive(const QStyleOption *option, QPainter
+     else
+         color = palette.color(colorGroup, QPalette::Highlight);
+ 
+-    // change color to implement mouse over
+-    if (mouseOver && !hasCustomBackground) {
+-        if (!selected)
+-            color.setAlphaF(0.2);
+-        else
+-            color = color.lighter(110);
++    // nalthis: selection is a tint of the accent, so icons of its color
++    // (folders) still show on it; in an inactive window a lighter tint of
++    // the same accent (a tint of the darker inactive color would vanish).
++    // Hover a clear step (Darkly: 20%).
++    if (!hasCustomBackground) {
++        if (selected) {
++            if (enabled)
++                color = palette.color(QPalette::Active, QPalette::Highlight);
++            color.setAlphaF(mouseOver ? 0.55 : active ? 0.45 : 0.35);
++        } else if (mouseOver) {
++            color.setAlphaF(0.30);
++        }
+     }
++    // nalthis: and a ring of the accent around a selected item drawn in one
++    // piece (not a row of cells), so it doesn't read as a hovered one.
++    const auto render = [&](Corners corners) {
++        _helper->renderSelection(painter, rect, color, corners);
++        if (selected && !hasCustomBackground && corners == AllCorners) {
++            painter->setBrush(Qt::NoBrush);
++            painter->setPen(QPen(palette.color(colorGroup, QPalette::Highlight), 1));
++            const qreal radius(StyleConfigData::cornerRadius() - 0.5);
++            painter->drawRoundedRect(QRectF(rect).adjusted(0.5, 0.5, -0.5, -0.5), radius, radius);
++        }
++    };
+ 
+     if (widget) {
+         if (!widget->property(PropertyNames::sidePanelView).toBool()) {
+@@ -4784,13 +4801,13 @@ bool Style::drawPanelItemViewItemPrimitive(const QStyleOption *option, QPainter
+                         corners |= CornersRight;
+                 }
+ 
+-                _helper->renderSelection(painter, rect, color, corners);
++                render(corners);
+                 return true;
+             }
+         }
+     }
+ 
+-    _helper->renderSelection(painter, rect, color, AllCorners);
++    render(AllCorners);
+ 
+     return true;
+ }

@@ -299,6 +299,19 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
   looked closer to the mockup. A full fork of our own was rejected: 18,000
   lines to merge with Breeze and Darkly forever. Union is KDE's direction:
   worth another look once it matures.
+- **Darkly is built patched for list hover and selection** (Oct 2026):
+  Darkly paints a selected item in the solid accent, the blue of Tela's
+  folders (a selected folder vanished), and hover as 20% of it (ΔE 0.07
+  from the pane: barely visible). No option or color reaches either: the
+  20% is hard-coded, and any accent dark enough for light text on it
+  stays near the pane at 20%. `modules/darkly` builds Darkly from source
+  with one patch: selection a 45% tint (35% in an inactive window, from
+  the active accent) with a 1 px accent ring when the item is drawn in one
+  piece (not a row of cells), hover 30%. Darkly's "new Dolphin selection
+  style" option was rejected: Dolphin only, and its hover is fainter
+  still. Buttons, checkboxes and radios needed no patch: Darkly fills them
+  with the scheme's Button color, which the palette now sets a clear step
+  above the window (`Control`, L 0.37).
 - **Colors live only in the color scheme.** The style reads them from it, so a new
   scheme recolors running apps (tested): the hue / tint / depth / accent knobs
   can be live without touching the style. `pkg/` (Go, `nalthis colors`) is the

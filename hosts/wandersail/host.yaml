@@ -8,6 +8,7 @@ modules:
   - desktop
   - kde
   - nalthis
+  - darkly
   - panel
   - konsole
   - shell
