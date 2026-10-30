@@ -95,7 +95,11 @@ func mix(a, b RGB, t float64) RGB {
 // Palette is every color the knobs produce.
 type Palette struct {
 	Frame, Base, Pane, Raised, Overlay RGB
-	Text, Text2, Text3                 RGB
+	// Control fills buttons, combo boxes and unchecked checkboxes and radios:
+	// the style draws them without an outline, so they stand a clear step
+	// above the window (raised, one step, was barely visible).
+	Control            RGB
+	Text, Text2, Text3 RGB
 	// Two accents of one hue: a deep one for fills (light text on it reaches
 	// ~4.5:1; Kirigami draws marks and text on fills in the scheme's light
 	// text, so fills can't be pale) and a light one for text and links.
@@ -111,7 +115,8 @@ func Compute(k Knobs) Palette {
 	}
 	return Palette{
 		Frame: s[0], Base: s[1], Pane: s[2], Raised: s[3], Overlay: s[4],
-		Text: OKLCH(0.94, c*0.8, k.Hue), Text2: OKLCH(0.76, c*1.5, k.Hue), Text3: OKLCH(0.58, c*1.5, k.Hue),
+		Control: OKLCH(0.37+k.Depth, c*1.6, k.Hue), // past the ramp: a clear step above pane
+		Text:    OKLCH(0.94, c*0.8, k.Hue), Text2: OKLCH(0.76, c*1.5, k.Hue), Text3: OKLCH(0.58, c*1.5, k.Hue),
 		Accent: OKLCH(0.56, 0.13, k.Accent), AccentText: OKLCH(0.76, 0.12, k.Accent),
 		Visited:  OKLCH(0.74, 0.12, 305),
 		Negative: OKLCH(0.70, 0.14, 20), Neutral: OKLCH(0.80, 0.12, 75), Positive: OKLCH(0.78, 0.12, 150),
@@ -162,7 +167,7 @@ func Scheme(name string, k Knobs) []Group {
 		}},
 		group("Colors:Window", p.Pane, p.Raised),
 		group("Colors:View", p.Base, mix(p.Base, p.Pane, 0.5)),
-		group("Colors:Button", p.Raised, p.Overlay),
+		group("Colors:Button", p.Control, mix(p.Control, p.Text, 0.08)),
 		// Selection is the deep accent with light text: KDE also uses it as
 		// "the accent" (Breeze folder icons, Plasma), so it can't be a dark
 		// tint. The style draws selected list rows as a tint itself.
