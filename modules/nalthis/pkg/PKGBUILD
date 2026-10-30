@@ -2,7 +2,7 @@
 pkgname=nalthis
 pkgver=1
 pkgrel=1
-pkgdesc='Nalthis theme: palette command, System Settings page, window decoration, Plasma style, icons'
+pkgdesc='Nalthis theme: palette command, System Settings page, window decoration, Plasma style, icons, show-desktop strip'
 arch=(x86_64)
 url='https://github.com/romain-ncls/dotfiles'
 license=(MIT ISC) # ISC: the Lucide icons
@@ -35,5 +35,7 @@ package() {
 	cp -a "$srcdir/icons/nalthis" "$pkgdir/usr/share/icons/"
 	install -d "$pkgdir/usr/share/plasma/look-and-feel"
 	cp -a "$startdir/lookandfeel" "$pkgdir/usr/share/plasma/look-and-feel/nalthis"
+	install -d "$pkgdir/usr/share/plasma/plasmoids"
+	cp -a "$startdir/plasmoids/peek" "$pkgdir/usr/share/plasma/plasmoids/nalthis.peek"
 	install -Dm644 "$srcdir/package/LICENSE" "$pkgdir/usr/share/licenses/nalthis/lucide-LICENSE"
 }

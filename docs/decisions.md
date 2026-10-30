@@ -335,7 +335,7 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
   blurs; without blur it would be hard to read, so the others are opaque.
   The popup header is the popup's own glass with a hairline, like the
   windows' merged header. The panel is docked and always translucent
-  (`plasmashellrc` in the host file: the panel's number is the machine's).
+  (`modules/panel/layout.js`).
 - **The settings page is C++ only where KDE requires it**: a System Settings
   page must be a compiled plugin, so `pkg/kcm/` is a thin C++ shell around
   QML that runs `nalthis`. It builds with Qt's moc and rcc plus g++ (no CMake);
@@ -407,6 +407,14 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
   only paints the row (no theme, Breeze's forks included, changes it);
   Darkly at least insets the highlight from the pane. A patched kio was
   rejected: a core framework rebuilt on every update.
+- **The panel is a script, run only when it changes** (Oct 2026): its
+  widgets, order and options are `modules/panel/layout.js`, which
+  plasmashell's scripting API runs to rebuild the bottom panel (the layout
+  file numbers widgets per machine, and Plasma rewrites it: never declared
+  key by key). Not the global theme's layout script: applying that resets
+  the desktops too (wallpaper, folder views). Windows 11's arrangement:
+  apps centered between two flexible spacers, show desktop as an 8 px
+  strip (`nalthis.peek`, our widget: Plasma's is a square icon).
 - **Testing never touches the session**: `dev/test.sh` runs an app in a
   headless KWin with its own D-Bus and a copy of the config. Galleries of
   every control: `dev/gallery/kirigami.sh` (QtQuick, run through test.sh)

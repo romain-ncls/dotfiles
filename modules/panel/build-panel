@@ -1,0 +1,13 @@
+#!/bin/sh
+# Rebuilds the bottom panel from layout.js, through plasmashell's scripting
+# API, then restarts plasmashell: a task manager built live shows its
+# launchers only after one.
+set -eu
+cd "$(dirname "$0")"
+if ! qdbus6 org.kde.plasmashell /PlasmaShell >/dev/null 2>&1; then
+    echo "build-panel: plasmashell isn't running; run lodestar apply again from Plasma" >&2
+    exit 1
+fi
+qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$(cat layout.js)"
+sleep 2 # plasmashell saves the new layout
+systemctl --user restart plasma-plasmashell.service

@@ -148,9 +148,8 @@ new Secure Boot keys, a db/dbx update (fwupd), a BIOS update or reset. Re-bind:
 
 ### By hand in Plasma
 - Activities (and their shortcuts): their ids change, so they are recreated.
-- The panel: Kickoff, Pager, Icons-only Task Manager, Claude Usage, System
-  Tray (with Weather and Media Player), Digital Clock (week numbers,
-  holidays), Peek at Desktop.
+- The panel is `modules/panel` (built on the first apply from Plasma).
+  Claude Usage, one of its widgets, is installed by hand (not in the repo).
 - KDE Connect: the phone's *Lock AFK* command runs `lock-afk`.
 
 ### Apps

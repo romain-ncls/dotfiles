@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "Romain Nicolas" }],
+        "Category": "Windows and Tasks",
+        "Description": "A thin strip at the panel's end that shows the desktop, as on Windows",
+        "Icon": "user-desktop",
+        "Id": "nalthis.peek",
+        "License": "MIT",
+        "Name": "Show Desktop (strip)",
+        "Version": "1"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

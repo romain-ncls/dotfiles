@@ -8,6 +8,7 @@ modules:
   - desktop
   - kde
   - nalthis
+  - panel
   - konsole
   - shell
   - kdeconnect
@@ -75,21 +76,6 @@ packages:
   - tesseract-data-fra
 
 kde:
-  plasmashellrc:
-    PlasmaViews/Panel 2: # the bottom panel (its number is this machine's)
-      floating: 0 # docked (nalthis)
-      panelOpacity: 2 # always the glass, even with a maximized window
-  # The panel's widgets (numbers are this machine's; Plasma reads them when it
-  # starts: systemctl --user restart plasma-plasmashell).
-  plasma-org.kde.plasma.desktop-appletsrc:
-    Containments/2/Applets/23/Configuration/Appearance: # the clock
-      autoFontAndSize: false # (it fills the panel's height)
-      fontSize: 10
-    Containments/2/Applets/4/Configuration/General: # the pager
-      displayedText: 2 # no text: the current desktop is the accent cell
-      showWindowOutlines: false
-    Containments/2/Applets/3/Configuration/General: # the launcher
-      compactMode: true # tighter rows (its icons stay Plasma's 22 px)
   kwinrc:
     Plugins:
       shakecursorEnabled: false
