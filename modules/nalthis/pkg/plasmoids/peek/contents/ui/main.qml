@@ -15,13 +15,16 @@ PlasmoidItem {
     readonly property bool vertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
     readonly property int thickness: 8 // Windows' strip
 
+    // asyncCall's callback form needs both callbacks: with only one, QML
+    // picks the one-argument overload and drops the callback.
     function toggle() {
         const kwin = { service: "org.kde.KWin", path: "/KWin" };
+        const failed = reply => console.warn("peek:", reply.error.message);
         DBus.SessionBus.asyncCall(Object.assign({ iface: "org.freedesktop.DBus.Properties", member: "Get",
                 arguments: ["org.kde.KWin", "showingDesktop"] }, kwin), reply => {
             DBus.SessionBus.asyncCall(Object.assign({ iface: "org.kde.KWin", member: "showDesktop",
-                    arguments: [!reply.value] }, kwin));
-        });
+                    arguments: [!reply.value] }, kwin), () => {}, failed);
+        }, failed);
     }
 
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
