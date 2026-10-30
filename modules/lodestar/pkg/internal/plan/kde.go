@@ -73,6 +73,25 @@ func (k *kdeFiles) get(name string) (*kconfig.File, error) {
 	return f, nil
 }
 
+// live is a key's value as KDE reads it: the user's file, else the global
+// theme's defaults (~/.config/kdedefaults). KConfig drops a key written with
+// the value of those defaults, so a declared key equal to them is only there.
+func (k *kdeFiles) live(name string, group []string, key string) (string, bool, error) {
+	f, err := k.get(name)
+	if err != nil {
+		return "", false, err
+	}
+	if v, ok := f.Get(group, key); ok {
+		return v, true, nil
+	}
+	d, err := k.get(filepath.Join("kdedefaults", name))
+	if err != nil {
+		return "", false, err
+	}
+	v, ok := d.Get(group, key)
+	return v, ok, nil
+}
+
 // kde plans KDE keys, shortcuts and the owned lists.
 func (p *Plan) kde(in Input) error {
 	c := in.Config
@@ -116,12 +135,11 @@ func (p *Plan) kde(in Input) error {
 	for _, k := range keys {
 		id := k.ID()
 		declared[id] = true
-		f, err := files.get(k.File)
+		a := &Action{Op: OpKDE, Phase: PhaseHome, KDEFile: k.File, KDEGroup: k.Group, KDEKey: k.Key, KDEID: id, Value: k.Value, From: k.From}
+		live, ok, err := files.live(k.File, k.Group, k.Key)
 		if err != nil {
 			return err
 		}
-		a := &Action{Op: OpKDE, Phase: PhaseHome, KDEFile: k.File, KDEGroup: k.Group, KDEKey: k.Key, KDEID: id, Value: k.Value, From: k.From}
-		live, ok := f.Get(k.Group, k.Key)
 		switch {
 		case ok && live == k.Value:
 			if rec, ok := in.HomeSt.KDE[id]; !ok || rec.Value != k.Value {
