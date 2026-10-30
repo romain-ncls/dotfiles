@@ -336,6 +336,28 @@ network-flightmode-on  plane
 network-flightmode-off plane
 network-mobile-off     signal-zero
 network-vpn            shield
+# plasma-nm's tray names: the signal in steps of 20, then "-locked" while
+# a VPN is up (in its list, a secured network) or "-limited"
+network-wired-activated-locked shield
+network-wired-activated-limited ethernet-port
+network-wireless-100   wifi
+network-wireless-80    wifi
+network-wireless-60    wifi-high
+network-wireless-40    wifi-high
+network-wireless-20    wifi-low
+network-wireless-0     wifi-zero
+network-wireless-100-locked wifi
+network-wireless-80-locked wifi
+network-wireless-60-locked wifi-high
+network-wireless-40-locked wifi-high
+network-wireless-20-locked wifi-low
+network-wireless-0-locked wifi-zero
+network-wireless-100-limited wifi
+network-wireless-80-limited wifi
+network-wireless-60-limited wifi-high
+network-wireless-40-limited wifi-high
+network-wireless-20-limited wifi-low
+network-wireless-0-limited wifi-zero
 battery-000           battery-warning
 battery-000-charging  battery-charging
 battery-010           battery-warning
