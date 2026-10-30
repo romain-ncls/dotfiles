@@ -40,9 +40,6 @@ kde:
       LookAndFeelPackage: nalthis
     Icons:
       Theme: nalthis # Tela + our Lucide line icons (pkg/icons.go)
-  dolphinrc:
-    PlacesPanel:
-      IconSize: 16 # as the toolbar (auto: 22)
 
 hooks:
   - run: apply-palette # the color scheme from palette.json
