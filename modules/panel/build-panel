@@ -1,9 +1,15 @@
 #!/bin/sh
 # Rebuilds the bottom panel from layout.js, through plasmashell's scripting
 # API, then restarts plasmashell: a task manager built live shows its
-# launchers only after one.
+# launchers only after one. Only when layout.js changed since the last build
+# (its hash in ~/.local/state): rebuilding loses changes made by hand.
 set -eu
 cd "$(dirname "$0")"
+state=${XDG_STATE_HOME:-$HOME/.local/state}/panel
+hash=$(sha256sum layout.js | cut -d' ' -f1)
+if [ "$(cat "$state/layout.sha256" 2>/dev/null)" = "$hash" ]; then
+    exit 0
+fi
 if ! qdbus6 org.kde.plasmashell /PlasmaShell >/dev/null 2>&1; then
     echo "build-panel: plasmashell isn't running; run lodestar apply again from Plasma" >&2
     exit 1
@@ -11,3 +17,5 @@ fi
 qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$(cat layout.js)"
 sleep 2 # plasmashell saves the new layout
 systemctl --user restart plasma-plasmashell.service
+mkdir -p "$state"
+echo "$hash" > "$state/layout.sha256"

@@ -414,7 +414,11 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
   key by key). Not the global theme's layout script: applying that resets
   the desktops too (wallpaper, folder views). Windows 11's arrangement:
   apps centered between two flexible spacers, show desktop as an 8 px
-  strip (`nalthis.peek`, our widget: Plasma's is a square icon).
+  strip (`nalthis.peek`, our widget: Plasma's is a square icon), and the
+  launcher opening centered on the screen (a KWin script: Plasma anchors
+  every popup to its widget, with no option; the script centers popups of
+  widgets in the panel's middle third). build-panel keeps layout.js's hash
+  in ~/.local/state, so other changes to the module don't rebuild the panel.
 - **Testing never touches the session**: `dev/test.sh` runs an app in a
   headless KWin with its own D-Bus and a copy of the config. Galleries of
   every control: `dev/gallery/kirigami.sh` (QtQuick, run through test.sh)

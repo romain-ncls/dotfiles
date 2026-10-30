@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Authors": [{ "Name": "Romain Nicolas" }],
+        "Description": "Popups of the panel's middle widgets open centered on the screen",
+        "EnabledByDefault": false,
+        "Id": "centred-popups",
+        "License": "MIT",
+        "Name": "Centred panel popups"
+    },
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js"
+}
