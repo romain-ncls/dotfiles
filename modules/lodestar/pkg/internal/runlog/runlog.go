@@ -5,10 +5,12 @@
 package runlog
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -26,9 +28,15 @@ const keep = 30
 type Log struct {
 	mu    sync.Mutex
 	f     *os.File
-	esc   int // where Write is in an escape sequence: 0 outside, 1 after ESC, 2 in CSI
+	esc   int    // where Write is in an escape sequence: 0 outside, 1 after ESC, 2 in CSI
+	line  []byte // the line being written, held until its end
+	cr    bool   // the last byte was a carriage return
 	start time.Time
 }
+
+// question ends a line that waits for an answer typed on the terminal
+// (pacman's, yay's): the answer reaches the command, not the log.
+var question = regexp.MustCompile(`\[[Yy]/[Nn]\]\s*$`)
 
 // Open starts the log of a command (args: the command line after lodestar).
 func Open(home string, args []string) (*Log, error) {
@@ -88,31 +96,51 @@ func (l *Log) Path() string {
 	return l.f.Name()
 }
 
-// Write adds p without its escape sequences (colours, cursor moves).
+// Write adds p without its escape sequences (colours, cursor moves). A line
+// redrawn after carriage returns (a progress bar) keeps only its last state,
+// and a question gets a line of its own.
 func (l *Log) Write(p []byte) (int, error) {
 	if l == nil {
 		return len(p), nil
 	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	clean := make([]byte, 0, len(p))
+	var out []byte
 	for _, b := range p {
 		switch {
 		case l.esc == 1 && b == '[':
 			l.esc = 2
+			continue
 		case l.esc == 1:
 			l.esc = 0 // a two-byte sequence
+			continue
 		case l.esc == 2:
 			if b >= 0x40 && b <= 0x7e {
 				l.esc = 0
 			}
+			continue
 		case b == 0x1b:
 			l.esc = 1
+			continue
+		}
+		if l.cr && b != '\n' {
+			l.line = l.line[:0] // redrawn
+		}
+		l.cr = b == '\r'
+		switch b {
+		case '\r':
+		case '\n':
+			out = append(append(out, l.line...), '\n')
+			l.line = l.line[:0]
 		default:
-			clean = append(clean, b)
+			l.line = append(l.line, b)
 		}
 	}
-	if _, err := l.f.Write(clean); err != nil {
+	if question.Match(l.line) {
+		out = append(append(out, bytes.TrimRight(l.line, " ")...), " (answered on the terminal)\n"...)
+		l.line = l.line[:0]
+	}
+	if _, err := l.f.Write(out); err != nil {
 		return 0, err
 	}
 	return len(p), nil
@@ -152,5 +180,44 @@ func (l *Log) Close() error {
 	if l == nil {
 		return nil
 	}
+	if len(l.line) > 0 {
+		l.f.Write(append(l.line, '\n'))
+	}
 	return l.f.Close()
+}
+
+// PacmanLog is where pacman logs its transactions.
+const PacmanLog = "/var/log/pacman.log"
+
+// change is a package pacman's log says a transaction changed.
+var change = regexp.MustCompile(`^\[([^\]]+)\] \[ALPM\] ((?:installed|upgraded|downgraded|reinstalled|removed) .*)$`)
+
+// Transactions adds what pacman changed since a time, as its log tells: what
+// the questions answered on the terminal led to.
+func (l *Log) Transactions(pacmanLog string, since time.Time) {
+	if l == nil {
+		return
+	}
+	data, err := os.ReadFile(pacmanLog)
+	if err != nil {
+		return
+	}
+	var changes []string
+	for _, line := range strings.Split(string(data), "\n") {
+		m := change.FindStringSubmatch(line)
+		if m == nil {
+			continue
+		}
+		if t, err := time.Parse("2006-01-02T15:04:05-0700", m[1]); err == nil && !t.Before(since.Truncate(time.Second)) {
+			changes = append(changes, m[2])
+		}
+	}
+	if len(changes) == 0 {
+		l.Printf("(pacman: no package installed, upgraded or removed)\n")
+		return
+	}
+	l.Printf("(pacman changed:)\n")
+	for _, c := range changes {
+		l.Printf("  %s\n", c)
+	}
 }

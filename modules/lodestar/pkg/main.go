@@ -446,13 +446,17 @@ func cmdPrune(o *options, args []string) (err error) {
 }
 
 // runLogged runs an interactive command on the terminal. The log gets the
-// command line and its errors; its output and questions stay on the
-// terminal only.
+// command line, its stderr (pacman's questions, makepkg) and what pacman
+// changed; its stdout stays on the terminal only, where pacman draws its
+// colours and progress bars, and so do the answers.
 func runLogged(log *runlog.Log, args ...string) error {
 	log.Printf("$ %s\n", strings.Join(args, " "))
+	start := time.Now()
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, log.Tee(os.Stderr)
-	if err := cmd.Run(); err != nil {
+	err := cmd.Run()
+	log.Transactions(runlog.PacmanLog, start)
+	if err != nil {
 		return fmt.Errorf("%s: %w", args[0], err)
 	}
 	return nil
