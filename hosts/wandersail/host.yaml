@@ -7,6 +7,9 @@ modules:
   - dns
   - desktop
   - kde
+  - nalthis
+  - darkly
+  - panel
   - konsole
   - shell
   - kdeconnect
@@ -47,6 +50,7 @@ vars:
   name: Romain Nicolas
   email: nicolasromain0@gmail.com
   secureboot: "yes" # Limine's config hash enrolled (modules/boot)
+  konsole_colors: Nalthis # modules/konsole; DarkOneNuanced without nalthis
 
 user:
   name: romain
@@ -74,17 +78,7 @@ packages:
 
 kde:
   kwinrc:
-    Effect-blur:
-      BlurStrength: 11
-      NoiseStrength: 4
-    Effect-wobblywindows:
-      AdvancedMode: true
-      Stiffness: 20
-    Effect-kwin4_effect_translucency:
-      Inactive: 52
     Plugins:
-      blurEnabled: true
-      wobblywindowsEnabled: true
       shakecursorEnabled: false
   kcminputrc:
     Keyboard:

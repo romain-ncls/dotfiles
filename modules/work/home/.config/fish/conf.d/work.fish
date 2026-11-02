@@ -62,8 +62,12 @@ if status is-interactive
     # uses ~/.kube/configs/<context>.
     function kube -a config newColors
         set previousColors $KONSOLE_CURRENT_COLORS
-        test -z "$previousColors" && set previousColors DarkOneNuanced
-        test -z "$newColors" && set newColors DarkOneBlue
+        test -z "$previousColors" && set previousColors (konsole-colors)
+        # The profile scheme's Blue variant (NalthisBlue), else DarkOneBlue
+        if test -z "$newColors"
+            set newColors (konsole-colors)Blue
+            test -e ~/.local/share/konsole/$newColors.colorscheme || set newColors DarkOneBlue
+        end
 
         if test -z "$config"
             echo "Usage: kube <context-name> [<konsole-color-profile>]" >&2

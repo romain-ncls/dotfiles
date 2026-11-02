@@ -1,0 +1,45 @@
+# Nalthis: our dark, rounded theme for Plasma 6.8 (design: docs/decisions.md
+# "Nalthis theme").
+#   pkg/     the nalthis command (palette: get/set/apply/tune) and the
+#            "Nalthis Palette" page in System Settings (kcm/), the window
+#            decoration (decoration/) and the Plasma style: panel, popups,
+#            generated at build time by `nalthis plasma-theme` (plasma.go),
+#            the icon theme: Tela with Lucide line icons (icons.go,
+#            icons.txt), the global theme with our splash (lookandfeel/),
+#            and, written by `nalthis apply` with the palette, the Konsole
+#            schemes (konsole.go) and the GTK layer (gtk.go)
+#   (the application style is Darkly, built patched by modules/darkly;
+#   settings of its own would go in a darklyrc: block under kde:)
+#   dev/     headless test rig (dev/test.sh) and control galleries
+# The palette's knobs are in palette.json (defaults when it's missing), written
+# by the page and by `nalthis tune`.
+packages:
+  - tela-icon-theme # AUR: the color icons, linked into our icon theme
+
+kde:
+  kwinrc:
+    org.kde.kdecoration2:
+      library: org.kde.nalthis # our decoration (pkg/decoration)
+    Effect-blur: # the glass behind the panel, popups and Konsole
+      BlurStrength: 11
+      NoiseStrength: 4
+    Plugins:
+      blurEnabled: true
+  plasmarc:
+    Theme:
+      name: nalthis # the Plasma style (pkg/plasma.go)
+  ksplashrc:
+    KSplash:
+      Theme: nalthis # our splash (pkg/lookandfeel/contents/splash)
+  kdeglobals:
+    KDE:
+      widgetStyle: Darkly
+      # Our global theme (pkg/lookandfeel): the splash, and "Nalthis" selected
+      # in System Settings, whose defaults are this module's settings.
+      LookAndFeelPackage: nalthis
+    Icons:
+      Theme: nalthis # Tela + our Lucide line icons (pkg/icons.go)
+
+hooks:
+  - run: apply-palette # the color scheme from palette.json
+    when: changed

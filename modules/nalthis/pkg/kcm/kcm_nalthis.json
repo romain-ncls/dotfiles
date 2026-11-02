@@ -1,0 +1,12 @@
+{
+    "KPlugin": {
+        "Authors": [{ "Name": "Romain Nicolas" }],
+        "Description": "Greys and accent of the Nalthis theme",
+        "Icon": "preferences-desktop-color",
+        "License": "MIT",
+        "Name": "Nalthis Palette"
+    },
+    "X-KDE-Keywords": "nalthis,palette,grey,gray,hue,tint,depth,accent,theme",
+    "X-KDE-System-Settings-Parent-Category": "themes",
+    "X-KDE-Weight": 25
+}

@@ -22,6 +22,8 @@ kde:
   kdeglobals:
     KDE:
       LookAndFeelPackage: Amethyst
+    Icons:
+      Theme: amethyst # the global theme's default: only in kdedefaults
 breeze-exceptions:
   - ExceptionPattern: mpv
     HideTitleBar: true
@@ -43,6 +45,7 @@ shortcuts:
 		"home/romain/.config/kglobalshortcutsrc": "[kwin]\nWindow Maximize=Meta+PgUp,Meta+PgUp,Maximize Window\n" +
 			"Overview=Meta+W,Meta+W,Toggle Overview\n",
 		"home/romain/.config/breezerc": "[Common]\nShadowSize=2\n\n[Windeco Exception 0]\nExceptionPattern=konsole\n",
+		"home/romain/.config/kdedefaults/kdeglobals": "[Icons]\nTheme=amethyst\n",
 	})
 	home := state.New()
 	home.KDE["kwinrc/Old/Gone"] = state.KDEKey{File: "kwinrc", Group: []string{"Old"}, Key: "Gone", Value: "1"}
@@ -64,6 +67,7 @@ shortcuts:
 		"write ~/.local/share/applications/net.local.lodestar-mute.desktop",
 		"kde kwinrc/Windows/Placement = Centered",
 		"adopt kwinrc/Windows/RollOverDesktops",
+		"adopt kdeglobals/Icons/Theme",
 		"adopt kglobalshortcutsrc/kwin/Overview",
 		"kde powerdevilrc/AC/Display/DimDisplayWhenIdle = false",
 		"kde kglobalshortcutsrc/services/net.local.lodestar-mute.desktop/_launch = Meta+É",

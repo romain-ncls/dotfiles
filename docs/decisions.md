@@ -275,6 +275,171 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   module: thermald, fstrim, microcode, i915 early (mkinitcpio's `kms` hook),
   and the Intel media and compute runtimes.
 
+## Nalthis theme (in progress)
+
+Our dark, rounded theme for Plasma 6.8, in `modules/nalthis/`, used by
+wandersail. Design page with the research and choices so far:
+https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
+
+- **Choices so far** (Oct 2026): Nocturne greys (hue 255, low tint), blue accent
+  (hue 250), radii 12 window / 10 popup / 6 controls, glass only on Plasma's
+  panel and popups, Tela (square) color icons with our own line icons drawn
+  from Lucide, Breeze cursor.
+- **Application style = Darkly, the rest ours** (Oct 2026): Darkly, a C++
+  fork of Breeze (by way of Lightly) maintained upstream, draws every app
+  widget; Kirigami apps get it through KDE's desktop QtQuick style. Ours:
+  the colors (Darkly reads every color from the scheme, so the palette
+  sliders still recolor it live), the title bar (Darkly's is too close to
+  Breeze's), the Plasma style (taskbar, popups), icons, splash, GTK and
+  Konsole. Darkly stays at its defaults; its options (`darklyrc:` in
+  module.yaml) only where something clashes, patches only where no option
+  reaches. It replaced a Union (CSS) style over Breeze: Union 6.8 reaches
+  only what Breeze's CSS exposes, so Breeze kept showing through (accent
+  borders, Dolphin's frames, the places inset), and Darkly untuned already
+  looked closer to the mockup. A full fork of our own was rejected: 18,000
+  lines to merge with Breeze and Darkly forever. Union is KDE's direction:
+  worth another look once it matures.
+- **Darkly is built patched for list hover and selection** (Oct 2026):
+  Darkly paints a selected item in the solid accent, the blue of Tela's
+  folders (a selected folder vanished), and hover as 20% of it (ΔE 0.07
+  from the pane: barely visible). No option or color reaches either: the
+  20% is hard-coded, and any accent dark enough for light text on it
+  stays near the pane at 20%. `modules/darkly` builds Darkly from source
+  with one patch: selection a 45% tint (35% in an inactive window, from
+  the active accent) with a 1 px accent ring when the item is drawn in one
+  piece (not a row of cells), hover 30%. Darkly's "new Dolphin selection
+  style" option was rejected: Dolphin only, and its hover is fainter
+  still. Buttons, checkboxes and radios needed no patch: Darkly fills them
+  with the scheme's Button color, which the palette now sets a clear step
+  above the window (`Control`, L 0.37).
+- **Colors live only in the color scheme.** The style reads them from it, so a new
+  scheme recolors running apps (tested): the hue / tint / depth / accent knobs
+  can be live without touching the style. `pkg/` (Go, `nalthis colors`) is the
+  generator.
+- **Two ways to move the knobs, one engine**: the "Nalthis Palette" page in
+  System Settings (Colors & Themes) and `nalthis tune` in a terminal. Both
+  call `nalthis`, preview live and save to `modules/nalthis/palette.json` in
+  the repo, so a tweak is never only on the machine. A lodestar hook applies
+  the palette when the module changes.
+- **Live apply without `plasma-apply-colorscheme`**: it refuses to re-apply
+  the scheme already set. `nalthis apply` merges the color groups into
+  kdeglobals itself and sends what KDE sends: KConfig's `ConfigChanged`
+  (signature `a{saay}`, recorded with `busctl monitor`; with any other
+  signature apps keep their cached colors) and KGlobalSettings'
+  `notifyChange(0, 0)`.
+- **Our own window decoration** (`pkg/decoration/`, KDecoration3 in C++,
+  modelled on Breeze's): tiles for minimize / maximize / close (the close
+  tile fills the corner, red on hover), square ghost buttons on the left like
+  the toolbar's, centered title, title bar merged with the toolbar, 12 px
+  corners, square when maximized or tiled. Not Aurorae: it can't declare a
+  corner radius, so KWin wouldn't round the bottom corners, and its SVG
+  shadows can't blur. Colors come from the scheme, so the sliders recolor
+  it. It honors Breeze's "hide title bar" window exceptions (breezerc), so
+  `breeze-exceptions:` still works for Konsole, mpv and Spotify.
+  Its glyphs are drawn at 1.5 px: the 1 px of KDE's icon rule looked too
+  thin next to the title text.
+- **Plasma style generated, not drawn** (`pkg/plasma.go`, `nalthis
+  plasma-theme`, run at package build): panel, popups (10 px), tooltips
+  (6 px) and the popup header are SVG frames computed from a radius, an
+  opacity and a shadow size, with the decoration's hairline outline. The
+  controls Plasma draws from the theme (buttons, fields, list and task
+  highlights, the pager) are generated too (`pkg/plasma_widgets.go`); what
+  the theme leaves out falls back to Breeze.
+  Colors come from the scheme's classes, so the sliders recolor them live
+  (tested). Glass (80%) only in the `translucent/` variant, used when KWin
+  blurs; without blur it would be hard to read, so the others are opaque.
+  The popup header is the popup's own glass with a hairline, like the
+  windows' merged header. The panel is docked and always translucent
+  (`modules/panel/layout.js`).
+- **The settings page is C++ only where KDE requires it**: a System Settings
+  page must be a compiled plugin, so `pkg/kcm/` is a thin C++ shell around
+  QML that runs `nalthis`. It builds with Qt's moc and rcc plus g++ (no CMake);
+  moc needs KDE's include paths to expand the plugin macro.
+- **Calm chrome, not islands**: content views are the darkest surface,
+  windows one step up, the header (toolbar merged with the title bar) one
+  more. Rounded "islands" were the first pick, but Union 6.8 can't draw them:
+  QtWidgets views (Dolphin) paint their own background, and Kirigami pages
+  take an inset but no radius. Only square panes with gaps were possible,
+  which read as plain dividers and clipped Dolphin's status label. Worth
+  another look if a later Union rounds page backgrounds (Kirigami apps only).
+- **Two accents of one hue**: a deep one (OKLCH L 0.56) fills checked boxes,
+  switches, sliders, focus and the menu hover, with light text on it (~4.5:1);
+  a light one is for accent text and links. Fills can't be pale: Kirigami
+  draws text and marks on them in the scheme's light text, whatever the CSS
+  says. The scheme's selection color is the deep accent too, since KDE uses
+  it as "the accent" (Breeze folders, Plasma); the style draws selected list
+  rows as a dark accent tint under normal text instead.
+- **Icons: color for things, lines for commands** (`pkg/icons.go`, names in
+  `pkg/icons.txt`). Apps, file types and large folders are Tela's (square,
+  dark variant); commands (toolbars, menus, buttons), the menu categories and
+  the small place and device icons (sidebars, where Tela draws lines too)
+  are Lucide, redrawn per size with lines on pixel centers (the 22 px size is
+  Lucide's 24 grid minus its empty border: exact) and recolored by KDE like
+  Breeze's. Strokes are 1.5 px, not KDE's 1 px: 1 px looked thin next to
+  Tela and the text, and 1.5 matches the title bar glyphs. Unmapped names
+  fall back to Tela's own line icons, then Breeze Dark.
+- **Tela is linked inside our icon theme, not inherited**: icon lookups take
+  the closest size within a theme before trying the next one, so with Tela
+  inherited, a folder at 64 px would get our 16 px line icon scaled up. Inside
+  one theme, our fixed 16/22/24 folders come first and Tela's scalable ones
+  serve the rest. Lucide comes from npm at build time (pinned, checksummed);
+  Tela from the AUR, which is why lodestar now installs AUR packages before
+  building local ones.
+- **GTK: a layer over Breeze-GTK, not a theme** (`pkg/gtk.go`): `nalthis apply`
+  writes `nalthis.css` next to the `colors.css` KDE generates and imports it
+  from `gtk.css` the way KDE imports its own. GTK 3 apps get our radii,
+  accent-filled checks, radios and switches, the tinted selection and thin
+  scrollbars; libadwaita apps get our palette through its named colors (KDE's
+  `colors.css` only defines Breeze's names, so they had none of it) and keep
+  Adwaita's shapes, which libadwaita doesn't let a theme change. A full GTK
+  theme would be thousands of lines to follow GTK releases.
+- **Konsole: One Dark's hues on our greys** (`pkg/konsole.go`): the
+  background is the views' surface, the six colors keep One Dark's hue and
+  chroma at one OKLCH lightness, with tinted Blue and Red variants for kube
+  and ssh. The scheme is the host variable `konsole_colors`, so a host
+  without the theme keeps DarkOneNuanced. VS Code stays on One Dark Pro: a
+  theme of years, not to be replaced.
+- **One look for every surface, Plasma included** (Oct 2026): hover is a
+  wash of the text color, pressed a stronger one, selected the accent tint;
+  the accent line only marks keyboard focus, a focused text field, and
+  what is active (the taskbar's app, the current desktop, the open tab).
+  So the Plasma style ships every widget SVG Plasma 6.8 still uses
+  (`pkg/plasma_widgets.go`): a missing file falls back to Breeze whole.
+  Applet settings windows are the application style, not the Plasma style.
+- **Icon sizes from the icon theme**: KDE 6 ignores kdeglobals'
+  `[MainToolbarIcons]`; toolbars take `MainToolbarDefault` from the theme's
+  `index.theme`, so ours says 16. At 22 and 24 line icons are an 18 px drawing
+  (the mockup's weight; full size looked heavy in popup headers and
+  Kickoff), status icons 20 px (the panel's tray; 18 looked small). At 32
+  (the tray's grid, list rows) they are the 22 px one, padded, except
+  glyphs in the panel itself (`[panel]`: show desktop), the tray's 20.
+  Dolphin's icon view keeps its own 64 px. Our folders are
+  Scalable with adjoining size ranges (16: 12–18, 22: 19–23, 24: 24–27, 32:
+  28–40), so in-between requests (Kirigami asks for 20) take our nearest
+  drawing, not a scalable Tela icon of the same name.
+- **Dolphin's places spacing stays KDE's**: kio's places view draws its
+  icon 4 px into the row and the label 4 px after it, hard-coded; a style
+  only paints the row (no theme, Breeze's forks included, changes it);
+  Darkly at least insets the highlight from the pane. A patched kio was
+  rejected: a core framework rebuilt on every update.
+- **The panel is a script, run only when it changes** (Oct 2026): its
+  widgets, order and options are `modules/panel/layout.js`, which
+  plasmashell's scripting API runs to rebuild the bottom panel (the layout
+  file numbers widgets per machine, and Plasma rewrites it: never declared
+  key by key). Not the global theme's layout script: applying that resets
+  the desktops too (wallpaper, folder views). Windows 11's arrangement:
+  apps centered between two flexible spacers, show desktop as an 8 px
+  strip (`nalthis.peek`, our widget: Plasma's is a square icon), and the
+  launcher opening centered on the screen (a KWin script: Plasma anchors
+  every popup to its widget, with no option; the script centers popups of
+  widgets in the panel's middle third). build-panel keeps layout.js's hash
+  in ~/.local/state, so other changes to the module don't rebuild the panel.
+- **Testing never touches the session**: `dev/test.sh` runs an app in a
+  headless KWin with its own D-Bus and a copy of the config. Galleries of
+  every control: `dev/gallery/kirigami.sh` (QtQuick, run through test.sh)
+  and `dev/gallery/grab.sh` (QtWidgets, rendered offscreen, since Wayland
+  won't open a menu without real input).
+
 ## Not in the repo yet
 
 - **VS Code** settings and extensions stay in VS Code Settings Sync for now,

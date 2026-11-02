@@ -1,0 +1,18 @@
+# The bottom panel, Windows 11's way: desktops and Claude Usage on the left,
+# the launcher and the apps in the middle, the tray, the clock and a
+# show-desktop strip (nalthis.peek, from the nalthis package) on the right.
+# layout.js holds the widgets, their order and options; build-panel hands it
+# to plasmashell when it changed. It replaces the panel: settings changed by
+# hand on the panel are lost then. A KWin script (home/.local/share/kwin/
+# scripts/centred-popups) opens the launcher centered on the screen.
+packages:
+  - qt6-tools # qdbus6
+
+kde:
+  kwinrc:
+    Plugins:
+      centred-popupsEnabled: true
+
+hooks:
+  - run: build-panel
+    when: always # it checks layout.js's hash itself

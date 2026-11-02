@@ -1,0 +1,6 @@
+# Darkly, the application style of the nalthis theme, built from source with
+# one patch (pkg/view-items.patch): list hover and selection as tints of the
+# accent, a selected item ringed (Darkly's own selection is the solid accent,
+# the color of Tela's folders, and its hover 20% of it, barely visible).
+# Upstream: https://github.com/Bali10050/Darkly; to update, change pkgver
+# and the checksum in pkg/PKGBUILD.

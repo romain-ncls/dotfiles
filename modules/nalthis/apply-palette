@@ -1,0 +1,3 @@
+#!/bin/sh
+# Builds the color scheme from palette.json and applies it to the session.
+exec nalthis apply
