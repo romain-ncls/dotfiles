@@ -149,7 +149,8 @@ shortcuts:
     run: brave "https://www.perplexity.ai"
   - name: Full brightness
     keys: Meta+Num+*
-    run: qdbus6 local.org_kde_powerdevil /org/kde/Solid/PowerManagement/Actions/BrightnessControl setBrightness 10000
+    # Plasma's power service, else (Hyprland) brightnessctl
+    run: qdbus6 local.org_kde_powerdevil /org/kde/Solid/PowerManagement/Actions/BrightnessControl setBrightness 10000 || brightnessctl set 100%
   # clipboard, keyboard
   - {component: plasmashell, action: clipboard_action, keys: Ctrl+Alt+X}
   - {component: plasmashell, action: repeat_action, keys: Ctrl+Alt+R}

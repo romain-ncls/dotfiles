@@ -202,8 +202,8 @@ its own shell id and state folder. Fine, but link the same path everywhere.
      on `wpctl`, `brightnessctl` and `playerctl`, a plain wallpaper.
    - The session's plumbing (Decisions and Secrets): XDG autostart, the
      Plasma-only units' condition, `pam_kwallet_init`, one secret store
-     pinned for Brave and the Electron apps, Wi-Fi and VPN secrets owned by
-     NetworkManager, the portals.
+     pinned for Brave and VS Code, nm-applet for networks and the VPN's
+     prompts, the portals, the Sleep key and the lid.
    - Apps look as in Plasma (the same GTK files and `kdeglobals`, Qt through
      KDE's platform plugin): no theme work before lumar.
 3. **shadesmar grows**, replacing the stand-ins one by one, in the live
@@ -275,15 +275,19 @@ also serves it as the freedesktop Secret Service (libsecret).
   `ksecretd`. Nothing to migrate, nothing to see.
 - **Chromium and Electron apps choose their store by desktop** (KWallet in
   Plasma, libsecret elsewhere): the same app would look for its key in
-  another place in Hyprland, fail to decrypt its data and log out (Brave,
-  Discord, VS Code, Obsidian, GitKraken, Bitwarden), and again back in
-  Plasma. Pin one store for both sessions (`--password-store=…` in
-  `brave-flags.conf`, `code-flags.conf`, and per app for the others) before
-  the first login, then check each app stays logged in both ways.
-- **Wi-Fi and VPN secrets move to NetworkManager itself** (system-owned,
-  root-only, in `/etc/NetworkManager/system-connections`): without Plasma's
-  network applet, nothing in Hyprland answers for the wallet's copies, and
-  they then work before login too.
+  another place in Hyprland, fail to decrypt its data and log out, and again
+  back in Plasma. The wallet shows two such apps, Brave and VS Code (their
+  "Safe Storage" keys): both pinned to KWallet (`--password-store=kwallet6`
+  in `brave-flags.conf` and `code-flags.conf`). JetBrains, gh, Zed and Warp
+  already use the Secret Service, the same in both sessions; Discord,
+  Obsidian, GitKraken and Bitwarden keep nothing there. Check at the first
+  login that each stays logged in.
+- **Networks: nm-applet in Hyprland** (a stand-in until shadesmar). Most
+  Wi-Fi passwords are Plasma's network applet's (agent-owned, in the
+  wallet), and both work VPNs ask a challenge (an OTP) at each connection:
+  Hyprland needs an agent that prompts anyway. nm-applet asks each Wi-Fi
+  password once (they're in Bitwarden) and keeps it in the Secret Service;
+  Plasma keeps its own copy.
 
 ## Apps and toolkits: GTK first
 

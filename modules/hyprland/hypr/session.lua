@@ -6,7 +6,8 @@ hl.env("QT_QPA_PLATFORMTHEME", "kde")
 hl.env("XCURSOR_THEME", "breeze_cursors")
 hl.env("XCURSOR_SIZE", "24")
 
--- The lid, as Plasma has it (hyprland-lid.service keeps logind off it):
+-- The lid, as Plasma has it (hyprland-lid.service keeps logind off it, and
+-- off the Sleep key, which is mutectl's Lock AFK):
 -- nothing at the desk, the screen locked on the charger, suspend on battery
 -- (locked first by hypridle).
 hl.bind("switch:on:Lid Switch", function()
