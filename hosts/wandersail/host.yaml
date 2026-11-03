@@ -8,6 +8,7 @@ modules:
   - desktop
   - kde
   - hyprland
+  - hyprslide
   - shadesmar
   - nalthis
   - darkly
