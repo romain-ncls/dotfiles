@@ -75,16 +75,24 @@ rejects (`bezier` or `spring`).
   workspace that doesn't exist yet is made on the focused screen). A switch
   computes the neighbour, sets the workspace animation's style and calls
   `set_workspace` on the side monitors; the middle screen's workspace never
-  moves. The style: Hyprland slides sideways or up and down, the direction
-  from the ids' order, so a straight move slides the way it goes and a
-  diagonal one only fades; the slides are short (10 %) and fade, as a whole
-  screen's would carry across it the columns the scrolling layout keeps
-  beside the screen. The bar learns the desktop shown from the grid's own
-  event (`hl.dsp.event`, `custom>>grid d`): Hyprland reports a workspace
-  change only for the focused screen. No plugin: plugins
-  must match the exact Hyprland build (hyprtasking doesn't compile on 0.57
-  yet, hyprexpo is gone). An overview of the grid, if wanted, comes later in
-  the shell.
+  moves. The bar learns the desktop shown from the grid's own event
+  (`hl.dsp.event`, `custom>>grid d`): Hyprland reports a workspace change
+  only for the focused screen.
+- **The slides are a plugin of ours, hyprslide** (`modules/hyprslide`, C++,
+  two hooks). Hyprland slides sideways or up and down only, the direction
+  from the ids' order, and draws during a slide the columns the scrolling
+  layout keeps beside the screen, which then cross it. hyprslide sets the
+  workspace's offset on both axes, the way the grid says the desktop lies
+  (`hl.plugin.hyprslide.towards(dx, dy)` around `set_workspace`), and leaves
+  out the tiled windows whose middle is off the screen while their workspace
+  slides: KDE's slide, diagonals included. Plugins must match the exact
+  Hyprland build, so lodestar rebuilds it with each new Hyprland
+  (`pkg: built-against: [hyprland]`); Hyprland refuses one built for
+  another, and the grid then falls back to short slides that fade (10 %,
+  so the columns barely show) and a fade for a diagonal. Third-party
+  plugins stay out: they lag behind Hyprland (hyprtasking doesn't compile on
+  0.57 yet, hyprexpo is gone). An overview of the grid, if wanted, comes
+  later in the shell.
 - **Our own shell in Quickshell, not Noctalia or another ready-made shell.**
   Noctalia 5 is native C++ with no QML, so the Silksong scene can't run in it;
   Dux Shell (ex-DankMaterialShell) and Caelestia are large, weekly-moving
@@ -180,6 +188,7 @@ reload`.
   requiring `monitors`, `grid`, `windows`, `binds`, `input`, `looknfeel`,
   `autostart`; LuaLS stubs from `/usr/share/hypr/stubs`), the dev rig
   (`dev/nested.sh`, `dev/headless.sh`).
+- `modules/hyprslide/`: the plugin (`pkg/`: its C++ and PKGBUILD).
 - `modules/shadesmar/`: the Quickshell config (`~/.config/quickshell/shadesmar/`,
   linked, edited in place) and the Go helper (`pkg/`).
 - `modules/lumar/`: the theme (below).
