@@ -288,7 +288,8 @@ migrations and update channels (lodestar does that), their titlebar plugin.
   their app's icon: Hyprland copies a window only while it overlaps its
   screen); click or Enter, arrows, typing filters. Meta+D: a peek at the
   desktop, each screen on an empty workspace of its own. Meta+= / Meta+- /
-  Meta+0 (à): KWin's zoom, Hyprland's `cursor.zoom_factor` by steps of 1.2.
+  Meta+0 (à), Meta+Ctrl+scroll: KWin's zoom, Hyprland's `cursor.zoom_factor`
+  by steps of 1.2.
   Meta+L locks.
 - Dropped: Meta+< (Focus Discord: Discord is always on the middle screen).
 - **The laptop alone**: its screen shows the grid's four desktops; `comms`
@@ -366,8 +367,10 @@ later (yazi, btop, lazygit…).
 
 ## Open
 
-- [ ] Changing the workspace animation's style from a bind at runtime: works
-      by reading the source, not yet tried.
+- [x] Changing the workspace animation's style from a bind at runtime: works
+      (grid.lua does it at each switch).
+- [ ] The overview's animations: the windows going from their place to
+      the grid and back, as Plasma's (it only appears and disappears now).
 - [ ] Brave stays on its Classic theme (no bar above the tabs) with lumar's
       colors: a Chrome theme (a manifest of frame, tab and toolbar colors)
       rendered by lumar and loaded unpacked once, like mutectl's Teams
@@ -376,7 +379,8 @@ later (yazi, btop, lazygit…).
       the profile's, so Brave in Plasma gets lumar too. Check in Hyprland
       whether any bar is left above the tabs: Hyprland draws no title bars,
       and "Use system title bar and borders" then leaves only the tabs.
-- [ ] Hotplug: what becomes of windows on a screen that goes away.
+- [x] Hotplug: what becomes of windows on a screen that goes away (they go
+      to the same desktop on the screens left, grid.lua; tried headless).
 - [ ] A drop-down terminal (Ghostty's quick terminal, or a special workspace
       as Omarchy's Super+\`), on top of the free-floating one.
 - [ ] Focus after a switch stays on the screen it was on (`set_workspace`
