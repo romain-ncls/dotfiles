@@ -2,6 +2,8 @@
 # (plan and decisions: docs/hyprland.md). Its config is Lua, in hypr/,
 # linked to ~/.config/hypr and edited in place: Hyprland reloads it on save.
 # dev/ runs it nested in a window of the Plasma session, or headless.
+# system/etc/systemd/user/ fits the session into systemd: what it starts,
+# what only it runs.
 packages:
   - hyprland
   - xdg-desktop-portal-hyprland
@@ -11,6 +13,18 @@ packages:
   - grim # screenshots
   - slurp # picking a region
   - wl-clipboard
+  - brightnessctl
+  - playerctl
+  # stand-ins until shadesmar has its own (docs/hyprland.md, first login)
+  - hyprlock
+  - hypridle
+  - mako # notifications
+  - fuzzel # launcher
+  - network-manager-applet # networks, and the VPN's prompts
+
+user-services:
+  - hypridle.service
+  - hyprland-lid.service
 
 files:
   ~/.config/hypr:
