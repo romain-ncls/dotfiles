@@ -36,17 +36,15 @@ bind("ALT + SHIFT + Tab", function()
     hl.dispatch(hl.dsp.window.bring_to_top())
 end)
 
--- Alt+` and Alt+~ (Alt+Shift+²): the current app's windows on the screens.
-local function escape(s)
-    return (s:gsub("[%^%$%(%)%%%.%[%]%*%+%-%?%{%}|\\]", "\\%0"))
-end
+-- Alt+² and Alt+Shift+² (Plasma's Alt+` and Alt+~): the current app's
+-- windows on the screens. (hl.get_windows' class is the exact class.)
 local function same_app(step)
     local w = hl.get_active_window()
     if not w then
         return
     end
     local list = {}
-    for _, o in ipairs(hl.get_windows({ class = "^" .. escape(w.class) .. "$" })) do
+    for _, o in ipairs(hl.get_windows({ class = w.class })) do
         if o.workspace and o.workspace.visible then
             list[#list + 1] = o
         end
