@@ -2,6 +2,9 @@
 Description=Per-app SmartShift and scroll force for Logitech mice
 PartOf=graphical-session.target
 After=graphical-session.target
+# Plasma only until it reads Hyprland's events: the active window comes
+# from a KWin script (docs/hyprland.md)
+ConditionEnvironment=XDG_CURRENT_DESKTOP=KDE
 
 [Service]
 ExecStart=/usr/bin/logi-smartshift
