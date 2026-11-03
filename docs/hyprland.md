@@ -15,15 +15,24 @@ rejects (`bezier` or `spring`).
 
 ## The workflow to keep
 
-- One desktop = one workspace on each of the three screens; **all screens
-  switch together**, as in KDE.
+- One desktop = one workspace on each side screen; **the side screens switch
+  together**, as in KDE.
 - Four desktops in a **2×2 grid**: direct jumps (Meta+A/Z/Q/S, Ctrl+F1..F4)
   and moves up/down/left/right, the animation sliding the way you move.
+- **The middle screen (the laptop's) has one workspace of its own** that
+  never switches: Discord there, and the Teams web app as the other window
+  (one or the other fills it). Discord always stays in view, at least its
+  servers and channels: who is in the voice channel.
+- **Spotify is a scratchpad on the middle screen**: a shortcut shows it over
+  Discord, leaving Discord's left side (servers and channel list, about the
+  first 375 px) uncovered, and hides it again.
+- **The terminal from Meta+Return always opens floating**; from there it goes
+  anywhere (over a window, into the tape at half width, two side by side).
 - What the KDE habits are for: one window filling each screen and quick
-  switching between them; the terminal anywhere (over a window, on half a
-  screen, two side by side); Discord on the middle screen and Spotify on
-  every desktop. Hyprland's own ways of doing that come first (below), KDE's
-  stacking model only if they don't stick.
+  switching between them. Hyprland's own ways of doing that come first
+  (below), KDE's stacking model only if they don't stick.
+- **Shortcuts stay close to today's at first** (KDE's bindings, below);
+  more keyboard-driven ones can come later.
 - Every shortcut the modules declare (bemoji, mutectl, soundboard, awpro,
   spotify-vol, ssh-add, Claude in Brave…), on the French AZERTY layout.
 
@@ -35,25 +44,31 @@ rejects (`bezier` or `spring`).
   default (`scrolling.column_width = 1.0`): one window per screen, like a
   maximized one, the others beside it. Alt+Tab becomes moving along the
   tape (`hl.dsp.layout("focus r")`, wrapping); the shell's switcher with
-  previews comes later. The terminal opens half width (`scrolling_width =
-  0.5`): two side by side fill a screen; `colresize +conf` cycles
+  previews comes later. The terminal from Meta+Return opens floating
+  (`exec_cmd(cmd, { float = true, … })`: the rule comes with that launch,
+  not with the app); tiled, it takes half width (`scrolling_width = 0.5`):
+  two side by side fill a screen; `colresize +conf` cycles
   1/3, 1/2, 2/3, full; `consume`/`expel` stack windows in a column; a floating
   toggle puts it over the other windows. Touchpad swipes scroll the tape.
   Floating is for dialogs, picture-in-picture and pinned windows only.
   Plan B if the tape doesn't stick: everything floating, maximize as a
   window state, quick tile by binds (KDE's model); or monocle.
-- **Discord and Spotify on every desktop** don't fit the tape: pinning only
-  works on floating windows, and a pinned window stays above the tiled
-  ones of its screen. Options to try, in order: a special workspace each
-  (Hyprland's scratchpad), on the middle screen, shown and hidden over any
-  desktop by the key that focuses it now (Meta+< for Discord); the middle
-  screen keeping its own workspace while the side screens switch; a pinned
-  floating window.
+- **The middle screen: a workspace of its own, a scratchpad over it.** No
+  pinning (only floating windows can be pinned, and they'd cover the tape).
+  The laptop's workspace (a name, `comms`, bound to the laptop's panel, kept
+  out of the grid) holds Discord and Teams (Brave's web app) as full-width
+  columns, opened there by window rules. Spotify lives on a special
+  workspace (Hyprland's scratchpad), floating, sized and placed by a rule
+  (from x = 375 px to the right edge, the full height under the bar); the
+  shortcut focuses the laptop's screen, then toggles it (a special workspace
+  opens on the focused screen), so it always shows there.
+  `decoration.dim_special = 0`, or the uncovered strip of Discord is dimmed.
 - **The grid is Lua in the compositor config.** Workspace ids are numbered per
-  screen, row by row (desktop d on the n-th screen: `(n-1)*4 + d`), each bound
-  to its screen by EDID description. A switch computes the neighbour, sets the
-  workspace animation's style (`slide` or `slidevert`, the direction from the
-  ids' order) and calls `set_workspace` on every monitor. No plugin: plugins
+  side screen, row by row (desktop d on the n-th side screen: `(n-1)*4 + d`),
+  each bound to its screen by EDID description. A switch computes the
+  neighbour, sets the workspace animation's style (`slide` or `slidevert`,
+  the direction from the ids' order) and calls `set_workspace` on the side
+  monitors; the middle screen's workspace never moves. No plugin: plugins
   must match the exact Hyprland build (hyprtasking doesn't compile on 0.57
   yet, hyprexpo is gone). An overview of the grid, if wanted, comes later in
   the shell.
@@ -168,7 +183,7 @@ Each phase ends with something usable in the nested session, then checked as
    (`monitor.added`/`removed`: the laptop alone keeps four desktops, windows
    from the gone screens come back to the matching desktop), the scrolling
    layout (column widths per app, floating rules for dialogs and
-   picture-in-picture), Discord and Spotify on every desktop, the binds
+   picture-in-picture), the middle screen (`comms`, the Spotify scratchpad), the binds
    (along the tape, column widths, move to the next screen, kill, the
    current app's windows), input (per-device acceleration as `flat-mice` and the host
    file set it, touchpad, repeat, Num Lock).
@@ -232,10 +247,15 @@ migrations and update channels (lodestar does that), their titlebar plugin.
       by reading the source, not yet tried.
 - [ ] Keeping the theme out of the Plasma session (phase 5).
 - [ ] Hotplug: what becomes of windows on a screen that goes away.
-- [ ] Discord and Spotify on every desktop: which of the three options
-      (Decisions) feels right.
-- [ ] The grid with the tape: up/down are the grid's, left/right are the
-      tape's (Meta+arrows along the tape, Meta+Ctrl+arrows between desktops?).
+- [ ] The laptop alone (no side screens): its screen shows the grid's four
+      desktops, and `comms` (Discord, Teams) becomes a fifth reached by its
+      own key? Spotify's scratchpad then opens over whatever is there.
+- [ ] Which key toggles Spotify (today Spotify has no focus key; Meta+<
+      focuses Discord).
+- [ ] KDE's binds on the tape, close to today: Meta+Ctrl+arrows between
+      desktops (KDE's default), Alt+Tab along the tape, Meta+Up full width
+      or maximized, Meta+Left/Right half width (KDE's quick tile), Meta+Down
+      (minimize: no such state in Hyprland; a hidden special workspace?).
 - [ ] A drop-down terminal on a special workspace (Omarchy's Super+\`), on
       top of the free-floating one.
 - [ ] Focus after a switch stays on the screen it was on (`set_workspace`
