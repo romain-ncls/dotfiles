@@ -34,7 +34,9 @@ rejects (`bezier` or `spring`).
   (`fullscreen({mode="maximized"})`) unless a rule says otherwise. Half-screen
   is a bind that moves and resizes (KDE's quick tile), not a tiling layout.
   Plan B if floating proves clumsy: the built-in monocle layout (every tiled
-  window fills the screen) with the terminal and pinned windows floating.
+  window fills the screen) with the terminal and pinned windows floating; or
+  the scrolling layout with full-width columns (half-width for two
+  terminals side by side).
 - **The grid is Lua in the compositor config.** Workspace ids are numbered per
   screen, row by row (desktop d on the n-th screen: `(n-1)*4 + d`), each bound
   to its screen by EDID description. A switch computes the neighbour, sets the
@@ -215,3 +217,24 @@ migrations and update channels (lodestar does that), their titlebar plugin.
       by reading the source, not yet tried.
 - [ ] Keeping the theme out of the Plasma session (phase 5).
 - [ ] Hotplug: what becomes of windows on a screen that goes away.
+- [ ] Pinned Discord: a pinned window may stay drawn above the other
+      windows of its screen. If it does, the middle screen keeps its own
+      workspace and only the side screens switch (Discord unpinned, nothing
+      to fight); try pinning first, since all screens switch together in KDE.
+- [ ] A drop-down terminal on a special workspace (Omarchy's Super+\`), on
+      top of the free-floating one.
+- [ ] Focus after a switch stays on the screen it was on (`set_workspace`
+      doesn't move focus, by the source): check.
+
+## Alternatives considered
+
+- Shells: Noctalia 5 (native C++, Luau plugins, TOML config; no QML, so no
+  Silksong scene), Dux Shell (ex-DankMaterialShell) and Caelestia
+  (Quickshell configs, large and fast-moving), Omarchy's (Quickshell, tied to
+  Omarchy), the classic kit (waybar, mako, fuzzel or walker, swayosd,
+  hyprlock, hypridle, hyprpaper: many pieces to theme one by one, and the
+  lock screen would still be ours), AGS/Astal (TypeScript and GTK 4: the
+  scene would be rewritten).
+- Compositors: Umbriel (Noctalia's own, young), Labwc (stacking, the closest
+  to KWin, few effects), niri (scrolling, fights maximize and Alt+Tab),
+  COSMIC (no plugins on the lock screen, no grid).
