@@ -1,0 +1,24 @@
+# Local package: lodestar builds it when this folder changes, and when
+# Hyprland does (module.yaml: built-against): Hyprland only loads a plugin
+# built against its exact headers.
+pkgname=hyprslide
+pkgver=1
+pkgrel=1
+pkgdesc='Hyprland plugin: workspace switches that slide the way the workspace lies, diagonals included'
+arch=(x86_64)
+license=(MIT)
+options=(!debug)
+depends=(hyprland)
+makedepends=(pkgconf)
+source=(hyprslide.cpp)
+sha256sums=(SKIP)
+
+build() {
+	# makepkg's flags, as Hyprland's own package is built with them
+	g++ -shared -fPIC -std=c++2c $CXXFLAGS $LDFLAGS $(pkg-config --cflags hyprland) \
+		hyprslide.cpp -o hyprslide.so
+}
+
+package() {
+	install -Dm755 hyprslide.so -t "$pkgdir/usr/lib/hyprslide"
+}
