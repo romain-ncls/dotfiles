@@ -1,14 +1,19 @@
 {
   "permissions": {
-    "defaultMode": "auto",
     "allow": [
       "mcp__raindrop__delete_bookmarks",
       "mcp__raindrop__delete_collections"
-    ]
+    ],
+    "defaultMode": "auto"
   },
   "statusLine": {
     "type": "command",
     "command": "bash ~/.claude/statusline-command.sh"
+  },
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "xhigh"
+    }
   },
   "tui": "fullscreen",
   "wheelScrollAccelerationEnabled": false,
