@@ -55,6 +55,20 @@ local function alone()
     return not find(screens.left) and not find(screens.right)
 end
 
+-- Each workspace on its screen, whatever creates it (a window sent there,
+-- an app's rule): else Hyprland makes it on the focused screen. comms is
+-- kept even when empty. A rule's screen that isn't plugged in is ignored,
+-- so the laptop alone gets the desktops.
+for d = 1, 4 do
+    if screens.left then
+        hl.workspace_rule({ workspace = tostring(d), monitor = screens.left })
+    end
+    if screens.right then
+        hl.workspace_rule({ workspace = tostring(4 + d), monitor = screens.right })
+    end
+end
+hl.workspace_rule({ workspace = "name:comms", monitor = screens.laptop, persistent = true })
+
 -- The grid screen a monitor is, if it is one.
 local function slot(m)
     for _, s in ipairs(grid()) do
@@ -64,9 +78,14 @@ local function slot(m)
     end
 end
 
+-- Where desktop d lies: its row and column, from 0.
+local function place(d)
+    return math.floor((d - 1) / 2), (d - 1) % 2
+end
+
 -- The desktop next to d (nil at the edge: no wrapping, as in KDE).
 local function neighbour(d, dir)
-    local row, col = math.floor((d - 1) / 2), (d - 1) % 2
+    local row, col = place(d)
     if dir == "left" then
         col = col - 1
     elseif dir == "right" then
@@ -99,18 +118,40 @@ local function current()
     return shown
 end
 
+-- Tells the bar's desktops (modules/shadesmar) the one shown, 0 for none
+-- (comms in place of the grid, on the laptop alone): Hyprland itself only
+-- says which workspace the focused screen switched to.
+local function announce(d)
+    hl.dispatch(hl.dsp.event("grid " .. d))
+end
+
+-- How a switch from desktop a to b moves. Hyprland slides one way or the
+-- other by the ids' order, sideways or up and down: a straight move slides
+-- the way it goes; a diagonal one can't, and fades. The slides are short and
+-- fade: a whole screen's would carry across it the columns that the
+-- scrolling layout keeps beside the screen.
+local travel = "10%"
+local function style(a, b)
+    local ra, ca = place(a)
+    local rb, cb = place(b)
+    if ra ~= rb and ca ~= cb then
+        return "fade"
+    end
+    return (ra ~= rb and "slidefadevert " or "slidefade ") .. travel
+end
+
 local switching = false
 
--- Shows desktop d on every grid screen, sliding the way it lies.
+-- Shows desktop d on every grid screen.
 function G.go(d)
-    local style = math.abs(d - current()) == 2 and "slidevert" or "slide"
-    hl.animation({ leaf = "workspaces", enabled = true, speed = 4, bezier = "easeOutQuint", style = style })
+    hl.animation({ leaf = "workspaces", enabled = true, speed = 4, bezier = "easeOutQuint", style = style(current(), d) })
     shown = d
     switching = true
     for _, s in ipairs(grid()) do
         s.monitor:set_workspace(tostring(s.base + d))
     end
     switching = false
+    announce(d)
 end
 
 function G.move(dir)
@@ -149,21 +190,101 @@ function G.comms()
         G.go(current())
     else
         laptop:set_workspace("name:comms")
+        announce(0)
     end
 end
 
--- Spotify's scratchpad, always on the laptop's screen (a special workspace
--- opens on the focused screen). Started the first time.
+-- Spotify's scratchpad, on the laptop's screen (a special workspace opens on
+-- the focused screen): Spotify over Discord, but for its left strip (the
+-- servers, who's in the voice channel), above the bar.
+local strip, bar = 375, 40
+
+local function laptop_screen()
+    return find(screens.laptop) or hl.get_active_monitor()
+end
+
+local function spotify(w)
+    return w ~= nil and (w.class == "Spotify" or w.class == "spotify")
+end
+
+-- (hl.get_windows' class is the exact class, not a pattern.)
+local function spotify_window()
+    for _, w in ipairs(hl.get_windows()) do
+        if spotify(w) then
+            return w
+        end
+    end
+end
+
+local function in_scratchpad(w)
+    return w.workspace ~= nil and w.workspace.name == "special:spotify"
+end
+
+local function scratchpad_shown()
+    local s = laptop_screen().active_special_workspace
+    return s ~= nil and s.name == "special:spotify"
+end
+
+-- The window to give the focus back to when the scratchpad hides: the one
+-- that had it before Spotify.
+local back = nil
+
+-- Shows the scratchpad, or hides it.
+local function scratchpad(show)
+    if show == scratchpad_shown() then
+        return
+    end
+    local a = hl.get_active_window()
+    if a and not spotify(a) then
+        back = a.address
+    end
+    hl.dispatch(hl.dsp.focus({ monitor = laptop_screen() }))
+    hl.dispatch(hl.dsp.workspace.toggle_special("spotify"))
+    if not show and back then
+        local w = hl.get_window("address:" .. back)
+        if w and w.workspace and w.workspace.visible then
+            hl.dispatch(hl.dsp.focus({ window = w }))
+        end
+        back = nil
+    end
+end
+
+-- Puts Spotify's window in the scratchpad. Not a window rule: Spotify names
+-- its window once it's open, after the rules have run.
+local function stow(w)
+    local m = laptop_screen()
+    if not w.floating then
+        hl.dispatch(hl.dsp.window.float({ window = w, action = "enable" }))
+    end
+    if not in_scratchpad(w) then
+        hl.dispatch(hl.dsp.window.move({ window = w, workspace = "special:spotify", follow = false }))
+    end
+    hl.dispatch(hl.dsp.window.resize({ window = w, x = m.width - strip, y = m.height - bar, relative = false }))
+    hl.dispatch(hl.dsp.window.move({ window = w, x = m.x + strip, y = m.y, relative = false }))
+end
+
+-- Meta+²: Spotify, started the first time, put back in the scratchpad if
+-- it left it.
 function G.spotify()
-    local laptop = find(screens.laptop)
-    if laptop then
-        hl.dispatch(hl.dsp.focus({ monitor = laptop }))
-    end
-    if #hl.get_windows({ class = "^[Ss]potify$" }) == 0 then
-        hl.exec_cmd("spotify")
+    local w = spotify_window()
+    if not w then
+        hl.exec_cmd("spotify", { workspace = "special:spotify silent", float = true })
+    elseif not in_scratchpad(w) then
+        stow(w)
+        scratchpad(true)
     else
-        hl.dispatch(hl.dsp.workspace.toggle_special("spotify"))
+        scratchpad(not scratchpad_shown())
     end
+end
+
+-- However Spotify was started, its window goes to the scratchpad, shown.
+for _, event in ipairs({ "window.open", "window.class" }) do
+    hl.on(event, function(w)
+        if spotify(w) then
+            stow(w)
+            scratchpad(true)
+        end
+    end)
 end
 
 -- Puts each screen on what it shows: the current desktop on the grid
@@ -204,6 +325,10 @@ end)
 -- window asking for focus), the other grid screens follow.
 hl.on("workspace.active", function(ws)
     if switching or not ws or not ws.monitor or not ws.id then
+        return
+    end
+    if ws.name == "comms" and alone() then
+        announce(0)
         return
     end
     local s = slot(ws.monitor)

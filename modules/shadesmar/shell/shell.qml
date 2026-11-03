@@ -1,5 +1,7 @@
+//@ pragma UseQApplication
 // shadesmar (modules/shadesmar; plan: docs/hyprland.md). For now the bar,
-// at the bottom of the laptop's screen, where Plasma's panel is.
+// at the bottom of the laptop's screen, where Plasma's panel is. (The
+// pragma: the tray's menus are Qt widgets' menus.)
 import QtQuick
 import Quickshell
 

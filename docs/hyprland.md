@@ -61,17 +61,27 @@ rejects (`bezier` or `spring`).
   The laptop's workspace (a name, `comms`, bound to the laptop's panel, kept
   out of the grid) holds Discord and Teams (Brave's web app) as full-width
   columns, opened there by window rules. Spotify lives on a special
-  workspace (Hyprland's scratchpad), floating, sized and placed by a rule
-  (from x = 375 px to the right edge, the full height under the bar); the
-  shortcut focuses the laptop's screen, then toggles it (a special workspace
-  opens on the focused screen), so it always shows there.
-  `decoration.dim_special = 0`, or the uncovered strip of Discord is dimmed.
+  workspace (Hyprland's scratchpad), floating, from x = 375 px to the right
+  edge, the full height under the bar. Not a rule: Spotify (XWayland) names
+  its window after it opens, so grid.lua places it on `window.class`, and
+  again on the shortcut if it left. The shortcut focuses the laptop's
+  screen, then toggles it (a special workspace opens on the focused screen),
+  so it always shows there; hiding it gives the focus back to the window
+  that had it. `decoration.dim_special = 0`, or the uncovered strip of
+  Discord is dimmed.
 - **The grid is Lua in the compositor config.** Workspace ids are numbered per
   side screen, row by row (desktop d on the n-th side screen: `(n-1)*4 + d`),
-  each bound to its screen by EDID description. A switch computes the
-  neighbour, sets the workspace animation's style (`slide` or `slidevert`,
-  the direction from the ids' order) and calls `set_workspace` on the side
-  monitors; the middle screen's workspace never moves. No plugin: plugins
+  each bound to its screen by EDID description (workspace rules: else a
+  workspace that doesn't exist yet is made on the focused screen). A switch
+  computes the neighbour, sets the workspace animation's style and calls
+  `set_workspace` on the side monitors; the middle screen's workspace never
+  moves. The style: Hyprland slides sideways or up and down, the direction
+  from the ids' order, so a straight move slides the way it goes and a
+  diagonal one only fades; the slides are short (10 %) and fade, as a whole
+  screen's would carry across it the columns the scrolling layout keeps
+  beside the screen. The bar learns the desktop shown from the grid's own
+  event (`hl.dsp.event`, `custom>>grid d`): Hyprland reports a workspace
+  change only for the focused screen. No plugin: plugins
   must match the exact Hyprland build (hyprtasking doesn't compile on 0.57
   yet, hyprexpo is gone). An overview of the grid, if wanted, comes later in
   the shell.
@@ -122,7 +132,10 @@ rejects (`bezier` or `spring`).
   autostart entries wouldn't start (`pam_kwallet_init`, the KDE Connect
   daemon, Bitwarden, Packet, limine-snapper-notify, xdg-user-dirs); those
   marked `OnlyShowIn=KDE` (plasmashell, powerdevil, KDE's polkit agent…)
-  stay out by themselves.
+  stay out by themselves. Plasma's startup also reads `environment.d`
+  (gpg-ssh's `SSH_AUTH_SOCK`: git's signing, ssh-add on ScrollLock), and
+  Hyprland's doesn't: `session.lua` runs systemd's generator and sets what it
+  gives.
 - **Updates read before they land, not held.** 0.55 and 0.57 both broke
   configs, but `IgnorePkg` would be a partial upgrade: a held Hyprland breaks
   when aquamarine or hyprutils move under it, and Arch rebuilds Quickshell
@@ -154,8 +167,12 @@ user units of one user manager. Plasma stays in the login screen's list,
 as the fallback.
 
 Every config change: `Hyprland --verify-config`, `hyprctl configerrors`, then
-the result checked with `hyprctl -j` or a screenshot. Hyprland and the shell
-reload on save.
+the result checked with `hyprctl -j` or a screenshot. `~/.config/hypr` and
+the shell's folder are this repo's folders: try changes on a copy
+(`HYPR_DEV_CONFIG=<copy>/hyprland.lua dev/headless.sh`, `qs -p <copy>`),
+then copy them back. The shell reloads on save (a `//@ pragma` needs a
+restart of `shadesmar.service`); Hyprland's Lua config doesn't: `hyprctl
+reload`.
 
 ## Repo layout (to be confirmed as it's built)
 
