@@ -36,7 +36,7 @@ hl.window_rule({
     workspace = "special:spotify",
     float = true,
     move = { 375, 0 },
-    size = { "monitor_w - 375", "monitor_h" },
+    size = { "monitor_w - 375", "monitor_h - 40" }, -- above shadesmar's bar
 })
 
 -- Dialogs and picture-in-picture float (Omarchy's default/hypr/apps/).
