@@ -4,6 +4,7 @@
 -- HYPR_DEV is set by dev/nested.sh and dev/headless.sh.
 
 require("looknfeel")
+require("session")
 require("input")
 require("windows")
 require("binds") -- requires grid, which requires monitors
