@@ -193,6 +193,9 @@ func Compute(in Input) (*Plan, error) {
 	errs = append(errs, p.units(in, false), p.units(in, true))
 	p.user(in, u)
 	home := append(slices.Clone(c.Files), shortcutFiles(c)...)
+	hypr, err := hyprlandShortcutFiles(c)
+	errs = append(errs, err)
+	home = append(home, hypr...)
 	for _, f := range home {
 		if f.Scope == config.Home {
 			errs = append(errs, p.file(in, r, f))
