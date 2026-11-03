@@ -1,11 +1,13 @@
 # shadesmar: the Hyprland session's shell, in Quickshell (QML; plan:
 # docs/hyprland.md). shell/ is linked to ~/.config/quickshell/shadesmar and
-# edited in place: Quickshell reloads it on save. For now the bar; the
-# stand-ins (mako, fuzzel, hyprlock…) go as it grows. Started by
-# shadesmar.service, in the Hyprland session only.
+# edited in place: Quickshell reloads it on save. The bar, the overview,
+# the launcher, notifications and the OSD; the stand-ins left (hyprlock,
+# hypridle, nm-applet) go as it grows. pkg/ builds spanreed, its Go helper
+# for D-Bus names (Plasma's OSD service). Both in the Hyprland session only.
 files:
   ~/.config/quickshell/shadesmar:
     link: shell
 
 user-services:
   - shadesmar.service
+  - spanreed.service
