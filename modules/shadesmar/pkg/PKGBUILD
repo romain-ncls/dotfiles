@@ -1,0 +1,24 @@
+# Local package: lodestar builds it when this folder changes.
+pkgname=spanreed
+pkgver=1
+pkgrel=1
+pkgdesc="shadesmar's D-Bus helper: Plasma's OSD service, passed on to the shell"
+arch=(x86_64)
+license=(MIT)
+options=(!debug)
+depends=(quickshell)
+makedepends=(go)
+source=(spanreed.service)
+sha256sums=(SKIP)
+
+build() {
+	cd "$startdir/spanreed"
+	export GOPATH="$srcdir/gopath" GOTOOLCHAIN=local CGO_ENABLED=0
+	export GOFLAGS="-buildmode=pie -trimpath -mod=readonly -modcacherw"
+	go build -o "$srcdir/spanreed" .
+}
+
+package() {
+	install -Dm755 "$srcdir/spanreed" -t "$pkgdir/usr/bin"
+	install -Dm644 spanreed.service -t "$pkgdir/usr/lib/systemd/user"
+}
