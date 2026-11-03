@@ -284,7 +284,7 @@ costs.
 | For | In Hyprland | Instead of |
 |---|---|---|
 | files | Nautilus | Dolphin |
-| documents | Papers | Okular |
+| documents (PDFs, reading only) | Papers | Okular |
 | images | Loupe | Gwenview |
 | archives | File Roller, Nautilus's own extract | Ark |
 | terminal | Ghostty | Konsole |
@@ -316,8 +316,14 @@ later (yazi, btop, lazygit…).
 
 - [ ] Changing the workspace animation's style from a bind at runtime: works
       by reading the source, not yet tried.
-- [ ] Papers vs Okular for forms and signatures, if needed.
-- [ ] Brave following GTK's colors, or a lumar browser theme (policy color).
+- [ ] Brave stays on its Classic theme (no bar above the tabs) with lumar's
+      colors: a Chrome theme (a manifest of frame, tab and toolbar colors)
+      rendered by lumar and loaded unpacked once, like mutectl's Teams
+      extension; or the `BrowserThemeColor` policy in `/etc/brave/policies`
+      (one seed color, no manual step), if Brave honors it. Either way it's
+      the profile's, so Brave in Plasma gets lumar too. Check in Hyprland
+      whether any bar is left above the tabs: Hyprland draws no title bars,
+      and "Use system title bar and borders" then leaves only the tabs.
 - [ ] Hotplug: what becomes of windows on a screen that goes away.
 - [ ] A drop-down terminal (Ghostty's quick terminal, or a special workspace
       as Omarchy's Super+\`), on top of the free-floating one.
