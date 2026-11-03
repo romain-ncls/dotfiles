@@ -125,11 +125,13 @@ local function announce(d)
     hl.dispatch(hl.dsp.event("grid " .. d))
 end
 
--- How a switch from desktop a to b moves. Hyprland slides one way or the
--- other by the ids' order, sideways or up and down: a straight move slides
--- the way it goes; a diagonal one can't, and fades. The slides are short and
--- fade: a whole screen's would carry across it the columns that the
--- scrolling layout keeps beside the screen.
+-- How a switch from desktop a to b moves. With hyprslide (modules/hyprslide)
+-- a whole screen's slide the way b lies, diagonals included, and without
+-- the columns the scrolling layout keeps beside the screen. Without it
+-- (missing, or built for another Hyprland): Hyprland slides sideways or up
+-- and down, the direction from the ids' order, so a straight move slides the
+-- way it goes and a diagonal one only fades; short slides that fade, as a
+-- whole screen's would carry those columns across it.
 local travel = "10%"
 local function style(a, b)
     local ra, ca = place(a)
@@ -140,17 +142,30 @@ local function style(a, b)
     return (ra ~= rb and "slidefadevert " or "slidefade ") .. travel
 end
 
+local function hyprslide()
+    return hl.plugin.hyprslide
+end
+
 local switching = false
 
 -- Shows desktop d on every grid screen.
 function G.go(d)
-    hl.animation({ leaf = "workspaces", enabled = true, speed = 4, bezier = "easeOutQuint", style = style(current(), d) })
+    local from, slide = current(), hyprslide()
+    if slide then
+        local ra, ca = place(from)
+        local rb, cb = place(d)
+        slide.towards(cb - ca, rb - ra)
+    end
+    hl.animation({ leaf = "workspaces", enabled = true, speed = 4, bezier = "easeOutQuint", style = slide and "slide" or style(from, d) })
     shown = d
     switching = true
     for _, s in ipairs(grid()) do
         s.monitor:set_workspace(tostring(s.base + d))
     end
     switching = false
+    if slide then
+        slide.towards(0, 0)
+    end
     announce(d)
 end
 
