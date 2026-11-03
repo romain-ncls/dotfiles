@@ -206,6 +206,15 @@ func (p *Plan) localPackages(in Input, installed map[string]machine.Package) err
 		if err != nil {
 			return fmt.Errorf("%s: %w", lp.From, err)
 		}
+		// The versions it was built against, so that a new one rebuilds it.
+		source := hash
+		for _, dep := range lp.BuiltAgainst {
+			version := "none"
+			if pk, ok := installed[dep]; ok {
+				version = pk.Version
+			}
+			hash += "\n" + dep + "=" + version
+		}
 		a.Hash = hash
 
 		missing := len(names) == 0
@@ -227,6 +236,9 @@ func (p *Plan) localPackages(in Input, installed map[string]machine.Package) err
 			a.Why = "changed"
 			if a.Commit != "" {
 				a.Why = "now at " + a.Commit[:12]
+			}
+			if len(lp.BuiltAgainst) > 0 && (built.Hash == source || strings.HasPrefix(built.Hash, source+"\n")) {
+				a.Why = "built against another " + strings.Join(lp.BuiltAgainst, ", ")
 			}
 		default:
 			continue

@@ -106,10 +106,12 @@ type LocalPackage struct {
 	Names []string // pkgname from pkg/PKGBUILD; unknown for a git source until built
 	Dir   string   // pkg/ folder; empty for a git source
 	Watch []string // more folders whose changes rebuild it
-	Git   string   // repo URL or local checkout (~/…)
-	Ref   string
-	Path  string // folder of the PKGBUILD in the git repo
-	From  string
+	// BuiltAgainst: packages whose new versions rebuild it.
+	BuiltAgainst []string
+	Git          string // repo URL or local checkout (~/…)
+	Ref          string
+	Path         string // folder of the PKGBUILD in the git repo
+	From         string
 	// Module is the module's name (or the host's), naming a git source's
 	// build folder.
 	Module string
@@ -457,7 +459,7 @@ func (m *merger) localPackage(from, dir string, pkg *Pkg) error {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("%s: %v", from, err)
 	}
-	var watch []string
+	var watch, against []string
 	if pkg != nil {
 		for _, w := range pkg.Watch {
 			abs := filepath.Join(dir, filepath.FromSlash(w))
@@ -466,6 +468,7 @@ func (m *merger) localPackage(from, dir string, pkg *Pkg) error {
 			}
 			watch = append(watch, abs)
 		}
+		against = pkg.BuiltAgainst
 	}
 	switch {
 	case pkg != nil && pkg.Git != "":
@@ -475,11 +478,11 @@ func (m *merger) localPackage(from, dir string, pkg *Pkg) error {
 		if pkg.Ref == "" && !strings.HasPrefix(pkg.Git, "~/") && !strings.HasPrefix(pkg.Git, "/") {
 			return fmt.Errorf("%s: pkg.ref is required with a remote pkg.git", from)
 		}
-		c.LocalPackages = append(c.LocalPackages, LocalPackage{Git: pkg.Git, Ref: pkg.Ref, Path: pkg.Path, Watch: watch, From: from, Module: module})
+		c.LocalPackages = append(c.LocalPackages, LocalPackage{Git: pkg.Git, Ref: pkg.Ref, Path: pkg.Path, Watch: watch, BuiltAgainst: against, From: from, Module: module})
 	case hasDir:
-		c.LocalPackages = append(c.LocalPackages, LocalPackage{Names: names, Dir: filepath.Join(dir, "pkg"), Watch: watch, From: from, Module: module})
+		c.LocalPackages = append(c.LocalPackages, LocalPackage{Names: names, Dir: filepath.Join(dir, "pkg"), Watch: watch, BuiltAgainst: against, From: from, Module: module})
 	case pkg != nil:
-		return fmt.Errorf("%s: pkg: needs git:, or a pkg/ folder for watch:", from)
+		return fmt.Errorf("%s: pkg: needs git:, or a pkg/ folder for watch: or built-against:", from)
 	}
 	return nil
 }
