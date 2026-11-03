@@ -16,3 +16,8 @@ hl.bind("switch:on:Lid Switch", function()
     end
     hl.exec_cmd("if grep -qx 1 /sys/class/power_supply/AC/online; then loginctl lock-session; else systemctl suspend; fi")
 end, { locked = true })
+
+-- KDE Connect's tray icon (Plasma shows it as a widget instead).
+hl.on("hyprland.start", function()
+    hl.exec_cmd("kdeconnect-indicator")
+end)
