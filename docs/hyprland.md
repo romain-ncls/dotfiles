@@ -1,7 +1,10 @@
 # Hyprland on wandersail (plan)
 
 A Hyprland session next to Plasma on the work laptop, with our own shell in
-Quickshell and a theme made from scratch. Plasma stays installed and stays the
+Quickshell (**shadesmar**, its Go helper **spanreed**) and a theme made from
+scratch (**lumar**). Names from the Cosmere: Shadesmar, the realm beneath the
+physical one; the spanreed, Roshar's paired pens that carry messages; Lumar,
+Tress's planet of seas of colored spores. Plasma stays installed and stays the
 daily session until this one is ready; then it stays as the fallback. Nalthis
 is not ported. Branch `feat/hyprland`, based on `feat/nalthis-darkly` (what
 the machine runs).
@@ -94,7 +97,7 @@ rejects (`bezier` or `spring`).
   anything (`life.js`) is worth more. Hyprland keeps sending frame callbacks
   to a wallpaper that windows cover, so the scene must stand still itself, as
   it already does on the desktop.
-- **A small Go helper beside the shell** (name to choose) for what QML can't
+- **A small Go helper beside the shell, `spanreed`,** for what QML can't
   do: own D-Bus names and talk to logind. It serves
   `org.kde.osdService.showText` (backdrop and spotify-vol call it: they stay
   as they are), `org.freedesktop.ScreenSaver` inhibits (browsers and video
@@ -158,9 +161,9 @@ reload on save.
   requiring `monitors`, `grid`, `windows`, `binds`, `input`, `looknfeel`,
   `autostart`; LuaLS stubs from `/usr/share/hypr/stubs`), the dev rig
   (`dev/nested.sh`, `dev/headless.sh`).
-- `modules/<shell>/`: the Quickshell config (`~/.config/quickshell/<shell>/`,
+- `modules/shadesmar/`: the Quickshell config (`~/.config/quickshell/shadesmar/`,
   linked, edited in place) and the Go helper (`pkg/`).
-- `modules/<theme>/`: the theme (below).
+- `modules/lumar/`: the theme (below).
 - `modules/silksong/wallpaper/quickshell/`: the scene's wrappers; the scene
   files move to a folder both wrappers import while Plasma still uses them.
 - lodestar: the shortcut translation (Go, with tests).
@@ -279,14 +282,13 @@ brings Nautilus and doesn't match Dolphin.
 
 - The shell crashes while locked: the session stays locked (Hyprland shows its
   "lock dead" screen). From a TTY: `hyprctl --instance 0 eval
-  'hl.exec_cmd("qs -c <shell>")'` (with `allow_session_lock_restore`), or log
+  'hl.exec_cmd("qs -c shadesmar")'` (with `allow_session_lock_restore`), or log
   in to Plasma.
 - Hyprland won't start: `start-hyprland` falls back to safe mode; Plasma is
   in the session list.
 
 ## Open
 
-- [ ] Names: the shell, the helper, the theme (from books read, as for lodestar).
 - [ ] Terminal: Ghostty (proposed) or Konsole.
 - [ ] Changing the workspace animation's style from a bind at runtime: works
       by reading the source, not yet tried.
