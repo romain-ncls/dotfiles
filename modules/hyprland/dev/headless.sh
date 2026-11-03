@@ -1,11 +1,23 @@
 #!/bin/sh
-# Hyprland with no display, for checks and screenshots (grim, hyprctl -i 0).
-# It runs in a user scope, outside the login session, so it finds no seat
-# and doesn't try the screens Plasma holds; without WAYLAND_DISPLAY it
-# doesn't open a window either, and only its headless outputs are left.
-# The scope caps its memory (heavy jobs froze the machine before). Extra
-# arguments go to Hyprland.
+# Hyprland with no display, for checks and screenshots: nested in an
+# offscreen KWin (kwin_wayland --virtual), since Hyprland's own headless
+# outputs need a backend with a GPU under them (the screens' or a parent
+# compositor's). hyprctl -i 0 reaches it; HYPR_DEV=headless lets the config
+# add headless outputs laid out like the desk. Everything runs in a user
+# scope with a memory cap (heavy jobs froze the machine before) and its own
+# D-Bus session bus. Extra arguments go to Hyprland.
 here=$(dirname "$(realpath "$0")")
-exec systemd-run --user --scope --quiet -p MemoryMax=4G -p MemorySwapMax=0 \
-	env -u WAYLAND_DISPLAY -u DISPLAY HYPR_DEV=headless \
-	dbus-run-session Hyprland --config "$here/../hypr/hyprland.lua" "$@"
+if [ "$1" = --inside ]; then
+	shift
+	export HYPR_DEV=headless
+	exec Hyprland --config "$here/../hypr/hyprland.lua" "$@"
+fi
+session=$(mktemp "${XDG_RUNTIME_DIR:-/tmp}/hypr-headless.XXXXXX")
+trap 'rm -f "$session"' EXIT
+printf '#!/bin/sh\nexec %s --inside' "$(realpath "$0")" > "$session"
+for a in "$@"; do printf " '%s'" "$(printf %s "$a" | sed "s/'/'\\\\''/g")" >> "$session"; done
+chmod +x "$session"
+systemd-run --user --scope --quiet -p MemoryMax=4G -p MemorySwapMax=0 \
+	env -u WAYLAND_DISPLAY -u DISPLAY dbus-run-session -- \
+	kwin_wayland --virtual --width 1920 --height 1200 \
+	--socket "hypr-headless-$$" --exit-with-session "$session"
