@@ -3,8 +3,11 @@
 -- in /usr/share/hypr/stubs, not from the hyprlang examples found online.
 -- HYPR_DEV is set by dev/nested.sh and dev/headless.sh.
 
+require("looknfeel")
 require("input")
-require("binds")
+require("windows")
+require("binds") -- requires grid, which requires monitors
+require("dev")
 
 hl.config({
     misc = {
