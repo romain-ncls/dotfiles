@@ -28,16 +28,8 @@ hl.window_rule({
     workspace = "name:comms silent",
 })
 
--- Spotify: a scratchpad over Discord, its servers and channels (the first
--- 375 px) left uncovered.
-hl.window_rule({
-    name = "spotify-scratchpad",
-    match = { class = "^[Ss]potify$" },
-    workspace = "special:spotify",
-    float = true,
-    move = { 375, 0 },
-    size = { "monitor_w - 375", "monitor_h - 40" }, -- above shadesmar's bar
-})
+-- Spotify's scratchpad: grid.lua (Spotify names its window too late for a
+-- rule).
 
 -- Dialogs and picture-in-picture float (Omarchy's default/hypr/apps/).
 hl.window_rule({ name = "pip", match = { title = "^Picture.in.[Pp]icture$" }, float = true, pin = true, keep_aspect_ratio = true })
