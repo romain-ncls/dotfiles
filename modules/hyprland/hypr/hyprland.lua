@@ -10,6 +10,11 @@ require("windows")
 require("binds") -- requires grid, which requires monitors
 require("dev")
 
+-- The modules' own shortcuts (bemoji, mutectl, soundboard…), written by
+-- lodestar from their shortcuts: with Plasma's keys. Missing until the
+-- first apply.
+pcall(require, os.getenv("HOME") .. "/.local/share/lodestar/hyprland-shortcuts")
+
 hl.config({
     misc = {
         force_default_wallpaper = 0,
