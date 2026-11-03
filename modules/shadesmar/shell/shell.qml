@@ -1,8 +1,9 @@
 //@ pragma UseQApplication
-// shadesmar (modules/shadesmar; plan: docs/hyprland.md). For now the bar,
-// and the overview over every screen (Overview.qml); the bar
-// is at the bottom of the laptop's screen, where Plasma's panel is. (The
-// pragma: the tray's menus are Qt widgets' menus.)
+// shadesmar (modules/shadesmar; plan: docs/hyprland.md): the bar, at the
+// bottom of the laptop's screen where Plasma's panel is, with the
+// notifications above it; the overview over every screen; the launcher and
+// the OSD on the focused one. (The pragma: the tray's menus are Qt
+// widgets' menus.)
 import QtQuick
 import Quickshell
 
@@ -19,6 +20,11 @@ ShellRoot {
     }
 
     Overview {}
+    Osd {}
+    Launcher {}
+    Notifications {
+        screen: barScreen
+    }
 
     Bar {
         screen: barScreen
