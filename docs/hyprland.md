@@ -190,7 +190,7 @@ reload`.
   (`dev/nested.sh`, `dev/headless.sh`).
 - `modules/hyprslide/`: the plugin (`pkg/`: its C++ and PKGBUILD).
 - `modules/shadesmar/`: the Quickshell config (`~/.config/quickshell/shadesmar/`,
-  linked, edited in place) and the Go helper (`pkg/`).
+  linked, edited in place) and the Go helper, spanreed (`pkg/`).
 - `modules/lumar/`: the theme (below).
 - `modules/silksong/wallpaper/quickshell/`: the scene's wrappers; the scene
   files move to a folder both wrappers import while Plasma still uses them.
@@ -235,7 +235,11 @@ its own shell id and state folder. Fine, but link the same path everywhere.
 3. **shadesmar grows**, replacing the stand-ins one by one, in the live
    session: the launcher, notifications, the OSD with spanreed (backdrop's and
    spotify-vol's calls work again), network, Bluetooth, power profiles,
-   clipboard history, Alt+Tab with previews.
+   clipboard history, Alt+Tab with previews. Done: the launcher (apps by
+   name, the most launched first, or a command; Hyprland starts them, so a
+   restart of the shell leaves them be), notifications (popups, actions;
+   no history yet), the OSD (PipeWire's volume and mute, the brightness
+   from its binds, spanreed's calls), the overview (Meta+Tab).
 4. **lumar, from scratch.** One palette, templates rendered at apply (Go
    templates, as now): Hyprland, shadesmar, Ghostty, libadwaita and adw-gtk3
    (below, Apps and toolkits), qt6ct for the few Qt apps, then each app with

@@ -139,7 +139,7 @@ bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 bind(mod .. " + Return", hl.dsp.exec_cmd("ghostty", { float = true }))
 bind("CTRL + ALT + t", hl.dsp.exec_cmd("ghostty"))
 for _, keys in ipairs({ mod .. " + space", "ALT + space", "ALT + F2" }) do
-    bind(keys, hl.dsp.exec_cmd("fuzzel")) -- shadesmar's launcher later
+    bind(keys, hl.dsp.global("shadesmar:launcher")) -- Launcher.qml
 end
 
 -- Screenshots, as Spectacle's: Print the screens, to a file and the
@@ -149,14 +149,19 @@ bind("Print", hl.dsp.exec_cmd(shots .. " && grim \"$f\" && wl-copy < \"$f\""))
 bind(mod .. " + SHIFT + s", hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | wl-copy"))
 bind(mod .. " + SHIFT + Print", hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | wl-copy"))
 
--- Volume, brightness, media (shadesmar's OSD later shows them).
+-- Volume, brightness, media. shadesmar's OSD shows the volume as PipeWire
+-- changes it, and the brightness as told here.
+local function brightness(step)
+    return hl.dsp.exec_cmd("brightnessctl -e4 -n2 -m set " .. step
+        .. " | cut -d, -f4 | tr -d % | xargs -r qs -c shadesmar ipc call osd brightness")
+end
 local locked = { locked = true, repeating = true }
 bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), locked)
 bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"), locked)
 bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { locked = true })
 bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true })
-bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%+"), locked)
-bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%-"), locked)
+bind("XF86MonBrightnessUp", brightness("5%+"), locked)
+bind("XF86MonBrightnessDown", brightness("5%-"), locked)
 bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 bind("XF86AudioNext", hl.dsp.exec_cmd("playerctl next"), { locked = true })
