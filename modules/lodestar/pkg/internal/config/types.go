@@ -122,6 +122,10 @@ type Pkg struct {
 	// More folders, relative to the module folder, whose changes rebuild
 	// the package of pkg/ (its sources outside pkg/).
 	Watch []string `yaml:"watch,omitempty"`
+	// Packages it is compiled against, whose every new version rebuilds it
+	// (a Hyprland plugin and hyprland: plugins only load in the exact
+	// Hyprland they were built for).
+	BuiltAgainst []string `yaml:"built-against,omitempty"`
 }
 
 // FileOptions changes how a file is installed, or declares a link.

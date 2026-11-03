@@ -13484,6 +13484,13 @@
           },
           "type": "array",
           "description": "More folders, relative to the module folder, whose changes rebuild\nthe package of pkg/ (its sources outside pkg/)."
+        },
+        "built-against": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Packages it is compiled against, whose every new version rebuilds it\n(a Hyprland plugin and hyprland: plugins only load in the exact\nHyprland they were built for)."
         }
       },
       "additionalProperties": false,

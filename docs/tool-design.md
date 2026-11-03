@@ -243,7 +243,10 @@ shortcuts:
   them. The first `lodestar apply` after your key is back builds them.
 - **When a local package is rebuilt:** its `pkg/` folder changed (lodestar
   keeps the hash in its state, not in the package), its `ref` changed, a
-  followed branch moved, or a library it links to went away (below).
+  followed branch moved, a library it links to went away (below), or a
+  package it's compiled against has a new version (`pkg: built-against:
+  [hyprland]`, for hyprslide: Hyprland only loads plugins built for its
+  exact version; the versions join the hash).
 - **Names must not collide with the AUR.** yay upgrades any installed package
   whose name it finds in the AUR with a higher version, even a local one.
   `lodestar check` warns when a local package has the name of an AUR or repo
