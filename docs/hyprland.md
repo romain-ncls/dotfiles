@@ -19,24 +19,36 @@ rejects (`bezier` or `spring`).
   switch together**, as in KDE.
 - Four desktops in a **2×2 grid**: direct jumps (Meta+A/Z/Q/S, Ctrl+F1..F4)
   and moves up/down/left/right, the animation sliding the way you move.
-- A stacking workflow, not tiling: mostly maximized windows switched with
-  Alt+Tab; the terminal floating, maximized, on half a screen, or two side by
-  side; Discord pinned on the middle screen, Spotify on all desktops.
+- What the KDE habits are for: one window filling each screen and quick
+  switching between them; the terminal anywhere (over a window, on half a
+  screen, two side by side); Discord on the middle screen and Spotify on
+  every desktop. Hyprland's own ways of doing that come first (below), KDE's
+  stacking model only if they don't stick.
 - Every shortcut the modules declare (bemoji, mutectl, soundboard, awpro,
   spotify-vol, ssh-add, Claude in Brave…), on the French AZERTY layout.
 
 ## Decisions
 
-- **Everything floats; maximize is a window state.** Pinning (on every
-  workspace) only works on floating windows, the terminal has to float freely,
-  and Hyprland has no keep-above: floating windows are above tiled ones, so a
-  mix would fight us. New windows open maximized
-  (`fullscreen({mode="maximized"})`) unless a rule says otherwise. Half-screen
-  is a bind that moves and resizes (KDE's quick tile), not a tiling layout.
-  Plan B if floating proves clumsy: the built-in monocle layout (every tiled
-  window fills the screen) with the terminal and pinned windows floating; or
-  the scrolling layout with full-width columns (half-width for two
-  terminals side by side).
+- **The scrolling layout, embraced rather than bent into KWin.** Each
+  workspace is a tape of columns (`layout = "scrolling"`, built into 0.57,
+  wiki: configuring/layouts/scrolling-layout). Columns are full width by
+  default (`scrolling.column_width = 1.0`): one window per screen, like a
+  maximized one, the others beside it. Alt+Tab becomes moving along the
+  tape (`hl.dsp.layout("focus r")`, wrapping); the shell's switcher with
+  previews comes later. The terminal opens half width (`scrolling_width =
+  0.5`): two side by side fill a screen; `colresize +conf` cycles
+  1/3, 1/2, 2/3, full; `consume`/`expel` stack windows in a column; a floating
+  toggle puts it over the other windows. Touchpad swipes scroll the tape.
+  Floating is for dialogs, picture-in-picture and pinned windows only.
+  Plan B if the tape doesn't stick: everything floating, maximize as a
+  window state, quick tile by binds (KDE's model); or monocle.
+- **Discord and Spotify on every desktop** don't fit the tape: pinning only
+  works on floating windows, and a pinned window stays above the tiled
+  ones of its screen. Options to try, in order: a special workspace each
+  (Hyprland's scratchpad), on the middle screen, shown and hidden over any
+  desktop by the key that focuses it now (Meta+< for Discord); the middle
+  screen keeping its own workspace while the side screens switch; a pinned
+  floating window.
 - **The grid is Lua in the compositor config.** Workspace ids are numbered per
   screen, row by row (desktop d on the n-th screen: `(n-1)*4 + d`), each bound
   to its screen by EDID description. A switch computes the neighbour, sets the
@@ -54,7 +66,9 @@ rejects (`bezier` or `spring`).
   monitor and inhibitor, global shortcuts, live window previews
   (`ScreencopyView`). Omarchy 4 made the same move (one Quickshell process in
   place of waybar, mako, swayosd, hyprlock, hypridle, walker…): its `shell/`
-  is our reference code.
+  is our reference code, with Dux Shell's (github.com/duxlabs-dev/dux-shell,
+  Quickshell with a Go daemon, as ours): its consistency and the way it's
+  built are the model, not its Material look.
 - **The Silksong scene is ported to Quickshell, not rewritten in Rust.** Its
   cost is GPU work a Rust renderer would do the same; the scene itself
   imports only QtQuick. What changes: `main.qml` (the Plasma wallpaper
@@ -152,10 +166,11 @@ Each phase ends with something usable in the nested session, then checked as
 2. **Compositor.** Monitors by EDID description (the desk's BenQs, the laptop
    alone: replaces `work-screens`), the 2×2 grid across screens, hotplug
    (`monitor.added`/`removed`: the laptop alone keeps four desktops, windows
-   from the gone screens come back to the matching desktop), floating and
-   maximize rules, pinned Discord and Spotify, KDE's window binds (maximize,
-   quick tile, move to next screen, kill, Alt+Tab and Alt+\` for the current
-   app's windows), input (per-device acceleration as `flat-mice` and the host
+   from the gone screens come back to the matching desktop), the scrolling
+   layout (column widths per app, floating rules for dialogs and
+   picture-in-picture), Discord and Spotify on every desktop, the binds
+   (along the tape, column widths, move to the next screen, kill, the
+   current app's windows), input (per-device acceleration as `flat-mice` and the host
    file set it, touchpad, repeat, Num Lock).
 3. **Shortcuts.** The lodestar translation; every module's commands bound.
 4. **Shell, the minimum to live in it.** Bar, launcher, notifications, OSD
@@ -217,10 +232,10 @@ migrations and update channels (lodestar does that), their titlebar plugin.
       by reading the source, not yet tried.
 - [ ] Keeping the theme out of the Plasma session (phase 5).
 - [ ] Hotplug: what becomes of windows on a screen that goes away.
-- [ ] Pinned Discord: a pinned window may stay drawn above the other
-      windows of its screen. If it does, the middle screen keeps its own
-      workspace and only the side screens switch (Discord unpinned, nothing
-      to fight); try pinning first, since all screens switch together in KDE.
+- [ ] Discord and Spotify on every desktop: which of the three options
+      (Decisions) feels right.
+- [ ] The grid with the tape: up/down are the grid's, left/right are the
+      tape's (Meta+arrows along the tape, Meta+Ctrl+arrows between desktops?).
 - [ ] A drop-down terminal on a special workspace (Omarchy's Super+\`), on
       top of the free-floating one.
 - [ ] Focus after a switch stays on the screen it was on (`set_workspace`
