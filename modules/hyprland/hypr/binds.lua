@@ -103,6 +103,24 @@ bind(mod .. " + CTRL + SHIFT + Page_Up", function()
     hl.dispatch(hl.dsp.window.pin({}))
 end)
 
+-- Meta+D: a peek at the desktop (grid.lua). Meta+Tab, Ctrl+Alt+Tab: the
+-- overview (shadesmar's Overview.qml).
+bind(mod .. " + d", function() G.peek() end)
+bind(mod .. " + Tab", hl.dsp.global("shadesmar:overview"))
+bind("CTRL + ALT + Tab", hl.dsp.global("shadesmar:overview"))
+
+-- Zoom, as KWin's: Meta+= in, Meta+- out, by steps of 1.2, Meta+0 (à on
+-- AZERTY, with or without Shift) back; the screen magnified around the
+-- pointer.
+local function zoom(step)
+    local z = step and (hl.get_config("cursor.zoom_factor") or 1) * step or 1
+    hl.config({ cursor = { zoom_factor = math.max(1, math.min(z, 20)) } })
+end
+bind(mod .. " + equal", function() zoom(1.2) end, { repeating = true })
+bind(mod .. " + minus", function() zoom(1 / 1.2) end, { repeating = true })
+bind(mod .. " + agrave", function() zoom(nil) end)
+bind(mod .. " + SHIFT + agrave", function() zoom(nil) end)
+
 -- To the other screens.
 bind(mod .. " + SHIFT + d", hl.dsp.window.move({ monitor = "+1" }))
 bind(mod .. " + SHIFT + right", hl.dsp.window.move({ monitor = "+1" }))
