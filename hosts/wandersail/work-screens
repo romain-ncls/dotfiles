@@ -58,8 +58,9 @@ if new != config:
     os.replace(path + ".new", path)
     print("work-screens: layout merged into kwinoutputconfig.json")
 
-# Live: only in a Plasma session with the three screens plugged in.
-if not os.environ.get("WAYLAND_DISPLAY"):
+# Live: only in a Plasma session (kscreen-doctor talks to KWin; Hyprland
+# lays the screens out itself) with the three screens plugged in.
+if "KDE" not in os.environ.get("XDG_CURRENT_DESKTOP", "").split(":"):
     sys.exit(0)
 connectors = {}
 for edid in glob.glob("/sys/class/drm/card*-*/edid"):
