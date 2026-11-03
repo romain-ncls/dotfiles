@@ -148,15 +148,53 @@ end
 
 local switching = false
 
+local function animate(how)
+    hl.animation({ leaf = "workspaces", enabled = true, speed = 4, bezier = "easeOutQuint", style = how })
+end
+
+-- Meta+D, Plasma's Peek at Desktop: each screen on an empty workspace of
+-- its own (the windows stay where they are); again, or any switch, and
+-- back. peeking: the workspace each screen had, by screen name.
+local peeking = nil
+
+local function bare(m)
+    return "name:desktop-" .. m.name
+end
+
+-- Back from the peek: what opened meanwhile goes to the workspace its
+-- screen had, and each screen back to it (but the grid ones, when a switch
+-- takes them elsewhere).
+local function unpeek(keep_grid)
+    local before = peeking
+    peeking = nil
+    switching = true
+    animate("fade")
+    for _, m in ipairs(hl.get_monitors()) do
+        local back = before[m.name]
+        if back then
+            for _, w in ipairs(hl.get_workspace_windows(bare(m))) do
+                hl.dispatch(hl.dsp.window.move({ window = w, workspace = back, follow = false }))
+            end
+            if not (keep_grid and slot(m)) then
+                m:set_workspace(back)
+            end
+        end
+    end
+    switching = false
+end
+
 -- Shows desktop d on every grid screen.
 function G.go(d)
+    if peeking then
+        unpeek(true)
+    end
     local from, slide = current(), hyprslide()
-    if slide then
+    if slide and from ~= d then
         local ra, ca = place(from)
         local rb, cb = place(d)
         slide.towards(cb - ca, rb - ra)
     end
-    hl.animation({ leaf = "workspaces", enabled = true, speed = 4, bezier = "easeOutQuint", style = slide and "slide" or style(from, d) })
+    animate(from == d and "fade" or slide and "slide" or style(from, d))
     shown = d
     switching = true
     for _, s in ipairs(grid()) do
@@ -302,6 +340,27 @@ for _, event in ipairs({ "window.open", "window.class" }) do
     end)
 end
 
+function G.peek()
+    if peeking then
+        unpeek(false)
+        return
+    end
+    if scratchpad_shown() then
+        scratchpad(false)
+    end
+    peeking = {}
+    switching = true
+    animate("fade")
+    for _, m in ipairs(hl.get_monitors()) do
+        local ws = m.active_workspace
+        if ws then
+            peeking[m.name] = ws.id and ws.id > 0 and tostring(ws.id) or "name:" .. ws.name
+            m:set_workspace(bare(m))
+        end
+    end
+    switching = false
+end
+
 -- Puts each screen on what it shows: the current desktop on the grid
 -- screens, comms on the laptop's at the desk.
 function G.arrange()
@@ -340,6 +399,13 @@ end)
 -- window asking for focus), the other grid screens follow.
 hl.on("workspace.active", function(ws)
     if switching or not ws or not ws.monitor or not ws.id then
+        return
+    end
+    -- a window asking for focus during a peek ends it, on its desktop
+    if peeking and not (ws.name or ""):find("^desktop%-") then
+        local s = slot(ws.monitor)
+        unpeek(true)
+        G.go(s and ws.id > s.base and ws.id <= s.base + 4 and ws.id - s.base or current())
         return
     end
     if ws.name == "comms" and alone() then

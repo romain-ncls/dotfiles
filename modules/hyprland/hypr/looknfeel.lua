@@ -25,4 +25,5 @@ hl.animation({ leaf = "windowsIn", enabled = true, speed = 4, bezier = "easeOutQ
 hl.animation({ leaf = "windowsOut", enabled = true, speed = 1.5, bezier = "linear", style = "popin 87%" })
 hl.animation({ leaf = "fade", enabled = true, speed = 3, bezier = "easeOutQuint" })
 hl.animation({ leaf = "workspaces", enabled = true, speed = 4, bezier = "easeOutQuint", style = "slidefade 10%" })
+hl.animation({ leaf = "zoomFactor", enabled = true, speed = 3, bezier = "easeOutQuint" })
 hl.animation({ leaf = "specialWorkspace", enabled = true, speed = 4, bezier = "easeOutQuint", style = "slidefadevert 20%" })
