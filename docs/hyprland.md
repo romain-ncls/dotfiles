@@ -283,6 +283,13 @@ migrations and update channels (lodestar does that), their titlebar plugin.
   and Meta+Shift+Q/D to the other screen, Ctrl+Alt+Esc kill.
 - Meta+Return: the terminal, floating. Meta+²: Spotify's scratchpad (the key
   that opens Plasma's media player now). Meta+~: volume (the shell).
+- Meta+Tab, Ctrl+Alt+Tab: shadesmar's overview, Plasma's: each screen's
+  windows as live thumbnails, the tape's off-screen columns included (as
+  their app's icon: Hyprland copies a window only while it overlaps its
+  screen); click or Enter, arrows, typing filters. Meta+D: a peek at the
+  desktop, each screen on an empty workspace of its own. Meta+= / Meta+- /
+  Meta+0 (à): KWin's zoom, Hyprland's `cursor.zoom_factor` by steps of 1.2.
+  Meta+L locks.
 - Dropped: Meta+< (Focus Discord: Discord is always on the middle screen).
 - **The laptop alone**: its screen shows the grid's four desktops; `comms`
   (Discord, Teams) is a fifth workspace with its own key; Spotify's

@@ -11,6 +11,7 @@ Singleton {
     readonly property color accent: "#61afef"
     readonly property color slot: "#3c404a"
     readonly property color warn: "#e06c75"
+    readonly property color shade: Qt.rgba(0.05, 0.055, 0.065, 0.88) // behind the overview
     readonly property string font: "Noto Sans"
     readonly property int barHeight: 40
     readonly property int icon: 18
