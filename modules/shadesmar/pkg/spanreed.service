@@ -1,0 +1,15 @@
+[Unit]
+Description=spanreed: shadesmar's D-Bus helper (Plasma's OSD service)
+PartOf=graphical-session.target
+After=graphical-session.target
+# in Plasma, plasmashell owns the name
+ConditionEnvironment=XDG_CURRENT_DESKTOP=Hyprland
+
+[Service]
+Type=dbus
+BusName=org.kde.plasmashell
+ExecStart=/usr/bin/spanreed
+Restart=on-failure
+
+[Install]
+WantedBy=hyprland-session.target
