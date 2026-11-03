@@ -123,10 +123,13 @@ rejects (`bezier` or `spring`).
   daemon, Bitwarden, Packet, limine-snapper-notify, xdg-user-dirs); those
   marked `OnlyShowIn=KDE` (plasmashell, powerdevil, KDE's polkit agent…)
   stay out by themselves.
-- **Updates held.** `hyprland` and `quickshell` go in pacman's `IgnorePkg`
-  (base module) and are upgraded on purpose after reading the release notes
-  (0.55 and 0.57 both broke configs; Omarchy pins Hyprland and builds its own
-  Quickshell after a Qt update broke it).
+- **Updates read before they land, not held.** 0.55 and 0.57 both broke
+  configs, but `IgnorePkg` would be a partial upgrade: a held Hyprland breaks
+  when aquamarine or hyprutils move under it, and Arch rebuilds Quickshell
+  with each Qt (Omarchy's Quickshell broke on a Qt update because they ship
+  their own). So everything upgrades together, the release notes read first
+  (later: `lodestar upgrade` stopping on a new Hyprland or Quickshell minor
+  version), and `Hyprland --verify-config` right after.
 
 ## Development
 
@@ -191,6 +194,8 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    - Lock: hyprlock (PAM) and hypridle (idle, `loginctl lock-session` for
      Lock AFK, lock before sleep, the lid), `allow_session_lock_restore`.
      Replaced by shadesmar's lock in phase 5.
+   - shadesmar's first bar: desktops, clock, battery, tray (Discord, KDE
+     Connect), volume.
    - Stand-ins: mako (notifications: Discord and others freeze without a
      notification server), fuzzel (launcher), KDE's polkit agent (already
      installed), grim and slurp on Print, volume, brightness and media keys
@@ -201,9 +206,8 @@ its own shell id and state folder. Fine, but link the same path everywhere.
      NetworkManager, the portals.
    - Apps look as in Plasma (the same GTK files and `kdeglobals`, Qt through
      KDE's platform plugin): no theme work before lumar.
-3. **shadesmar's first pieces**, replacing the stand-ins one by one, in
-   the live session: the bar (desktops, clock, battery, tray, audio), the
-   launcher, notifications, the OSD with spanreed (backdrop's and
+3. **shadesmar grows**, replacing the stand-ins one by one, in the live
+   session: the launcher, notifications, the OSD with spanreed (backdrop's and
    spotify-vol's calls work again), network, Bluetooth, power profiles,
    clipboard history, Alt+Tab with previews.
 4. **lumar, from scratch.** One palette, templates rendered at apply (Go
