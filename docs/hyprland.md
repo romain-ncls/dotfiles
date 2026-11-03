@@ -195,12 +195,13 @@ Each phase ends with something usable in the nested session, then checked as
    (with the helper), polkit, tray (KDE Connect, Discord), audio and media,
    network, Bluetooth, battery and power profiles, clipboard history,
    screenshots (grim, slurp, tesseract for text), lock with PAM, idle.
-5. **Theme from scratch.** One palette, templates rendered at apply (Go
-   templates, as now): Hyprland, the shell, Konsole, GTK 3/4 and libadwaita,
-   Qt apps (Dolphin, Kate, Okular: KDE color scheme and a Qt style; Omarchy
-   has nothing usable here). To settle first: how the theme stays out of the
-   Plasma session while both are in use, since KDE apps read `kdeglobals`
-   and GTK apps `~/.config/gtk-*` in either session.
+5. **lumar, from scratch.** One palette, templates rendered at apply (Go
+   templates, as now): Hyprland, shadesmar, Ghostty, libadwaita and adw-gtk3
+   (below, Apps and toolkits), qt6ct for the few Qt apps, then each app with
+   its own UI (Brave, Discord's Vencord CSS, VS Code, JetBrains, Obsidian,
+   GitKraken…), Omarchy's way: most of the work is there. While it's built
+   it renders into `hyprtest`'s home; at the switch-over it takes the GTK
+   files over from Nalthis's GTK layer.
 6. **Silksong on desktop and lock screen.** The wrappers above, the bench on
    headless Hyprland, then the real lock: lid, suspend, hibernate, Lock AFK,
    a crash of the shell while locked.
@@ -269,14 +270,38 @@ also serves it as the freedesktop Secret Service (libsecret).
   network applet, nothing in Hyprland answers for the wallet's copies, and
   they then work before login too.
 
-## File chooser
+## Apps and toolkits: GTK first
 
-KDE's (xdg-desktop-portal-kde, already installed) in
-`hyprland-portals.conf`, the rest from xdg-desktop-portal-hyprland and
--gtk: the dialog Brave, Discord and VS Code show today, Dolphin's places
-and previews, and it takes the same theme as Dolphin, Kate and Okular. KDE
-apps use it anyway. GTK's (GTK 3) is plainer; GNOME's (GTK 4) is fine but
-brings Nautilus and doesn't match Dolphin.
+The desktop's own apps are GNOME's (GTK 4 and libadwaita), so that one
+palette makes them consistent: libadwaita takes colors from `gtk.css`
+(named colors, as `modules/nalthis/pkg/gtk.go` writes them now), GTK 3 apps
+follow with adw-gtk3 (`adw-gtk-theme`) in the same colors. Only colors:
+the widgets keep Adwaita's shapes, so lumar is its palette, fonts, icons and
+shadesmar, drawn to sit with Adwaita (radii, spacing). Qt can reshape
+widgets, but only through a style engine, and Nalthis showed what that
+costs.
+
+| For | In Hyprland | Instead of |
+|---|---|---|
+| files | Nautilus | Dolphin |
+| documents | Papers | Okular |
+| images | Loupe | Gwenview |
+| archives | File Roller, Nautilus's own extract | Ark |
+| terminal | Ghostty | Konsole |
+| screenshots | grim, slurp, shadesmar | Spectacle |
+| file chooser | Nautilus's (xdg-desktop-portal-gnome, `FileChooser` only in `hyprland-portals.conf`; the rest from xdg-desktop-portal-hyprland and -gtk) | KDE's |
+
+Kate goes (not used). Still Qt: qBittorrent, EasyEffects (Kirigami since
+8), KDE Connect, qrca: lumar's palette through qt6ct, set only in Hyprland's
+environment (Plasma never reads it), and a neutral style; their tray menus
+are drawn by shadesmar anyway. The KDE apps stay installed for Plasma until
+it's only the fallback.
+
+Apps with their own UI (Chromium and Electron: Brave, Discord, VS Code,
+Obsidian, GitKraken, Teams; CEF: Spotify, Steam; Tauri: Readest; Swing:
+JetBrains; mpv's OSD) follow no toolkit: each gets a lumar template.
+Terminal apps (TUIs) follow Ghostty's palette: the way to more keyboard
+later (yazi, btop, lazygit…).
 
 ## Recovery
 
@@ -289,13 +314,13 @@ brings Nautilus and doesn't match Dolphin.
 
 ## Open
 
-- [ ] Terminal: Ghostty (proposed) or Konsole.
 - [ ] Changing the workspace animation's style from a bind at runtime: works
       by reading the source, not yet tried.
-- [ ] Keeping the theme out of the Plasma session (phase 5).
+- [ ] Papers vs Okular for forms and signatures, if needed.
+- [ ] Brave following GTK's colors, or a lumar browser theme (policy color).
 - [ ] Hotplug: what becomes of windows on a screen that goes away.
-- [ ] A drop-down terminal on a special workspace (Omarchy's Super+\`), on
-      top of the free-floating one.
+- [ ] A drop-down terminal (Ghostty's quick terminal, or a special workspace
+      as Omarchy's Super+\`), on top of the free-floating one.
 - [ ] Focus after a switch stays on the screen it was on (`set_workspace`
       doesn't move focus, by the source): check.
 
