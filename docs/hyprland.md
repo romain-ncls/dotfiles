@@ -115,8 +115,14 @@ rejects (`bezier` or `spring`).
 - **Started by `start-hyprland`** (the official launcher, a watchdog with a
   safe mode) from the Plasma login screen's session list. Hyprland 0.57
   starts `hyprland-session.target` itself, bound to `graphical-session.target`,
-  so our user units start in both sessions; those that only make sense in
-  Plasma (backdrop's Plasma side, the KRDP server) get a condition.
+  so our user units start in both sessions; those that only work in Plasma
+  for now get `ConditionEnvironment=XDG_CURRENT_DESKTOP=KDE` (backdrop, and
+  logi-smartshift until it reads Hyprland's events). That target doesn't
+  pull in `xdg-desktop-autostart.target`: a drop-in adds it, or the XDG
+  autostart entries wouldn't start (`pam_kwallet_init`, the KDE Connect
+  daemon, Bitwarden, Packet, limine-snapper-notify, xdg-user-dirs); those
+  marked `OnlyShowIn=KDE` (plasmashell, powerdevil, KDE's polkit agent…)
+  stay out by themselves.
 - **Updates held.** `hyprland` and `quickshell` go in pacman's `IgnorePkg`
   (base module) and are upgraded on purpose after reading the release notes
   (0.55 and 0.57 both broke configs; Omarchy pins Hyprland and builds its own
@@ -124,10 +130,11 @@ rejects (`bezier` or `spring`).
 
 ## Development
 
-Three places to run it:
+No test user: the real test is romain's own session. Until it's enough to
+work in (Phases: first login), it's built in:
 
-1. **Nested, inside Plasma** (most of the time): `Hyprland` started as romain
-   in a window, under `dbus-run-session` (its own session bus, so its shell's
+1. **Nested, inside Plasma**: `Hyprland` started as romain in a window,
+   under `dbus-run-session` (its own session bus, so its shell's
    notifications and tray don't fight Plasma's), with a dev config. Claude can
    start it, query it (`hyprctl -j`, `hyprctl eval`), screenshot it (`grim`)
    and stop it.
@@ -135,21 +142,13 @@ Three places to run it:
    display, headless outputs laid out like the desk (`hyprctl output create
    headless`), permissions not enforced so `grim` works. The shell's and the
    scene's benches run here.
-3. **The real session as `hyprtest`**, a temporary user, on another TTY while
-   Plasma runs: the three screens, the grid across them, idle, lock and PAM,
-   suspend, hibernate, lid. Its `~/.config/hypr` and `~/.config/quickshell`
-   are links into this repo, so edits reload live there too. Claude can't see
-   into that session (its sockets are in its own `/run/user`): it's checked
-   by eye and screenshots. Removed when romain switches over.
 
-   ```sh
-   sudo useradd -m -G input,video hyprtest && sudo passwd hyprtest
-   setfacl -m u:hyprtest:x /home/romain   # pass through to ~/dotfiles only
-   ```
-
-Two sessions of the same user at once (Plasma on one TTY, Hyprland on
-another, both as romain) are not an option: Plasma's parts and our daemons
-are systemd user units of one user manager, and two desktops would share them.
+Then romain logs out of Plasma and into Hyprland, and works there; Claude
+runs inside it and sees the live session (`hyprctl -j`, the shell's logs),
+and keeps screenshots and experiments to the nested and headless ones. The
+two sessions are never open at once: Plasma's parts and our daemons are
+user units of one user manager. Plasma stays in the login screen's list,
+as the fallback.
 
 Every config change: `Hyprland --verify-config`, `hyprctl configerrors`, then
 the result checked with `hyprctl -j` or a screenshot. Hyprland and the shell
@@ -173,41 +172,53 @@ its own shell id and state folder. Fine, but link the same path everywhere.
 
 ## Phases
 
-Each phase ends with something usable in the nested session, then checked as
-`hyprtest`.
-
 1. **Base.** The `hyprland` module (packages: hyprland, quickshell,
-   xdg-desktop-portal-hyprland, hyprland-guiutils, grim, slurp, wl-clipboard,
-   cliphist, hyprpicker, hyprsunset…), added to wandersail; the nested and
-   headless rigs; the `hyprtest` user. Plasma must not change: `lodestar plan`
-   shows only additions.
-2. **Compositor.** Monitors by EDID description (the desk's BenQs, the laptop
-   alone: replaces `work-screens`), the 2×2 grid across screens, hotplug
-   (`monitor.added`/`removed`: the laptop alone keeps four desktops, windows
-   from the gone screens come back to the matching desktop), the scrolling
-   layout (column widths per app, floating rules for dialogs and
-   picture-in-picture), the middle screen (`comms`, the Spotify scratchpad), the binds
-   (along the tape, column widths, move to the next screen, kill, the
-   current app's windows), input (per-device acceleration as `flat-mice` and the host
-   file set it, touchpad, repeat, Num Lock).
-3. **Shortcuts.** The lodestar translation; every module's commands bound.
-4. **Shell, the minimum to live in it.** Bar, launcher, notifications, OSD
-   (with the helper), polkit, tray (KDE Connect, Discord), audio and media,
-   network, Bluetooth, battery and power profiles, clipboard history,
-   screenshots (grim, slurp, tesseract for text), lock with PAM, idle.
-5. **lumar, from scratch.** One palette, templates rendered at apply (Go
+   xdg-desktop-portal-hyprland, hyprland-guiutils, ghostty, grim, slurp,
+   wl-clipboard…), added to wandersail; the nested and headless rigs. Plasma
+   must not change: `lodestar plan` shows only additions.
+2. **First login: enough to work.** What romain needs: the workspaces,
+   moving windows, locking the screen; and what a working day needs
+   around them. Stand-ins from the Hypr project and others do what
+   shadesmar will do later, so the first login comes early:
+   - Compositor: monitors by EDID description (the desk's BenQs, the laptop
+     alone: replaces `work-screens`), the 2×2 grid on the side screens,
+     `comms` and the Spotify scratchpad on the middle one, hotplug (the
+     laptop alone keeps four desktops), the scrolling layout (column widths
+     per app, floating rules for dialogs and picture-in-picture), the binds
+     (Binds, below), input (per-device acceleration as `flat-mice` and the
+     host file set it, touchpad, repeat, Num Lock, AZERTY).
+   - Every module's shortcuts: the lodestar translation.
+   - Lock: hyprlock (PAM) and hypridle (idle, `loginctl lock-session` for
+     Lock AFK, lock before sleep, the lid), `allow_session_lock_restore`.
+     Replaced by shadesmar's lock in phase 5.
+   - Stand-ins: mako (notifications: Discord and others freeze without a
+     notification server), fuzzel (launcher), KDE's polkit agent (already
+     installed), grim and slurp on Print, volume, brightness and media keys
+     on `wpctl`, `brightnessctl` and `playerctl`, a plain wallpaper.
+   - The session's plumbing (Decisions and Secrets): XDG autostart, the
+     Plasma-only units' condition, `pam_kwallet_init`, one secret store
+     pinned for Brave and the Electron apps, Wi-Fi and VPN secrets owned by
+     NetworkManager, the portals.
+   - Apps look as in Plasma (the same GTK files and `kdeglobals`, Qt through
+     KDE's platform plugin): no theme work before lumar.
+3. **shadesmar's first pieces**, replacing the stand-ins one by one, in
+   the live session: the bar (desktops, clock, battery, tray, audio), the
+   launcher, notifications, the OSD with spanreed (backdrop's and
+   spotify-vol's calls work again), network, Bluetooth, power profiles,
+   clipboard history, Alt+Tab with previews.
+4. **lumar, from scratch.** One palette, templates rendered at apply (Go
    templates, as now): Hyprland, shadesmar, Ghostty, libadwaita and adw-gtk3
    (below, Apps and toolkits), qt6ct for the few Qt apps, then each app with
    its own UI (Brave, Discord's Vencord CSS, VS Code, JetBrains, Obsidian,
-   GitKraken…), Omarchy's way: most of the work is there. While it's built
-   it renders into `hyprtest`'s home; at the switch-over it takes the GTK
-   files over from Nalthis's GTK layer.
-6. **Silksong on desktop and lock screen.** The wrappers above, the bench on
-   headless Hyprland, then the real lock: lid, suspend, hibernate, Lock AFK,
-   a crash of the shell while locked.
-7. **Switch over.** romain logs into Hyprland; `hyprtest` and its ACL go.
-   Then whatever was missed: Alt+Tab previews, a grid overview, Klipper-like
-   actions if missed.
+   GitKraken…), Omarchy's way: most of the work is there. The GNOME apps
+   replace the KDE ones then. GTK's files are shared by both sessions (and
+   Nalthis writes them for Plasma): each session points them at its own
+   theme when it starts (the two are never open at once).
+5. **Silksong on desktop and lock screen.** The wrappers above, the bench on
+   headless Hyprland, then shadesmar's lock in place of hyprlock: lid,
+   suspend, hibernate, Lock AFK, a crash of the shell while locked.
+6. **Then whatever was missed**: a grid overview, Klipper-like actions,
+   more keyboard-driven binds and terminal apps.
 
 ## Borrowed from Omarchy (github.com/omacom/omarchy, branch `quattro`)
 
@@ -261,10 +272,10 @@ also serves it as the freedesktop Secret Service (libsecret).
 - **Chromium and Electron apps choose their store by desktop** (KWallet in
   Plasma, libsecret elsewhere): the same app would look for its key in
   another place in Hyprland, fail to decrypt its data and log out (Brave,
-  Discord, VS Code, Obsidian, GitKraken), and again back in Plasma. Pin one
-  store for both sessions (`--password-store=…` in `brave-flags.conf`,
-  `code-flags.conf`, and per app for the others). `hyprtest` has its own
-  home, so it can't show this: check at the switch-over.
+  Discord, VS Code, Obsidian, GitKraken, Bitwarden), and again back in
+  Plasma. Pin one store for both sessions (`--password-store=…` in
+  `brave-flags.conf`, `code-flags.conf`, and per app for the others) before
+  the first login, then check each app stays logged in both ways.
 - **Wi-Fi and VPN secrets move to NetworkManager itself** (system-owned,
   root-only, in `/etc/NetworkManager/system-connections`): without Plasma's
   network applet, nothing in Hyprland answers for the wallet's copies, and
@@ -305,10 +316,10 @@ later (yazi, btop, lazygit…).
 
 ## Recovery
 
-- The shell crashes while locked: the session stays locked (Hyprland shows its
-  "lock dead" screen). From a TTY: `hyprctl --instance 0 eval
-  'hl.exec_cmd("qs -c shadesmar")'` (with `allow_session_lock_restore`), or log
-  in to Plasma.
+- The locker crashes: the session stays locked (Hyprland shows its "lock
+  dead" screen). From a TTY (Ctrl+Alt+F3): `hyprctl --instance 0 eval
+  'hl.exec_cmd("hyprlock")'` (`qs -c shadesmar` once shadesmar locks), with
+  `allow_session_lock_restore`; or end the session and log in to Plasma.
 - Hyprland won't start: `start-hyprland` falls back to safe mode; Plasma is
   in the session list.
 
