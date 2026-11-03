@@ -1,0 +1,17 @@
+# Hyprland: a second session next to Plasma, chosen at the login screen
+# (plan and decisions: docs/hyprland.md). Its config is Lua, in hypr/,
+# linked to ~/.config/hypr and edited in place: Hyprland reloads it on save.
+# dev/ runs it nested in a window of the Plasma session, or headless.
+packages:
+  - hyprland
+  - xdg-desktop-portal-hyprland
+  - hyprland-guiutils # permission prompts, the "not responding" dialog
+  - quickshell # shadesmar
+  - ghostty
+  - grim # screenshots
+  - slurp # picking a region
+  - wl-clipboard
+
+files:
+  ~/.config/hypr:
+    link: hypr
