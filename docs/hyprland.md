@@ -228,6 +228,53 @@ Left out: per-monitor workspaces (the opposite of ours), universal
 Super+C/V, their GTK/Qt theming (Adwaita and `QT_QPA_PLATFORMTHEME=gtk3`),
 migrations and update channels (lodestar does that), their titlebar plugin.
 
+## Binds, close to KDE's at first
+
+- Desktops: Meta+A/Z/Q/S and Ctrl+F1..F4 jump (as now), Meta+Ctrl+arrows
+  move in the grid (KDE's default). The side screens only.
+- Windows: Alt+Tab along the tape (wrapping), Meta+Up full width (or
+  maximized), Meta+Left/Right half width (KDE's quick tile), Meta+Down a
+  hidden special workspace (Hyprland has no minimize), Meta+Shift+Left/Right
+  and Meta+Shift+Q/D to the other screen, Ctrl+Alt+Esc kill.
+- Meta+Return: the terminal, floating. Meta+²: Spotify's scratchpad (the key
+  that opens Plasma's media player now). Meta+~: volume (the shell).
+- Dropped: Meta+< (Focus Discord: Discord is always on the middle screen).
+- **The laptop alone**: its screen shows the grid's four desktops; `comms`
+  (Discord, Teams) is a fifth workspace with its own key; Spotify's
+  scratchpad opens over whatever is there.
+
+## Secrets (KWallet)
+
+What's in the wallet now: Brave's (and Chromium's) Safe Storage key, which
+encrypts their cookies and saved logins; the Wi-Fi passwords and the work
+VPN's secrets (stored by Plasma's network applet); an SMB password. It's
+unlocked at login by Plasma Login's PAM (`pam_kwallet5`), and `ksecretd`
+also serves it as the freedesktop Secret Service (libsecret).
+
+- **Keep it, invisible**, in both sessions: Hyprland starts
+  `pam_kwallet_init` so the PAM unlock reaches it, and libsecret apps get
+  `ksecretd`. Nothing to migrate, nothing to see.
+- **Chromium and Electron apps choose their store by desktop** (KWallet in
+  Plasma, libsecret elsewhere): the same app would look for its key in
+  another place in Hyprland, fail to decrypt its data and log out (Brave,
+  Discord, VS Code, Obsidian, GitKraken), and again back in Plasma. Pin one
+  store for both sessions (`--password-store=…` in `brave-flags.conf`,
+  `code-flags.conf`, and per app for the others). `hyprtest` has its own
+  home, so it can't show this: check at the switch-over.
+- **Wi-Fi and VPN secrets move to NetworkManager itself** (system-owned,
+  root-only, in `/etc/NetworkManager/system-connections`): without Plasma's
+  network applet, nothing in Hyprland answers for the wallet's copies, and
+  they then work before login too.
+
+## File chooser
+
+KDE's (xdg-desktop-portal-kde, already installed) in
+`hyprland-portals.conf`, the rest from xdg-desktop-portal-hyprland and
+-gtk: the dialog Brave, Discord and VS Code show today, Dolphin's places
+and previews, and it takes the same theme as Dolphin, Kate and Okular. KDE
+apps use it anyway. GTK's (GTK 3) is plainer; GNOME's (GTK 4) is fine but
+brings Nautilus and doesn't match Dolphin.
+
 ## Recovery
 
 - The shell crashes while locked: the session stays locked (Hyprland shows its
@@ -240,22 +287,11 @@ migrations and update channels (lodestar does that), their titlebar plugin.
 ## Open
 
 - [ ] Names: the shell, the helper, the theme (from books read, as for lodestar).
-- [ ] Terminal: Konsole stays (its colors from the theme) or another.
-- [ ] File chooser portal: KDE's (Dolphin's dialogs) or GTK's.
-- [ ] KWallet in Hyprland (Brave, KDE apps), or another secret service.
+- [ ] Terminal: Ghostty (proposed) or Konsole.
 - [ ] Changing the workspace animation's style from a bind at runtime: works
       by reading the source, not yet tried.
 - [ ] Keeping the theme out of the Plasma session (phase 5).
 - [ ] Hotplug: what becomes of windows on a screen that goes away.
-- [ ] The laptop alone (no side screens): its screen shows the grid's four
-      desktops, and `comms` (Discord, Teams) becomes a fifth reached by its
-      own key? Spotify's scratchpad then opens over whatever is there.
-- [ ] Which key toggles Spotify (today Spotify has no focus key; Meta+<
-      focuses Discord).
-- [ ] KDE's binds on the tape, close to today: Meta+Ctrl+arrows between
-      desktops (KDE's default), Alt+Tab along the tape, Meta+Up full width
-      or maximized, Meta+Left/Right half width (KDE's quick tile), Meta+Down
-      (minimize: no such state in Hyprland; a hidden special workspace?).
 - [ ] A drop-down terminal on a special workspace (Omarchy's Super+\`), on
       top of the free-floating one.
 - [ ] Focus after a switch stays on the screen it was on (`set_workspace`
