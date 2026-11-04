@@ -39,11 +39,12 @@ Item {
     readonly property bool canSeat: width > 0 && height > 0 && sized
     onCanSeatChanged: if (canSeat) seated = true
 
-    // The screen as it was (shell.qml: an image of it), under everything: the painting starts over
-    // it (bare), and it's let go once every painting has washed away (paintingGone).
+    // The screen as it was (shell.qml: an image of it), under everything and the painting's ground
+    // (it starts over it), let go once every painting has washed away (paintingGone).
     property url capture: ""
     signal paintingGone()
     Image {
+        id: captureImage
         anchors.fill: parent
         source: root.capture
         asynchronous: false
@@ -93,7 +94,7 @@ Item {
                 longitude: root.longitude,
                 dayHours: root.dayHours,
                 revealed: Qt.binding(() => view.item?.revealed ?? false),
-                bare: Qt.binding(() => root.capture.toString() !== "")
+                ground: Qt.binding(() => root.capture.toString() !== "" ? captureImage : null)
             })
         }
         Connections {
