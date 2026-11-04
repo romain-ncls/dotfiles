@@ -256,24 +256,29 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    Nalthis writes them for Plasma): each session points them at its own
    theme when it starts (the two are never open at once).
    Picked on 2026-11-04 on the lumar page (claude.ai/artifact/4qoiTRCu5ectVG2SmLvgnF,
-   the picks in its store): Nalthis's own colors, so lumar takes them from
-   Nalthis's knobs (`modules/nalthis/palette.json`, `nalthis tokens`): one
-   palette for both sessions, GTK's and Qt's files already in it, Nalthis's
-   page in System Settings re-tinting Hyprland too. `modules/lumar`'s
-   apply-lumar writes it for shadesmar (read live), Hyprland and Ghostty, on
-   every apply and when the knobs change (`lumar-palette.path`). Flush by
+   the picks in its store): Nalthis's colors at first, then lighter and
+   nearer One Dark's tint. lumar is its own theme, so it has its own knobs
+   (`modules/lumar/palette.json`: hue 260, tint 1.3, depth 0.03, accent
+   250; Nalthis keeps 255, 1, 0, 250), turned into colors with Nalthis's
+   maths (`nalthis tokens`). apply-lumar writes them for shadesmar (read
+   live), Hyprland and Ghostty, and writes the files both sessions read,
+   GTK's palette (`nalthis gtk`) and Brave's theme, in the colors of the
+   session it runs in: at each login (`lumar-session.service`, before the
+   autostarted apps), on every apply, and when the knobs change
+   (`lumar-palette.path`; `apply-lumar set depth=0.04`). The Qt apps in
+   Hyprland keep Nalthis's colors (`kdeglobals`) until qt6ct. Flush by
    default, as close to maximized as it gets: no gaps, no borders, square
    tiled windows (floating ones keep 10 px corners in both layouts), the bar
    docked; floating on Meta+G (gaps, 10 px corners, the bar floating), kept
-   across logins. The bar, its popups, notifications and the OSD in
-   Nalthis's glass from Plasma: the pane at 80 %, blurred behind, a 10 %
-   outline in the text's color (the page's 92 % of the frame, dropped).
-   Noto Sans;
-   Ghostty in Fira Code, no title bar, the page's terminal colors on Konsole's
-   Nalthis background (the raised surface) and text. The wallpaper: shadesmar's,
-   the newest of the ones liked in Backdrop (~/Pictures/Backdrop). The GNOME
-   apps are in, Hyprland's defaults through hyprland-mimeapps.list. Next: the
-   apps with their own UI, then qt6ct.
+   across logins. The bar, its popups, notifications, the OSD and the
+   launcher in Nalthis's glass from Plasma: the pane at 80 %, blurred
+   behind, a 10 % outline in the text's color (the page's 92 % of the
+   frame, dropped). Noto Sans; Ghostty in Fira Code, no title bar, the
+   page's terminal colors on the pane (about Konsole's Nalthis background)
+   and the second text color. The wallpaper: shadesmar's, the newest of the
+   ones liked in Backdrop (~/Pictures/Backdrop). The GNOME apps are in,
+   Hyprland's defaults through hyprland-mimeapps.list; Brave's theme too
+   (docs/manual-steps.md). Next: qt6ct.
 5. **Silksong on desktop and lock screen.** The wrappers above, the bench on
    headless Hyprland, then shadesmar's lock in place of hyprlock: lid,
    suspend, hibernate, Lock AFK, a crash of the shell while locked.
@@ -408,8 +413,9 @@ later (yazi, btop, lazygit…).
       colors: a Chrome theme apply-lumar renders from the palette
       (`~/.local/share/lumar/brave-theme`, loaded unpacked once:
       docs/manual-steps.md): the tab strip the frame, the active tab and
-      toolbar the pane, the address bar and new tab the base. It's the
-      profile's, so Brave in Plasma gets it too. Discord and VS Code already
+      toolbar the pane, the address bar and new tab the base. One profile,
+      two sessions: each login rewrites it in its session's colors (Brave
+      rereads it when it starts). Discord and VS Code already
       match with their own dark themes.
 - [x] Hotplug: what becomes of windows on a screen that goes away (they go
       to the same desktop on the screens left, grid.lua; tried headless).
