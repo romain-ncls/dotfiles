@@ -255,6 +255,18 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    replace the KDE ones then. GTK's files are shared by both sessions (and
    Nalthis writes them for Plasma): each session points them at its own
    theme when it starts (the two are never open at once).
+   Picked on 2026-11-04 on the lumar page (claude.ai/artifact/4qoiTRCu5ectVG2SmLvgnF,
+   the picks in its store): Nalthis's own colors, so lumar takes them from
+   Nalthis's knobs (`modules/nalthis/palette.json`, `nalthis tokens`): one
+   palette for both sessions, GTK's and Qt's files already in it, Nalthis's
+   page in System Settings re-tinting Hyprland too. `modules/lumar`'s
+   apply-lumar writes it for shadesmar (read live), Hyprland and Ghostty, on
+   every apply and when the knobs change (`lumar-palette.path`). Flush by
+   default, as close to maximized as it gets: no gaps, no borders, square
+   windows, the bar docked, see-through and blurred; floating on Meta+G
+   (gaps, 10 px corners, the bar floating), kept across logins. Noto Sans;
+   Ghostty in Fira Code, no title bar, the page's terminal colors on the
+   palette's background. Next: the apps with their own UI, then qt6ct.
 5. **Silksong on desktop and lock screen.** The wrappers above, the bench on
    headless Hyprland, then shadesmar's lock in place of hyprlock: lid,
    suspend, hibernate, Lock AFK, a crash of the shell while locked.

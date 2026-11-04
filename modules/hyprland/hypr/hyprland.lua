@@ -9,6 +9,7 @@
 pcall(hl.plugin.load, "/usr/lib/hyprslide/hyprslide.so")
 
 require("looknfeel")
+require("lumar") -- the layout (flush or floating) and the colors
 require("session")
 require("input")
 require("windows")

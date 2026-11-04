@@ -1,0 +1,12 @@
+# Ghostty, in lumar's colors (modules/lumar; docs/hyprland.md): the theme is
+# written by apply-lumar from the palette both sessions share.
+theme = lumar
+font-family = Fira Code
+font-size = 11
+# no title bar: the window as close to the tile as it gets (Hyprland draws
+# no decorations either)
+window-decoration = none
+window-padding-x = 10
+window-padding-y = 8
+window-padding-balance = true
+cursor-style-blink = false

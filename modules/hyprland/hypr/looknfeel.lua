@@ -1,16 +1,8 @@
--- How it looks and moves, until lumar (docs/hyprland.md, phase 4): small
--- gaps, thin borders, quick animations. How the workspaces switch is set
--- by grid.lua at each switch (the way the desktop lies).
+-- How it moves: quick animations. How the workspaces switch is set by
+-- grid.lua at each switch (the way the desktop lies); how it looks (gaps,
+-- corners, colors) is lumar.lua's.
 
 hl.config({
-    general = {
-        gaps_in = 4,
-        gaps_out = 8,
-        border_size = 2,
-    },
-    decoration = {
-        rounding = 8,
-    },
     animations = {
         enabled = true,
     },
