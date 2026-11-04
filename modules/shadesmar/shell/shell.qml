@@ -19,6 +19,7 @@ ShellRoot {
         return Quickshell.screens[0]
     }
 
+    Wallpaper {}
     Overview {}
     Osd {}
     Launcher {}
