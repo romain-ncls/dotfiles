@@ -16,6 +16,13 @@ packages:
   - wl-clipboard
   - brightnessctl
   - playerctl
+  # the desktop's own apps, GTK first (docs/hyprland.md, Apps and toolkits):
+  # Hyprland's defaults for them in hyprland-mimeapps.list; Plasma keeps KDE's
+  - nautilus
+  - gvfs # Nautilus's trash and mounts (Plasma uses KIO)
+  - papers
+  - loupe
+  - file-roller
   # stand-ins until shadesmar has its own (docs/hyprland.md, first login)
   - hyprlock
   - hypridle
