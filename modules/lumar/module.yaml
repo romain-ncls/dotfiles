@@ -1,0 +1,15 @@
+# lumar: the Hyprland session's look (docs/hyprland.md, phase 4; picked on
+# the lumar page, 2026-11-04). Its colors are Nalthis's palette, the one both
+# sessions share (modules/nalthis/palette.json): apply-lumar writes them for
+# shadesmar, Hyprland and Ghostty, on every apply and whenever the knobs
+# change (lumar-palette.path). The two layouts, flush and floating (Meta+G),
+# are modules/hyprland's lumar.lua; shadesmar's bar follows them.
+packages:
+  - ttf-fira-code # Ghostty's font
+
+user-services:
+  - lumar-palette.path
+
+hooks:
+  - run: apply-lumar
+    when: always # cheap; writes only what changed
