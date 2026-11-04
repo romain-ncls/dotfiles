@@ -123,8 +123,8 @@ Scope {
                     height: content.implicitHeight + 24
                     radius: 10
                     color: Theme.bar
-                    border.width: critical ? 2 : 0
-                    border.color: Theme.warn
+                    border.width: critical ? 2 : 1
+                    border.color: critical ? Theme.warn : Theme.outline
 
                     Timer {
                         running: popup.timeout > 0 && !hover.containsMouse
