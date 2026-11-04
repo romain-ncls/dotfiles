@@ -2,10 +2,10 @@
 # docs/hyprland.md). shell/ is linked to ~/.config/quickshell/shadesmar and
 # edited in place: Quickshell reloads it on save. The bar and its popups
 # (clipboard, notifications, network, Bluetooth, sound, battery), the
-# overview, the launcher, notifications and the OSD; the stand-ins left
-# (hyprlock, hypridle, nm-applet for its prompts) go as it grows. pkg/
-# builds spanreed, its Go helper for D-Bus names (Plasma's OSD service).
-# All in the Hyprland session only.
+# overview, the launcher, notifications and the OSD (the lock screen is
+# modules/silksong's); the stand-ins left (hypridle, nm-applet for its
+# prompts) go as it grows. pkg/ builds spanreed, its Go helper for D-Bus
+# names (Plasma's OSD service). All in the Hyprland session only.
 packages:
   - cliphist # the clipboard's history
 
