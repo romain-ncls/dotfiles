@@ -154,8 +154,10 @@ Scope {
             y: parent.height / 4
             width: 560
             height: list.y + list.height + 10
-            radius: 14
-            color: Theme.bar
+            radius: Theme.radius + 4
+            color: Theme.popup
+            border.width: 1
+            border.color: Theme.outline
 
             // clicks inside stay inside
             MouseArea {
