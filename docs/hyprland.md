@@ -404,14 +404,13 @@ later (yazi, btop, lazygit…).
       (grid.lua does it at each switch).
 - [ ] The overview's animations: the windows going from their place to
       the grid and back, as Plasma's (it only appears and disappears now).
-- [ ] Brave stays on its Classic theme (no bar above the tabs) with lumar's
-      colors: a Chrome theme (a manifest of frame, tab and toolbar colors)
-      rendered by lumar and loaded unpacked once, like mutectl's Teams
-      extension; or the `BrowserThemeColor` policy in `/etc/brave/policies`
-      (one seed color, no manual step), if Brave honors it. Either way it's
-      the profile's, so Brave in Plasma gets lumar too. Check in Hyprland
-      whether any bar is left above the tabs: Hyprland draws no title bars,
-      and "Use system title bar and borders" then leaves only the tabs.
+- [x] Brave stays on its Classic layout (no bar above the tabs) in lumar's
+      colors: a Chrome theme apply-lumar renders from the palette
+      (`~/.local/share/lumar/brave-theme`, loaded unpacked once:
+      docs/manual-steps.md): the tab strip the frame, the active tab and
+      toolbar the pane, the address bar and new tab the base. It's the
+      profile's, so Brave in Plasma gets it too. Discord and VS Code already
+      match with their own dark themes.
 - [x] Hotplug: what becomes of windows on a screen that goes away (they go
       to the same desktop on the screens left, grid.lua; tried headless).
 - [ ] A drop-down terminal (Ghostty's quick terminal, or a special workspace
