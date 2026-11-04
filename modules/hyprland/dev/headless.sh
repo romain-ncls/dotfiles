@@ -5,7 +5,8 @@
 # compositor's). hyprctl -i <its instance> reaches it (hyprctl instances:
 # the newest); HYPR_DEV=headless lets the config add headless outputs laid
 # out like the desk. Everything runs in a user scope with a memory cap
-# (heavy jobs froze the machine before) and its own D-Bus session bus.
+# (heavy jobs froze the machine before) and its own D-Bus session bus; KWin's
+# own lock screen off (it locked itself and drew the Silksong world unseen).
 # Extra arguments go to Hyprland.
 #
 # HYPR_DEV_CONFIG: the hyprland.lua to try, default this repo's. Try changes
@@ -24,5 +25,5 @@ for a in "$@"; do printf " '%s'" "$(printf %s "$a" | sed "s/'/'\\\\''/g")" >> "$
 chmod +x "$session"
 systemd-run --user --scope --quiet -p MemoryMax=4G -p MemorySwapMax=0 \
 	env -u WAYLAND_DISPLAY -u DISPLAY dbus-run-session -- \
-	kwin_wayland --virtual --width 1920 --height 1200 \
+	kwin_wayland --virtual --no-lockscreen --width 1920 --height 1200 \
 	--socket "hypr-headless-$$" --exit-with-session "$session"

@@ -9,6 +9,13 @@ qs list -c silksong-lock 2>/dev/null | grep -q '^Instance' && exit 0
 [ -e /etc/pam.d/silksong-lock ] || exec hyprlock
 marker=${XDG_RUNTIME_DIR:-/tmp}/silksong-lock.locked # touched once every screen shows it
 rm -f "$marker"
+# Traced once: with this file there, the next lock logs each screen's frames (Qt's render loop
+# timing) in Quickshell's log.log; the file goes as it's read, so the log stays small.
+trace=${XDG_RUNTIME_DIR:-/tmp}/silksong-lock.trace
+if [ -e "$trace" ]; then
+    rm -f "$trace"
+    export QT_LOGGING_RULES="qt.scenegraph.time.renderloop=true;qt.scenegraph.general=true"
+fi
 qs -n -c silksong-lock &
 pid=$!
 i=0
