@@ -1,9 +1,11 @@
 // Notifications, where Plasma has them: popups in the bottom right corner of
 // the bar's screen, above the bar, the newest at the bottom. A click runs
 // the notification's default action (Discord: its channel) or dismisses it,
-// a right click dismisses it; its other actions are buttons. They go after
-// their timeout (5 s when the app leaves it to us), not while the pointer
-// is on them; critical ones stay. No history yet.
+// a right click dismisses it; its other actions are buttons. After their
+// timeout (5 s when the app leaves it to us; not while the pointer is on
+// them; critical ones stay) they go to the history, the bar's bell
+// (NotificationCenter.qml), still there for their app and their actions,
+// until dismissed. Do not disturb: no popups but critical ones.
 import QtQuick
 import Quickshell
 import Quickshell.Services.Notifications
@@ -14,6 +16,50 @@ Scope {
     id: notifications
 
     property var screen
+    property bool dnd: false
+    // the ones in the history since the bell was last opened
+    property int unread: 0
+
+    // by notification id: shown as a popup; when it came
+    property var popups: ({})
+    property var times: ({})
+
+    readonly property var shown: server.trackedNotifications.values.filter(n => popups[n.id])
+    // the newest first
+    readonly property var history: server.trackedNotifications.values.filter(n => !popups[n.id]).reverse()
+
+    function critical(n) {
+        return n.urgency === NotificationUrgency.Critical
+    }
+
+    // From its popup to the history.
+    function hide(n) {
+        if (!popups[n.id])
+            return
+        const p = Object.assign({}, popups)
+        delete p[n.id]
+        popups = p
+        unread++
+    }
+
+    function clear() {
+        for (const n of history)
+            n.dismiss()
+        unread = 0
+    }
+
+    // An image that's a theme icon's name (image://icon/…) is an icon, given
+    // a fallback when the theme lacks it.
+    function picture(n) {
+        return n.image.startsWith("image://icon/") ? "" : n.image
+    }
+    function icon(n) {
+        const entry = n.desktopEntry ? DesktopEntries.byId(n.desktopEntry) : null
+        const name = n.image.startsWith("image://icon/") ? n.image.slice(13) : n.appIcon || (entry ? entry.icon : "")
+        if (name.startsWith("/") || name.startsWith("file:"))
+            return name
+        return Quickshell.iconPath(name, "dialog-information")
+    }
 
     NotificationServer {
         id: server
@@ -26,12 +72,17 @@ Scope {
         persistenceSupported: true
         onNotification: n => {
             n.tracked = true
+            notifications.times = Object.assign({}, notifications.times, { [n.id]: Date.now() })
+            if (!notifications.dnd || notifications.critical(n))
+                notifications.popups = Object.assign({}, notifications.popups, { [n.id]: true })
+            else
+                notifications.unread++
         }
     }
 
     PanelWindow {
         screen: notifications.screen
-        visible: server.trackedNotifications.values.length > 0
+        visible: notifications.shown.length > 0
         anchors {
             bottom: true
             right: true
@@ -54,28 +105,19 @@ Scope {
             spacing: 8
 
             Repeater {
-                model: server.trackedNotifications
+                model: notifications.shown
 
                 Rectangle {
                     id: popup
 
                     required property var modelData
                     readonly property var n: modelData
-                    readonly property bool critical: n.urgency === NotificationUrgency.Critical
+                    readonly property bool critical: notifications.critical(n)
                     // ms; 0: until dismissed
                     readonly property int timeout: critical ? 0 : n.expireTimeout > 0 ? n.expireTimeout * 1000 : n.expireTimeout === 0 ? 0 : 5000
                     readonly property var defaultAction: n.actions.find(a => a.identifier === "default") ?? null
-                    // An image that's a theme icon's name (image://icon/…)
-                    // is an icon, given a fallback when the theme lacks it.
-                    readonly property bool themed: n.image.startsWith("image://icon/")
-                    readonly property string picture: themed ? "" : n.image
-                    readonly property string icon: {
-                        const entry = n.desktopEntry ? DesktopEntries.byId(n.desktopEntry) : null
-                        const name = themed ? n.image.slice(13) : n.appIcon || (entry ? entry.icon : "")
-                        if (name.startsWith("/") || name.startsWith("file:"))
-                            return name
-                        return Quickshell.iconPath(name, "dialog-information")
-                    }
+                    readonly property string picture: notifications.picture(n)
+                    readonly property string icon: notifications.icon(n)
 
                     width: column.width
                     height: content.implicitHeight + 24
@@ -87,7 +129,7 @@ Scope {
                     Timer {
                         running: popup.timeout > 0 && !hover.containsMouse
                         interval: popup.timeout
-                        onTriggered: popup.n.expire()
+                        onTriggered: notifications.hide(popup.n)
                     }
 
                     MouseArea {

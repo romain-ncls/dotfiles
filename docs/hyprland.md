@@ -238,8 +238,15 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    clipboard history (Alt+Tab with previews: dropped, below). Done: the
    launcher (apps by name, the most launched first, or a command; Hyprland
    starts them, so a restart of the shell leaves them be), notifications
-   (popups, actions; no history yet), the OSD (PipeWire's volume and mute, the brightness
-   from its binds, spanreed's calls), the overview (Meta+Tab).
+   (popups, actions, a history in the bar, Do not disturb), the OSD
+   (PipeWire's volume and mute, the brightness from its binds, spanreed's
+   calls), the overview (Meta+Tab), and the bar's popups, as Plasma's tray:
+   the clipboard's history (cliphist, recorded by clipboard-history.service),
+   the network (Wi-Fi, the cable, the VPNs through nmcli; nm-applet stays
+   for its prompts, its icon hidden), Bluetooth (no pairing agent yet: a
+   device wanting a PIN typed needs bluetoothctl), the sound (devices,
+   volume, the microphone; Meta+~), the battery (power profiles,
+   brightness).
 4. **lumar, from scratch.** One palette, templates rendered at apply (Go
    templates, as now): Hyprland, shadesmar, Ghostty, libadwaita and adw-gtk3
    (below, Apps and toolkits), qt6ct for the few Qt apps, then each app with

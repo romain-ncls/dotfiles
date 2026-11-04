@@ -1,0 +1,15 @@
+[Unit]
+Description=The clipboard's history for shadesmar (cliphist)
+PartOf=graphical-session.target
+After=graphical-session.target
+# in Plasma, Klipper keeps it
+ConditionEnvironment=XDG_CURRENT_DESKTOP=Hyprland
+
+[Service]
+# text and images, the last 100; what a password manager marks secret,
+# wl-paste passes as sensitive and cliphist leaves out
+ExecStart=/bin/sh -c 'wl-paste --type image --watch cliphist -max-items 100 store & exec wl-paste --type text --watch cliphist -max-items 100 store'
+Restart=on-failure
+
+[Install]
+WantedBy=hyprland-session.target
