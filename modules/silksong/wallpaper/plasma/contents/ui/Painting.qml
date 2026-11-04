@@ -36,11 +36,13 @@ Item {
     // painting shows (world.py times it so): even, `speed` of it a second, for most of what the
     // world takes to have everything it shows (README, Runtime: 1.2 s, twice that on a busy
     // machine); then, from `calm` on, slower and slower towards the end, gently enough that it's
-    // still painting what shows however long the world takes. Bare, quicker and even for longer:
-    // over the screen as it was, the world mustn't wash in before the brush has been everywhere
-    // (covered, below), and on the windows its first, small washes hardly show.
-    readonly property real speed: bare ? 0.8 : 0.65
+    // still painting what shows however long the world takes. Bare, getting up to speed from a
+    // standstill over the first 0.8 s, then even for longer: over the screen as it was, its first
+    // washes are seen from the first, and the world mustn't wash in before the brush has been
+    // everywhere (covered, below).
+    readonly property real speed: bare ? 0.6 : 0.65
     readonly property real calm: bare ? 0.85 : 0.6
+    readonly property real ramp: bare ? 0.8 : 0
     // Then how long the world takes to wash in over it.
     readonly property real washFor: 0.7
 
@@ -160,6 +162,7 @@ Item {
                 property color veil: root.veil
                 property color light: root.light
                 property real bare: root.bare ? 1 : 0
+                property real ramp: root.ramp
                 fragmentShader: Qt.resolvedUrl("shaders/watercolor.frag.qsb")
             }
             // The brush's clock, in seconds: started as it's made, it runs from the first frame,
@@ -265,19 +268,28 @@ Item {
     // painted first, the brush is on the darkest.
     property real finishFor: 1
     readonly property real endFor: Math.max(finishFor, washFor)
+    // How far the brush's pace alone takes it after c seconds of its clock, and its pace then: up
+    // to speed over the first `ramp` seconds, then at speed (watercolor.frag run(), runOf()).
+    function runAt(c) {
+        return c < ramp ? speed * c * c / (2 * ramp) : speed * (c - ramp / 2);
+    }
+    function runOf(c) {
+        return c < ramp ? speed * c / ramp : speed;
+    }
     // How far the painting is after c seconds of the brush's clock, and its pace then
     // (watercolor.frag pace(), paceOf()).
     function paceAt(c) {
-        const p = speed * c;
+        const p = runAt(c);
         return p <= calm ? p : 1 - (1 - calm) * Math.exp(-(p - calm) / (1 - calm));
     }
     function paceOf(c) {
-        const p = speed * c;
-        return p <= calm ? speed : speed * Math.exp(-(p - calm) / (1 - calm));
+        const p = runAt(c);
+        return p <= calm ? runOf(c) : runOf(c) * Math.exp(-(p - calm) / (1 - calm));
     }
     // And how long the brush's clock takes to come to p (paceAt's inverse).
     function timeFor(p) {
-        return (p <= calm ? p : calm - (1 - calm) * Math.log((1 - p) / (1 - calm))) / speed;
+        const run = p <= calm ? p : calm - (1 - calm) * Math.log((1 - p) / (1 - calm));
+        return run <= speed * ramp / 2 ? Math.sqrt(2 * ramp * run / speed) : run / speed + ramp / 2;
     }
     // How long the brush would take to come to the end from now, going on at its pace.
     function finishNow() {
