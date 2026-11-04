@@ -1,0 +1,13 @@
+[Unit]
+Description=The files both sessions read (GTK's palette, Brave's theme) in this session's colors
+PartOf=graphical-session.target
+After=graphical-session-pre.target
+# before the apps that start with the session read them
+Before=xdg-desktop-autostart.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/dotfiles/modules/lumar/apply-lumar
+
+[Install]
+WantedBy=graphical-session.target

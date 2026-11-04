@@ -1,5 +1,5 @@
 [Unit]
-Description=lumar's colors from Nalthis's palette
+Description=lumar's colors from its knobs
 
 [Service]
 Type=oneshot
