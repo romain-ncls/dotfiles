@@ -18,6 +18,7 @@ packages:
   - pipewire-pulse
   - pipewire-jack
   - wireplumber
+  - rtkit # PipeWire's realtime priority; without it, audio crackles whenever the CPU is busy
   # bluetooth (KDE's bluedevil talks to bluetoothd)
   - bluez
   - bluez-utils
