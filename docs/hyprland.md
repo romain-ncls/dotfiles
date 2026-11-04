@@ -263,8 +263,12 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    apply-lumar writes it for shadesmar (read live), Hyprland and Ghostty, on
    every apply and when the knobs change (`lumar-palette.path`). Flush by
    default, as close to maximized as it gets: no gaps, no borders, square
-   windows, the bar docked, see-through and blurred; floating on Meta+G
-   (gaps, 10 px corners, the bar floating), kept across logins. Noto Sans;
+   tiled windows (floating ones keep 10 px corners in both layouts), the bar
+   docked; floating on Meta+G (gaps, 10 px corners, the bar floating), kept
+   across logins. The bar, its popups, notifications and the OSD in
+   Nalthis's glass from Plasma: the pane at 80 %, blurred behind, a 10 %
+   outline in the text's color (the page's 92 % of the frame, dropped).
+   Noto Sans;
    Ghostty in Fira Code, no title bar, the page's terminal colors on Konsole's
    Nalthis background (the raised surface) and text. The wallpaper: shadesmar's,
    the newest of the ones liked in Backdrop (~/Pictures/Backdrop). The GNOME

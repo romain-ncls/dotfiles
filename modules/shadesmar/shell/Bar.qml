@@ -31,10 +31,23 @@ PanelWindow {
     // Hyprland blurs behind it (lumar.lua)
     WlrLayershell.namespace: "shadesmar-bar"
 
+    // the glass, outlined as Plasma's panel: all round when it floats, its
+    // top edge when docked
     Rectangle {
         anchors.fill: parent
         radius: Theme.floating ? Theme.radius : 0
         color: Theme.bar
+        border.width: Theme.floating ? 1 : 0
+        border.color: Theme.outline
+    }
+
+    Rectangle {
+        visible: !Theme.floating
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 1
+        color: Theme.outline
     }
 
     IpcHandler {

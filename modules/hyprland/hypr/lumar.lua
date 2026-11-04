@@ -52,6 +52,10 @@ end
 
 L.set(saved())
 
+-- Floating windows (the Meta+Return terminal, dialogs, picture in picture)
+-- keep their corners in both layouts: they touch nothing.
+hl.window_rule({ name = "lumar-floating-corners", match = { float = true }, rounding = 10 })
+
 -- The colors (apply-lumar writes them; Hyprland's defaults until it has).
 local ok, colors = pcall(dofile, data .. "/colors.lua")
 if ok and type(colors) == "table" and colors.frame then
