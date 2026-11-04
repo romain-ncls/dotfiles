@@ -197,6 +197,13 @@ silksong-lock`, linked to `~/.config/quickshell/silksong-lock`) that modules/hyp
 quits once unlocked. Each screen (`LockSurface.qml`) does what Plasma's lock screen does with the
 wallpaper and the prompt (`main.qml`'s lock screen half, `LockScreen.qml`): the painting, then the
 world, Hornet's day planned meanwhile, and the prompt once every screen has drawn its first frame.
+The painting starts over the screen as it was, where Plasma's starts on dark paper (KWin shows
+nothing of the screen once locked; chosen among mockups): `shell.qml` captures each screen just
+before locking, from an overlay of its own that shows nothing and lets every click through, and
+moves the capture as it is (no copy) onto its lock surface, under everything; the painting is bare
+there (`Painting.qml`'s `bare`, the shader's), its unpainted part showing the capture, and the
+captures are let go once every painting has washed away. A screen with no capture within 400 ms
+starts on the dark paper.
 The scene and the prompt are used as they are, by `file:` URL through the links `scene` and
 `prompt` (through Quickshell's own URLs, the types beside them aren't found in a linked folder);
 the wallpaper's settings are Plasma's lock screen's (`main.xml`'s defaults). The screens' sizes are

@@ -1,6 +1,7 @@
 // The Silksong lock screen in Hyprland (README, Lock screen): on every screen the world painted in
-// watercolor, then the world, and the game's prompt, as on Plasma's lock screen: the scene
-// (scene/, Plasma's wallpaper) and the prompt (prompt/SilksongPrompt.qml) as they are, by URL.
+// watercolor over the screen as it was, then the world, and the game's prompt, as on Plasma's
+// lock screen (which paints on dark paper: KWin shows nothing of the screen once locked): the
+// scene (scene/, Plasma's wallpaper) and the prompt (prompt/SilksongPrompt.qml) as they are, by URL.
 // `qs -c silksong-lock` locks the session as it starts and quits once it's unlocked: modules/
 // hyprland's lock-screen runs it, and hyprlock instead should it fail. Without the game's art
 // (tools/extract_ui.py) it quits at once, status 2; should the prompt fail, status 3, the session
@@ -94,6 +95,7 @@ ShellRoot {
         id: auth
 
         onUnlocked: {
+            shell.unlocking = true;
             lock.locked = false;
             shell.quitWith(0);
         }
@@ -111,10 +113,80 @@ ShellRoot {
         onTriggered: Qt.exit(status)
     }
 
+    // The screens as they were, for the paintings to start over (LockSurface.qml, Painting.qml bare):
+    // captured just before locking, each from an overlay of its own that shows nothing and lets
+    // every click through, then moved onto its lock surface, as it is (no copy). In memory only,
+    // and let go once every painting has washed away. Without one within 400 ms, the screens start
+    // on the dark paper.
+    property var captureScreens: []
+    property bool capturing: true
+    onCapturingChanged: if (!capturing) console.info("Silksong lock screen: the screens as they were, let go")
+    readonly property bool captured: overlays.instances.length === captureScreens.length
+        && overlays.instances.every(o => o.capture.hasContent)
+    function captureOf(screen) {
+        const overlay = overlays.instances.find(o => o.modelData.name === screen?.name);
+        return overlay?.capture.hasContent ? overlay.capture : null;
+    }
+    Variants {
+        id: overlays
+
+        model: shell.capturing ? shell.captureScreens : []
+
+        PanelWindow {
+            id: overlay
+
+            required property var modelData
+            readonly property Item capture: view
+
+            screen: modelData
+            visible: !lock.locked
+            color: "transparent"
+            mask: Region {}
+            exclusionMode: ExclusionMode.Ignore
+            anchors {
+                top: true
+                bottom: true
+                left: true
+                right: true
+            }
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.namespace: "silksong-lock-capture"
+
+            ScreencopyView {
+                id: view
+                anchors.fill: parent
+                captureSource: overlay.modelData
+                live: false
+                opacity: 0
+            }
+        }
+    }
+    Timer {
+        id: captureFor
+        interval: 400
+        onTriggered: shell.lockNow()
+    }
+    onCapturedChanged: if (captured) lockNow()
+    // Locks once, for good: only the password unlocks (auth), never a change of what's above.
+    property bool unlocking: false
+    function lockNow() {
+        if (kit !== null && !unlocking && !lock.locked) {
+            lock.locked = true;
+        }
+    }
+    // Every screen's painting has washed away, or it's been long enough.
+    property int paintingsGone: 0
+    onPaintingsGoneChanged: if (paintingsGone >= captureScreens.length) capturing = false
+    Timer {
+        interval: 20000
+        running: lock.locked
+        onTriggered: shell.capturing = false
+    }
+
     WlSessionLock {
         id: lock
 
-        locked: shell.kit !== null
+        locked: false
         // Every screen shows its surface: lock-screen waits for this before it leaves the lock to it.
         onSecureChanged: if (secure) marker.running = true
 
@@ -132,6 +204,8 @@ ShellRoot {
                 kit: shell.kit
                 art: shell.uiDir
                 locker: auth
+                capture: shell.captureOf(surface.screen)
+                onPaintingGone: shell.paintingsGone++
                 onBroken: shell.quitWith(3)
             }
         }
@@ -149,6 +223,8 @@ ShellRoot {
             quitWith(2);
             return;
         }
+        captureScreens = Array.from(Quickshell.screens);
+        captureFor.start();
         kit = made;
     }
 }
