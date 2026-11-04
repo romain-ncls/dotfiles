@@ -28,6 +28,9 @@ Item {
     property var dayHours: ["09:30", "10:00", "17:00", "17:30"]
     // The world behind it has everything it shows (WorldScene's revealed).
     property bool revealed: false
+    // No paper: what's under it shows where the brush hasn't been yet (Hyprland's lock screen puts
+    // the screen as it was there, ../../../quickshell/LockSurface.qml).
+    property bool bare: false
 
     // The brush's pace (watercolor.frag pace()), all over the screens at once, in how much of the
     // painting shows (world.py times it so): even, `speed` of it a second, for most of what the
@@ -73,11 +76,11 @@ Item {
     Component.onCompleted: Paintings.join(root)
     Component.onDestruction: Paintings.leave(root)
 
-    // Black where no piece is, until the world washes in.
+    // Black where no piece is, until the world washes in (bare: what's under it).
     Rectangle {
         anchors.fill: parent
         color: "black"
-        visible: !root.leaving
+        visible: !root.leaving && !root.bare
     }
 
     // What it paints here, each image read at once, at the size it's drawn (they have to be in the
@@ -154,6 +157,7 @@ Item {
                 property real washFor: root.washFor
                 property color veil: root.veil
                 property color light: root.light
+                property real bare: root.bare ? 1 : 0
                 fragmentShader: Qt.resolvedUrl("shaders/watercolor.frag.qsb")
             }
             // The brush's clock, in seconds: started as it's made, it runs from the first frame,
