@@ -200,10 +200,12 @@ world, Hornet's day planned meanwhile, and the prompt once every screen has draw
 The painting starts over the screen as it was, where Plasma's starts on dark paper (KWin shows
 nothing of the screen once locked; chosen among mockups): `shell.qml` captures each screen just
 before locking, from an overlay of its own that shows nothing and lets every click through, and
-moves the capture as it is (no copy) onto its lock surface, under everything; the painting is bare
-there (`Painting.qml`'s `bare`, the shader's), its unpainted part showing the capture, and the
-captures are let go once every painting has washed away. A screen with no capture within 400 ms
-starts on the dark paper. Bare, the brush gets up to speed from a standstill over the first 0.8 s
+copies it at once to an image in memory (the capture and its overlay let go then), which that
+screen's lock surface shows under everything; the painting is bare there (`Painting.qml`'s `bare`,
+the shader's), its unpainted part showing the image, and the images are let go once every painting
+has washed away. (Moving the capture itself onto its lock surface put some on the wrong screen:
+Quickshell gives a lock surface its screen after making it, and a capture can only be in one
+place.) Without every screen's image within 400 ms, the screens start on the dark paper. Bare, the brush gets up to speed from a standstill over the first 0.8 s
 (`ramp`), then goes on evenly for longer (0.6 of the painting a second, slowing from 85% on), and
 the world washes in only once it has been everywhere (2 s): timed for the dark paper, the brush was
 a quarter through within 0.3 s and the world came while a third of the screen still showed the
