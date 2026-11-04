@@ -17,8 +17,9 @@ knobs=$(nalthis get | jq -r '.knobs | "\(.hue) \(.tint) \(.depth) \(.accent)"')
 # shellcheck disable=SC2086 # four numbers
 tokens=$(nalthis tokens $knobs)
 
-# The terminal: Konsole's Nalthis background and text (the raised surface,
-# the second text color), with the colors picked on the lumar page
+# The terminal: about Konsole's Nalthis background (#282e36 at the first
+# knobs; the pane since they lightened, 2026-11-04) and its text (the second
+# text color), with the colors picked on the lumar page
 # (2026-11-04): fixed hues; black and white follow the palette.
 # And the warning colors.
 palette=$(printf '%s' "$tokens" | jq '. + {
@@ -54,7 +55,7 @@ put "$data/colors.lua" "$(printf '%s' "$palette" | jq -r '
 
 put "$themes/lumar" "$(printf '%s' "$palette" | jq -r '
 	"# lumar, written by modules/lumar/apply-lumar",
-	"background = \(.raised)",
+	"background = \(.pane)",
 	"foreground = \(.text2)",
 	"cursor-color = \(.accentText)",
 	"selection-background = \(.accent)",
