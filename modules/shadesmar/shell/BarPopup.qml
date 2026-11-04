@@ -43,7 +43,7 @@ PopupWindow {
         radius: Theme.radius
         color: Theme.popup
         border.width: 1
-        border.color: Theme.slot
+        border.color: Theme.outline
 
         Column {
             id: body

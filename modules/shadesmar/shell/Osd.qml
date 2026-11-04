@@ -117,6 +117,8 @@ Scope {
             anchors.fill: parent
             radius: height / 2
             color: Theme.bar
+            border.width: 1
+            border.color: Theme.outline
 
             IconImage {
                 id: glyph

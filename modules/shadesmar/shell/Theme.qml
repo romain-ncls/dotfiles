@@ -52,11 +52,15 @@ Singleton {
         return Qt.rgba(c.r, c.g, c.b, a)
     }
     readonly property color frameColor: palette.frame
-    readonly property color raisedColor: palette.raised
+    readonly property color paneColor: palette.pane
+    readonly property color textColor: palette.text
 
-    // the bar and the notifications, see-through, blurred behind (Hyprland)
-    readonly property color bar: alpha(frameColor, 0.92)
-    readonly property color popup: alpha(raisedColor, 0.97) // the bar's popups
+    // Nalthis's glass in Plasma: the window background (the pane) at 80 %,
+    // blurred behind (Hyprland), a 10 % outline in the text's color
+    readonly property real glass: 0.80
+    readonly property color bar: alpha(paneColor, glass)
+    readonly property color popup: alpha(paneColor, glass) // the bar's popups
+    readonly property color outline: alpha(textColor, 0.10)
     readonly property color shade: alpha(frameColor, 0.88) // behind the overview
     readonly property color text: palette.text
     readonly property color dim: palette.text2
