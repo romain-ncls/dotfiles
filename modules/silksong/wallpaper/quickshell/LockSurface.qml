@@ -13,6 +13,8 @@ Item {
     id: root
 
     required property var screens
+    // The screens' sizes are in (shell.qml): the scene may be made.
+    required property bool sized
     required property string screenName
     required property url dataDir
     required property QtObject kit
@@ -32,9 +34,9 @@ Item {
     readonly property real longitude: 2.35
     readonly property var dayHours: ["09:30", "10:00", "17:00", "17:30"]
 
-    // Made once the surface has its size, then kept (main.qml).
+    // Made once the surface has its size and the screens theirs, then kept (main.qml).
     property bool seated: false
-    readonly property bool canSeat: width > 0 && height > 0
+    readonly property bool canSeat: width > 0 && height > 0 && sized
     onCanSeatChanged: if (canSeat) seated = true
 
     Item {
@@ -85,14 +87,33 @@ Item {
         Connections {
             target: painting.item
 
+            function onShownChanged() {
+                if (painting.item.shown) {
+                    const pieces = painting.item.pieces.length;
+                    console.info("Silksong lock screen:", root.screenName, "painting shown,",
+                                 pieces === 1 ? "this screen's own view" : `${pieces} tiles`);
+                }
+            }
             function onUpChanged() {
                 if (painting.item.up) {
+                    console.info("Silksong lock screen:", root.screenName, "painting up, the world made");
                     root.planDay();
                 }
             }
             function onGoneChanged() {
                 if (painting.item.gone) {
+                    console.info("Silksong lock screen:", root.screenName, "painting gone");
                     wallpaper.paintingGone = true;
+                }
+            }
+        }
+        // When each screen's painting and world come (in log.log, timed: modules/silksong's README).
+        Connections {
+            target: view.item
+
+            function onRevealedChanged() {
+                if (view.item.revealed) {
+                    console.info("Silksong lock screen:", root.screenName, "world revealed");
                 }
             }
         }

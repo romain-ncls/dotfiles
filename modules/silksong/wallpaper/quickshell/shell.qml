@@ -19,28 +19,68 @@ ShellRoot {
     readonly property int kitVersion: 2
     property QtObject kit: null
 
-    // The screens as the scene reads them: Qt's, as Plasma's. The dev rigs' outputs have no size
-    // in millimetres: SILKSONG_DESK gives them the desk's, left to right ("DP-3:476x268,…"), names
-    // included, which the views tools/derive.py made for the desk go by.
+    // The screens as the scene reads them, as Plasma's: Qt's, in the sizes KWin gives them, the
+    // EDID's detailed timing's millimetres (476 by 268), which tools/derive.py made this desk's views
+    // for. Hyprland gives the EDID's whole centimetres instead (480 by 270): the world would be laid
+    // out a little wider, and each screen, its own view not found, would read the tiles it shows,
+    // many times the work. The dev rigs' outputs have no size at all: SILKSONG_DESK gives them the
+    // desk's, left to right ("DP-3:476x268,…"), names included, which the views go by.
     readonly property var desk: (Quickshell.env("SILKSONG_DESK") ?? "").split(",").filter(s => s !== "").map(s => {
         const [name, mm] = s.split(":");
         const [w, h] = mm.split("x").map(Number);
         return { name: name, w: w, h: h };
     })
+    // The EDID's sizes by output, read as the lock screen starts (edid below); the scene is made once
+    // they're in, or without them a moment on (sized).
+    property var edidMm: ({})
+    property bool sized: desk.length > 0
+    // QScreen::physicalDotsPerInch() / 25.4, as Qt works it out (tools/desk.js)
+    function density(s, mm) {
+        return (s.height / mm.h + s.width / mm.w) * 12.7 / 25.4;
+    }
     readonly property var screens: {
         const qt = Array.from(Qt.application.screens);
-        if (desk.length === 0) {
-            return qt;
-        }
-        return qt.sort((a, b) => a.virtualX - b.virtualX).map((s, i) => ({
-            name: desk[i]?.name ?? s.name,
+        const standIn = (s, name, mm) => ({
+            name: name,
             virtualX: s.virtualX,
             virtualY: s.virtualY,
             width: s.width,
             height: s.height,
-            // QScreen::physicalDotsPerInch() / 25.4, as Qt works it out (tools/desk.js)
-            pixelDensity: desk[i] ? (s.height / desk[i].h + s.width / desk[i].w) * 12.7 / 25.4 : s.pixelDensity
-        }));
+            pixelDensity: mm ? density(s, mm) : s.pixelDensity
+        });
+        if (desk.length === 0) {
+            return qt.map(s => standIn(s, s.name, edidMm[s.name]));
+        }
+        return qt.sort((a, b) => a.virtualX - b.virtualX).map((s, i) => standIn(s, desk[i]?.name ?? s.name, desk[i]));
+    }
+    Process {
+        id: edid
+
+        running: shell.desk.length === 0
+        // Each connected output's first detailed timing: its pixel clock, then its image size in mm.
+        command: ["sh", "-c", "for f in /sys/class/drm/card*-*/edid; do set -- $(od -An -tu1 -j54 -N15 \"$f\" 2>/dev/null); [ $# -eq 15 ] && [ $(($1 + $2)) -gt 0 ] || continue; n=${f%/edid}; n=${n##*/}; echo \"${n#card*-} $((${13} + ((${15} >> 4) << 8))) $((${14} + ((${15} & 15) << 8)))\"; done"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (shell.sized) {
+                    return;
+                }
+                const sizes = {};
+                for (const line of text.split("\n")) {
+                    const [name, w, h] = line.trim().split(" ");
+                    if (name && Number(w) > 0 && Number(h) > 0) {
+                        sizes[name] = { w: Number(w), h: Number(h) };
+                    }
+                }
+                console.info("Silksong lock screen: sizes from the EDID:", Object.keys(sizes).map(n => `${n} ${sizes[n].w}×${sizes[n].h} mm`).join(", ") || "none");
+                shell.edidMm = sizes;
+                shell.sized = true;
+            }
+        }
+    }
+    Timer {
+        interval: 300
+        running: !shell.sized
+        onTriggered: shell.sized = true
     }
     function nameOf(screen) {
         if (desk.length === 0) {
@@ -86,6 +126,7 @@ ShellRoot {
             LockSurface {
                 anchors.fill: parent
                 screens: shell.screens
+                sized: shell.sized
                 screenName: shell.nameOf(surface.screen)
                 dataDir: shell.dataDir
                 kit: shell.kit
