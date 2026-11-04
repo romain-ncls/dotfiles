@@ -1,7 +1,8 @@
 # Silksong Aquarium
 
-A Plasma wallpaper (desktop or lock screen) showing a Hollow Knight: Silksong world
-spread across all monitors as they physically sit on the desk, with Hornet living in it.
+A Plasma wallpaper (desktop or lock screen), and Hyprland's lock screen, showing a Hollow Knight:
+Silksong world spread across all monitors as they physically sit on the desk, with Hornet living in
+it.
 
 The game's art never enters this repo: the tools read it from your installed copy and
 write everything to `~/.local/share/silksong-wallpaper` (caches in `~/.cache/silksong-wallpaper`).
@@ -157,10 +158,14 @@ with (a pair of bug eyes at the end of the line shows the password), the invento
 under them, and Sleep and Switch User as menu items. A long password's full stops get smaller,
 then the field grows. Messages are written out as dialogue is, ending on Hornet's needle, and the
 column opens to let them in. While it's up the aquarium behind is darkened and blurred; idle, the
-lock screen shows the aquarium alone, as before. Everything it does is Plasma's own
-(`SilksongLockUi.qml` keeps its authenticator calls, messages, timers and keys), and
-`LockScreen.qml` shows Plasma's own prompt when the art is missing or older than the prompt needs
-(`extract_ui.py` not run, or not since an update) or the Silksong one can't be loaded. It makes
+lock screen shows the aquarium alone, as before. Everything it does is Plasma's own (the
+authenticator calls, messages, timers and keys), and `LockScreen.qml` shows Plasma's own prompt
+when the art is missing or older than the prompt needs (`extract_ui.py` not run, or not since an
+update) or the Silksong one can't be loaded. The prompt itself, `SilksongPrompt.qml`, draws only,
+in QtQuick alone; what it asks of the lock screen goes through a locker its header lists, which
+`SilksongLockUi.qml` makes of Plasma's (kscreenlocker's authenticator, its sessions, Caps Lock,
+the battery, the keyboard layout, the readers) and `quickshell/Locker.qml` of Hyprland's (below).
+It makes
 the prompt only once every screen has drawn its first frame (`prompts.js`), or half a second on
 for a screen that draws none: the first one made compiles it all, a tenth of a second the screens'
 first frames (the world's painting, below) would otherwise wait for. It's made a moment later,
@@ -183,6 +188,25 @@ desktop alone:
   (`plasma-<shell>-appletsrc`).
 
 It applies from the next login (KWin's next start). `lockscreen.sh uninstall` takes both away.
+
+### In Hyprland
+
+`quickshell/` is the same lock screen in Hyprland: a Quickshell config of its own (`qs -c
+silksong-lock`, linked to `~/.config/quickshell/silksong-lock`) that modules/hyprland's
+`lock-screen` runs. It locks the session as it starts (`WlSessionLock`, a surface per screen) and
+quits once unlocked. Each screen (`LockSurface.qml`) does what Plasma's lock screen does with the
+wallpaper and the prompt (`main.qml`'s lock screen half, `LockScreen.qml`): the painting, then the
+world, Hornet's day planned meanwhile, and the prompt once every screen has drawn its first frame.
+The scene and the prompt are used as they are, by `file:` URL through the links `scene` and
+`prompt` (through Quickshell's own URLs, the types beside them aren't found in a linked folder);
+the wallpaper's settings are Plasma's lock screen's (`main.xml`'s defaults). `Locker.qml` gives the
+prompt the password through PAM (`/etc/pam.d/silksong-lock`, as KDE's lock screen asks it), Caps
+Lock from Hyprland, the battery from UPower; no Sleep, Switch User or keyboard layout. Without the
+game's art it quits at once (status 2), and should the prompt fail, with the session locked (3):
+`lock-screen` then runs hyprlock, as when it hasn't locked within 5 seconds or ends while locked
+(hyprlock takes the lock over). The dev rigs' outputs have no size in millimetres:
+`SILKSONG_DESK=DP-3:476x268,eDP-1:344x215,HDMI-A-1:476x268` gives them the desk's, names included,
+and with `HYPR_DEV` set, `SILKSONG_LOCK_TEST_PAM` a folder with a test `silksong-lock` PAM config.
 
 ## Runtime
 

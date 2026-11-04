@@ -24,7 +24,8 @@ packages:
   - papers
   - loupe
   - file-roller
-  # stand-ins until shadesmar has its own (docs/hyprland.md, first login)
+  # stand-ins until shadesmar has its own (docs/hyprland.md, first login);
+  # hyprlock stays as the lock screen's fallback (hypr/lock-screen)
   - hyprlock
   - hypridle
   - network-manager-applet # networks, and the VPN's prompts

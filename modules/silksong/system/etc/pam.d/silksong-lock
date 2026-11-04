@@ -1,0 +1,6 @@
+#%PAM-1.0
+# The Silksong lock screen in Hyprland (modules/silksong, wallpaper/quickshell): the password, as
+# KDE's lock screen asks it (/usr/lib/pam.d/kde).
+
+auth       include      system-local-login
+account    include      system-local-login
