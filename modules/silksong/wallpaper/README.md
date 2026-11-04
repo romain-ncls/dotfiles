@@ -205,11 +205,13 @@ screen's lock surface shows under everything; the painting is bare there (`Paint
 the shader's), its unpainted part showing the image, and the images are let go once every painting
 has washed away. (Moving the capture itself onto its lock surface put some on the wrong screen:
 Quickshell gives a lock surface its screen after making it, and a capture can only be in one
-place.) Without every screen's image within 400 ms, the screens start on the dark paper. Bare, the brush gets up to speed from a standstill over the first 0.8 s
-(`ramp`), then goes on evenly for longer (0.6 of the painting a second, slowing from 85% on), and
-the world washes in only once it has been everywhere (2 s): timed for the dark paper, the brush was
-a quarter through within 0.3 s and the world came while a third of the screen still showed the
-windows, the painting seeming to start halfway. To see a lock's frames,
+place.) Without every screen's image within 400 ms, the screens start on the dark paper. Bare, the
+brush gets up to speed from a standstill over the first 0.8 s (`ramp`), then goes on evenly for
+longer (0.6 of the painting a second, slowing from 85% on): timed for the dark paper, it was a
+quarter through within 0.3 s, its first, small washes lost on the windows. The world washes in once
+the brush is up to speed, behind it at its pace (Runtime), so it never shows where the brush
+hasn't been: there the painting draws the image itself, opaque (`Painting.qml`'s `ground`), where
+holes would show the world through. To see a lock's frames,
 `touch $XDG_RUNTIME_DIR/silksong-lock.trace` before locking: `lock-screen` has the next lock log
 Qt's render loop timing in Quickshell's `log.log`.
 The scene and the prompt are used as they are, by `file:` URL through the links `scene` and
@@ -264,19 +266,23 @@ has taken the compositor's latest word on its surface (a configure), which the c
 anew as the lock screen's surfaces appear, so a world made at once (half a second, two thirds of
 it her day) stood every brush still meanwhile, `UniformAnimator` or not. The brush keeps an even
 pace (0.65 of the painting a second, timed by how much of it shows, `world.py`), then from 60%
-on slows down towards the end, however long the world takes (`speed`, `calm`, the shader's
-`pace()`). The world stays hidden under it until it has everything it shows; once its first frame
-is drawn on every screen (its images go to the GPU then, which holds the brush back a moment), the
-brushes go on to the end at the pace they have, never faster, while the worlds wash in through
-the paintings together, in 0.7 s (`washFor`, a second `UniformAnimator`), in the order the washes
-were painted, the lighter first, along soft, ragged fronts: each place goes from painting to world
-in a few frames, where a fade would show both at once everywhere. Time is told by the clock at
-each frame: QML Timers run on the GUI thread's animation clock, which stands still while only the
-render thread animates (a second's Timer then takes 1.6). Measured in the real lock screen
-(KWin, three screens), the paintings show about 0.3 s after it starts, the worlds have everything
-they show about a second later and have washed in 0.7 s after that, and no frame waits more than
-about 70 ms. Before the paintings show, KWin shows black: once the session is locked it shows the
-lock screen's windows alone.
+on slows down, easing towards its slowest pace (0.35 a second: an ease-out to a terminal pace,
+not to a stop), however long the world takes (`speed`, `calm`, `slowest`, the shader's `pace()`).
+The world stays hidden under it until it has everything it shows; once its first frame is drawn on
+every screen (its images go to the GPU then, which holds the brush back a moment), the brushes go
+on to the end at the pace they have, never faster nor slower, and the worlds wash in through the
+paintings together at that same pace (the slowest screen's; `washFor`, the painting's whole time
+at it, a second `UniformAnimator`), in the order the washes were painted, the lighter first,
+along soft, ragged fronts: each place goes from painting to world in a few frames, where a fade
+would show both at once everywhere, and the world, behind the brush at its pace, never outruns it
+(a fixed 0.7 s did, five times the brush's pace over the screen as it was: the two moved apart).
+Time is told by the clock at each frame: QML Timers run on the GUI thread's animation clock,
+which stands still while only the render thread animates (a second's Timer then takes 1.6).
+Measured in the real lock screen (KWin, three screens, with the 0.7 s wash), the paintings show
+about 0.3 s after it starts, the worlds have everything they show about a second later and have
+washed in 0.7 s after that (at the brush's pace, now 1.5 to 2 s: not measured there yet), and no
+frame waits more than about 70 ms. Before the paintings show, KWin shows black: once the session
+is locked it shows the lock screen's windows alone.
 
 Elsewhere (the desktop, where Plasma's splash screen covers the wallpaper meanwhile, or a world
 made before the painting), each screen stays black until it has everything it shows (her sheets

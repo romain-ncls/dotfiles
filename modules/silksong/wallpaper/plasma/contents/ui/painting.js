@@ -29,11 +29,13 @@ function shown() {
 }
 
 // Asked by a painting once the world under it has drawn its first frame: when every one has, all
-// end, for as long as the one least far along needs.
+// end, for as long as the one least far along needs, the worlds washing in at the pace of the
+// slowest brush.
 function framed() {
     if (paintings.every(p => p.framed || p.leaving)) {
         const waiting = paintings.filter(p => !p.leaving && p.shown);
         const finish = Math.max(0, ...waiting.map(p => p.finishNow()));
-        paintings.forEach(p => p.leave(finish || p.finishNow()));
+        const wash = Math.max(0, ...waiting.map(p => p.washNow()));
+        paintings.forEach(p => p.leave(finish || p.finishNow(), wash || p.washNow()));
     }
 }

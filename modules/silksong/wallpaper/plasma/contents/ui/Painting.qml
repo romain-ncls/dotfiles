@@ -28,23 +28,27 @@ Item {
     property var dayHours: ["09:30", "10:00", "17:00", "17:30"]
     // The world behind it has everything it shows (WorldScene's revealed).
     property bool revealed: false
-    // No paper: what's under it shows where the brush hasn't been yet (Hyprland's lock screen puts
-    // the screen as it was there, ../../../quickshell/LockSurface.qml).
-    property bool bare: false
+    // No paper, bare: where the brush hasn't been, the ground shows (an image of the screen as it
+    // was, on Hyprland's lock screen: ../../../quickshell/LockSurface.qml), the world only where it
+    // has been.
+    property Item ground: null
+    readonly property bool bare: ground !== null
 
     // The brush's pace (watercolor.frag pace()), all over the screens at once, in how much of the
     // painting shows (world.py times it so): even, `speed` of it a second, for most of what the
     // world takes to have everything it shows (README, Runtime: 1.2 s, twice that on a busy
-    // machine); then, from `calm` on, slower and slower towards the end, gently enough that it's
-    // still painting what shows however long the world takes. Bare, getting up to speed from a
-    // standstill over the first 0.8 s, then even for longer: over the screen as it was, its first
-    // washes are seen from the first, and the world mustn't wash in before the brush has been
-    // everywhere (covered, below).
+    // machine); then, from `calm` on, slower and slower, easing towards `slowest` (an ease-out to
+    // a terminal pace, not to a stop: the world washes in at the pace the brush has then, below).
+    // Bare, getting up to speed from a standstill over the first 0.8 s, then even for longer: over
+    // the screen as it was, its first washes are seen from the first.
     readonly property real speed: bare ? 0.6 : 0.65
     readonly property real calm: bare ? 0.85 : 0.6
     readonly property real ramp: bare ? 0.8 : 0
-    // Then how long the world takes to wash in over it.
-    readonly property real washFor: 0.7
+    readonly property real slowest: 0.35
+    // Then how long the world takes to wash in over it: the painting's whole time at the pace the
+    // brush has as it does (leave()), so that the world never outruns the brush, nor the brush
+    // the world.
+    property real washFor: 0.7
 
     readonly property var painting: sketch.item?.painting ?? null
     readonly property var me: World.layout(screens, gapMm).screens[screenName] ?? null
@@ -153,6 +157,10 @@ Item {
                 anchors.fill: parent
                 property variant paint: colours
                 property variant timing: times
+                // (bare or not, the sampler needs a texture: the paint's when there's no ground)
+                property variant ground: root.ground ?? colours
+                property vector4d groundRect: Qt.vector4d(piece.x / root.width, piece.y / root.height,
+                                                          piece.width / root.width, piece.height / root.height)
                 property real clock: 0
                 property real speed: root.speed
                 property real calm: root.calm
@@ -163,6 +171,7 @@ Item {
                 property color light: root.light
                 property real bare: root.bare ? 1 : 0
                 property real ramp: root.ramp
+                property real slowest: root.slowest
                 fragmentShader: Qt.resolvedUrl("shaders/watercolor.frag.qsb")
             }
             // The brush's clock, in seconds: started as it's made, it runs from the first frame,
@@ -216,8 +225,8 @@ Item {
             if (!root.allShown && Date.now() - root.shownAt >= 400) {
                 root.allShown = true; // a screen whose painting never showed (switched off) holds no one back
             }
-            if (!root.covered && Date.now() - root.shownAt >= root.coverAt * 1000) {
-                root.covered = true;
+            if (!root.upToSpeed && Date.now() - root.shownAt >= root.ramp * 1000) {
+                root.upToSpeed = true;
             }
             if (root.uncover && ++root.framesUncovered >= 2 && !root.framed) {
                 root.framed = true;
@@ -249,16 +258,14 @@ Item {
     // paintings together while the last washes still go on, light first as the washes were
     // painted: each place goes from painting to world in a few frames along a ragged front, rather
     // than both showing everywhere as a fade would.
-    readonly property bool uncover: revealed && covered
-    // Bare, the world waits for the brush to have been everywhere: 93% of its time, which with the
-    // brush a tenth quicker than its time (watercolor.frag's behind) is all of it, so that no window
-    // shows on through to the world. Should no frame tell it, a while after the world is in.
-    property bool covered: !bare
-    readonly property real coverAt: timeFor(0.93)
+    readonly property bool uncover: revealed && upToSpeed
+    // Not while the brush is still getting up to speed (bare): the world would wash in slower and
+    // slower behind it. Should no frame tell it, a while after the world is in.
+    property bool upToSpeed: ramp <= 0
     Timer {
         interval: 2000
-        running: root.revealed && !root.covered
-        onTriggered: root.covered = true
+        running: root.revealed && !root.upToSpeed
+        onTriggered: root.upToSpeed = true
     }
     property int framesUncovered: 0
     property bool framed: false
@@ -277,29 +284,32 @@ Item {
         return c < ramp ? speed * c / ramp : speed;
     }
     // How far the painting is after c seconds of the brush's clock, and its pace then
-    // (watercolor.frag pace(), paceOf()).
+    // (watercolor.frag pace(), paceOf()): past the end, its progress stops there.
     function paceAt(c) {
         const p = runAt(c);
-        return p <= calm ? p : 1 - (1 - calm) * Math.exp(-(p - calm) / (1 - calm));
+        const f = slowest / speed;
+        return p <= calm ? p
+            : calm + f * (p - calm) + (1 - f) * (1 - calm) * (1 - Math.exp(-(p - calm) / (1 - calm)));
     }
     function paceOf(c) {
         const p = runAt(c);
-        return p <= calm ? runOf(c) : runOf(c) * Math.exp(-(p - calm) / (1 - calm));
+        const f = slowest / speed;
+        return p <= calm ? runOf(c) : runOf(c) * (f + (1 - f) * Math.exp(-(p - calm) / (1 - calm)));
     }
-    // And how long the brush's clock takes to come to p (paceAt's inverse).
-    function timeFor(p) {
-        const run = p <= calm ? p : calm - (1 - calm) * Math.log((1 - p) / (1 - calm));
-        return run <= speed * ramp / 2 ? Math.sqrt(2 * ramp * run / speed) : run / speed + ramp / 2;
-    }
-    // How long the brush would take to come to the end from now, going on at its pace.
+    // How long the brush would take to come to the end from now, going on at its pace, and the
+    // world to wash in at that pace (the painting's whole time).
     function finishNow() {
         const c = (Date.now() - shownAt) / 1000;
-        return (1 - paceAt(c)) / paceOf(c);
+        return Math.max(0, 1 - paceAt(c)) / paceOf(c);
     }
-    // The end, the brush taking finish seconds to come to it.
-    function leave(finish) {
+    function washNow() {
+        return 1 / paceOf((Date.now() - shownAt) / 1000);
+    }
+    // The end, the brush taking finish seconds to come to it, the world wash seconds to wash in.
+    function leave(finish, wash) {
         if (!leaving) {
             finishFor = finish;
+            washFor = wash;
             leaving = true;
         }
     }
@@ -307,7 +317,7 @@ Item {
         interval: 500 // should no frame come, or another screen's not
         running: root.uncover && !root.leaving
         onTriggered: {
-            root.leave(root.finishNow());
+            root.leave(root.finishNow(), root.washNow());
             Paintings.framed();
         }
     }
