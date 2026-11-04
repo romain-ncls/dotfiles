@@ -192,8 +192,9 @@ reload`.
 - `modules/shadesmar/`: the Quickshell config (`~/.config/quickshell/shadesmar/`,
   linked, edited in place) and the Go helper, spanreed (`pkg/`).
 - `modules/lumar/`: the theme (below).
-- `modules/silksong/wallpaper/quickshell/`: the scene's wrappers; the scene
-  files move to a folder both wrappers import while Plasma still uses them.
+- `modules/silksong/wallpaper/quickshell/`: the scene's wrappers. The scene
+  files stay where Plasma's package has them, untouched; the wrappers
+  load them through a link.
 - lodestar: the shortcut translation (Go, with tests).
 
 Quickshell 0.3 no longer resolves a config's symlinks: a linked config gets
@@ -286,7 +287,16 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    (docs/manual-steps.md); the file chooser is Nautilus's. Done.
 5. **Silksong on desktop and lock screen.** The wrappers above, the bench on
    headless Hyprland, then shadesmar's lock in place of hyprlock: lid,
-   suspend, hibernate, Lock AFK, a crash of the shell while locked.
+   suspend, hibernate, Lock AFK, a crash of the shell while locked. Done so
+   far: the lock screen, a Quickshell config of its own (`qs -c
+   silksong-lock`, modules/silksong's README) with the Silksong prompt,
+   which is now shared with Plasma's (`SilksongPrompt.qml`, a locker for
+   each). `lock-screen` is hypridle's lock_cmd, so Meta+L, the idle, the
+   lid, sleep and Lock AFK all reach it; sleep waits for the lock
+   (`inhibit_sleep = 3`). hyprlock stays as the fallback: without the art or
+   the PAM service, if the lock doesn't come up within 5 seconds, or if it
+   ends while locked. Next: the painting starting over the windows, chosen
+   among mockups; then the desktop, if wanted, and the bench.
 6. **Then whatever was missed**: a grid overview, Klipper-like actions,
    more keyboard-driven binds and terminal apps.
 
@@ -404,10 +414,11 @@ later (yazi, btop, lazygit…).
 
 ## Recovery
 
-- The locker crashes: the session stays locked (Hyprland shows its "lock
-  dead" screen). From a TTY (Ctrl+Alt+F3): `hyprctl --instance 0 eval
-  'hl.exec_cmd("hyprlock")'` (`qs -c shadesmar` once shadesmar locks), with
-  `allow_session_lock_restore`; or end the session and log in to Plasma.
+- The lock screen crashes: the session stays locked, and `lock-screen` starts
+  hyprlock, which takes the lock over (`misc.allow_session_lock_restore`).
+  If neither shows (Hyprland's "lock dead" screen), from a TTY
+  (Ctrl+Alt+F3): `hyprctl --instance 0 eval 'hl.exec_cmd("hyprlock")'`; or
+  end the session and log in to Plasma.
 - Hyprland won't start: `start-hyprland` falls back to safe mode; Plasma is
   in the session list.
 

@@ -26,6 +26,9 @@ hl.config({
         force_default_wallpaper = 0,
         disable_hyprland_logo = true,
         disable_splash_rendering = true,
+        -- should the lock screen end while locked, hyprlock takes the lock
+        -- over (lock-screen; docs/hyprland.md, Recovery)
+        allow_session_lock_restore = true,
     },
     ecosystem = {
         no_update_news = true, -- release notes are read before upgrading

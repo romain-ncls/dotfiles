@@ -1,0 +1,26 @@
+#!/bin/sh
+# The session's lock screen (docs/hyprland.md), hypridle's lock_cmd: Meta+L, the idle, the lid,
+# sleep and mutectl's Lock AFK all go through `loginctl lock-session`. The Silksong one
+# (modules/silksong: `qs -c silksong-lock`), else hyprlock: without its PAM service, if it quits
+# (no game's art) or hasn't locked within 5 seconds, or should it end while locked (the session
+# stays locked; hyprlock takes the lock over, misc.allow_session_lock_restore). One at a time.
+pidof hyprlock > /dev/null && exit 0
+qs list -c silksong-lock 2>/dev/null | grep -q '^Instance' && exit 0
+[ -e /etc/pam.d/silksong-lock ] || exec hyprlock
+marker=${XDG_RUNTIME_DIR:-/tmp}/silksong-lock.locked # touched once every screen shows it
+rm -f "$marker"
+qs -n -c silksong-lock &
+pid=$!
+i=0
+while [ ! -e "$marker" ] && kill -0 "$pid" 2> /dev/null && [ "$i" -lt 50 ]; do
+    sleep 0.1
+    i=$((i + 1))
+done
+if [ ! -e "$marker" ]; then
+    kill "$pid" 2> /dev/null
+    exec hyprlock
+fi
+wait "$pid"
+status=$?
+rm -f "$marker"
+[ "$status" -eq 0 ] || exec hyprlock
