@@ -185,8 +185,6 @@ Scope {
                         readonly property int row: Math.floor(index / view.cols)
                         readonly property int col: index % view.cols
                         readonly property int inRow: Math.min(view.cols, view.windows.length - row * view.cols)
-                        readonly property var size: modelData.lastIpcObject.size
-                        readonly property real scale: Math.min(width / size[0], (height - view.titleHeight) / size[1], 1)
                         readonly property bool selected: view.focusedScreen && view.selected === index
 
                         // the last row centred
@@ -195,41 +193,16 @@ Scope {
                         width: view.cellWidth
                         height: view.cellHeight
 
-                        Rectangle {
+                        Thumbnail {
                             id: frame
 
                             anchors.horizontalCenter: parent.horizontalCenter
                             y: (parent.height - view.titleHeight - height) / 2
-                            width: cell.size[0] * cell.scale + 6
-                            height: cell.size[1] * cell.scale + 6
-                            radius: 10
-                            color: copy.hasContent ? "transparent" : Theme.slot
-                            border.width: 3
-                            border.color: cell.selected || hover.containsMouse ? Theme.accent : "transparent"
-
-                            ScreencopyView {
-                                id: copy
-
-                                anchors.fill: parent
-                                anchors.margins: 3
-                                captureSource: overview.shown ? cell.modelData.wayland : null
-                                live: true
-                                constraintSize: Qt.size(width, height)
-                            }
-
-                            // Hyprland copies a window only while it's on its
-                            // screen: the columns beside it get their app's
-                            // icon instead.
-                            IconImage {
-                                visible: !copy.hasContent
-                                anchors.centerIn: parent
-                                implicitSize: Math.min(96, parent.height / 2)
-                                source: {
-                                    const cls = cell.modelData.lastIpcObject.class || ""
-                                    const entry = DesktopEntries.heuristicLookup(cls)
-                                    return Quickshell.iconPath(entry ? entry.icon : cls, "application-x-executable")
-                                }
-                            }
+                            toplevel: cell.modelData
+                            maxWidth: cell.width
+                            maxHeight: cell.height - view.titleHeight
+                            lit: cell.selected || hover.containsMouse
+                            live: overview.shown
                         }
 
                         Text {
@@ -249,7 +222,9 @@ Scope {
 
                             anchors.fill: frame
                             hoverEnabled: true
-                            onEntered: view.selected = cell.index
+                            // on a move only: a pointer resting where the overview opens
+                            // doesn't pick for the keyboard
+                            onPositionChanged: view.selected = cell.index
                             onClicked: overview.go(cell.modelData)
                         }
                     }
