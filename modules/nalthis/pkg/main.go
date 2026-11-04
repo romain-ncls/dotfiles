@@ -211,6 +211,7 @@ func merge(base, scheme []Group) []Group {
 			}
 		}
 		i := find("General")
+		out[i].Keys = slices.Clone(out[i].Keys) // base stays as it was
 		set := false
 		for j, kv := range out[i].Keys {
 			if kv[0] == "ColorScheme" {

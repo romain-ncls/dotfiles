@@ -249,7 +249,7 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    brightness).
 4. **lumar, from scratch.** One palette, templates rendered at apply (Go
    templates, as now): Hyprland, shadesmar, Ghostty, libadwaita and adw-gtk3
-   (below, Apps and toolkits), qt6ct for the few Qt apps, then each app with
+   (below, Apps and toolkits), `kdeglobals` for the few Qt apps, then each app with
    its own UI (Brave, Discord's Vencord CSS, VS Code, JetBrains, Obsidian,
    GitKraken…), Omarchy's way: most of the work is there. The GNOME apps
    replace the KDE ones then. GTK's files are shared by both sessions (and
@@ -262,11 +262,16 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    250; Nalthis keeps 255, 1, 0, 250), turned into colors with Nalthis's
    maths (`nalthis tokens`). apply-lumar writes them for shadesmar (read
    live), Hyprland and Ghostty, and writes the files both sessions read,
-   GTK's palette (`nalthis gtk`) and Brave's theme, in the colors of the
-   session it runs in: at each login (`lumar-session.service`, before the
-   autostarted apps), on every apply, and when the knobs change
-   (`lumar-palette.path`; `apply-lumar set depth=0.04`). The Qt apps in
-   Hyprland keep Nalthis's colors (`kdeglobals`) until qt6ct. Flush by
+   in the colors of the session it runs in: Nalthis's own files (`nalthis
+   apply` with the session's knobs, not saved: `kdeglobals`, which the Qt
+   apps follow live, Konsole's schemes, GTK's palette) and Brave's theme.
+   It runs at each login (`lumar-session.service`, before the autostarted
+   apps, and in Plasma before KWin and the shell), on every apply, and
+   when the knobs change (`lumar-palette.path`; `apply-lumar set
+   depth=0.04`); the apps are only told to repaint when `kdeglobals`
+   changes. The Qt apps keep Darkly and nalthis's icons: Hyprland adds
+   Plasma's `~/.config/kdedefaults` to `XDG_CONFIG_DIRS`, as Plasma's
+   startup does (session.lua). Flush by
    default, as close to maximized as it gets: no gaps, no borders, square
    tiled windows (floating ones keep 10 px corners in both layouts), the bar
    docked; floating on Meta+G (gaps, 10 px corners, the bar floating), kept
@@ -278,7 +283,7 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    and the second text color. The wallpaper: shadesmar's, the newest of the
    ones liked in Backdrop (~/Pictures/Backdrop). The GNOME apps are in,
    Hyprland's defaults through hyprland-mimeapps.list; Brave's theme too
-   (docs/manual-steps.md). Next: qt6ct.
+   (docs/manual-steps.md); the file chooser is Nautilus's. Done.
 5. **Silksong on desktop and lock screen.** The wrappers above, the bench on
    headless Hyprland, then shadesmar's lock in place of hyprlock: lid,
    suspend, hibernate, Lock AFK, a crash of the shell while locked.
@@ -380,12 +385,15 @@ costs.
 | archives | File Roller, Nautilus's own extract | Ark |
 | terminal | Ghostty | Konsole |
 | screenshots | grim, slurp, shadesmar | Spectacle |
-| file chooser | Nautilus's (xdg-desktop-portal-gnome, `FileChooser` only in `hyprland-portals.conf`; the rest from xdg-desktop-portal-hyprland and -gtk) | KDE's |
+| file chooser | Nautilus's (xdg-desktop-portal-gnome, `FileChooser` only in `hyprland-portals.conf`; the rest from xdg-desktop-portal-hyprland and -gtk), for the apps that ask the portal: GTK 4's (by default now), Brave | KDE's |
 
 Kate goes (not used). Still Qt: qBittorrent, EasyEffects (Kirigami since
-8), KDE Connect, qrca: lumar's palette through qt6ct, set only in Hyprland's
-environment (Plasma never reads it), and a neutral style; their tray menus
-are drawn by shadesmar anyway. The KDE apps stay installed for Plasma until
+8), KDE Connect, qrca, and the Qt apps' own file dialog (KDE's, drawn in
+their process): `kdeglobals` in lumar's colors (apply-lumar), with Darkly
+and nalthis's icons. Not qt6ct, as planned first: the KDE apps read their
+colors from `kdeglobals` whatever the platform theme says (KColorScheme),
+so qt6ct would only have recolored half of them. Their tray menus are
+drawn by shadesmar anyway. The KDE apps stay installed for Plasma until
 it's only the fallback.
 
 Apps with their own UI (Chromium and Electron: Brave, Discord, VS Code,

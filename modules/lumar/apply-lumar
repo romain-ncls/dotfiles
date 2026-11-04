@@ -7,7 +7,8 @@
 #   ~/.config/ghostty/themes/lumar      Ghostty's theme (reread on SIGUSR2)
 # and the files both sessions read, in the colors of the session it runs
 # in (lumar's in Hyprland, Nalthis's in Plasma):
-#   ~/.config/gtk-{3,4}.0/nalthis.css   GTK's palette (`nalthis gtk`)
+#   ~/.config/kdeglobals and the rest of `nalthis apply`: the Qt apps'
+#                                       colors (live), Konsole's, GTK's palette
 #   ~/.local/share/lumar/brave-theme    Brave's theme, reread when it starts
 # Run by lodestar on every apply, by lumar-session.service at each login
 # (before the autostarted apps), and by lumar-palette.path when the knobs
@@ -121,10 +122,12 @@ put "$data/brave-theme/manifest.json" "$(printf '%s' "$session_tokens" | jq '
 		} }
 	}')"
 
-# GTK's palette, in the session's colors (Nautilus, Papers… read it when
-# they start).
+# Nalthis's files in the session's colors, without saving these knobs as
+# Nalthis's: kdeglobals (the Qt apps follow it live, Darkly stays their
+# style), Konsole's schemes, GTK's palette (Nautilus, Papers… read it when
+# they start). It only signals the apps when kdeglobals changes.
 # shellcheck disable=SC2086 # four numbers
-nalthis gtk "${XDG_CONFIG_HOME:-$HOME/.config}" $session
+nalthis apply $session
 
 if $changed; then
 	# Ghostty rereads its config; shadesmar follows palette.json by itself;

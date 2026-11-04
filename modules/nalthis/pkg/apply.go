@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -107,11 +109,37 @@ func apply(k Knobs) error {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
-	if err := writeINIFile(globals, merge(current, scheme)); err != nil {
+	// Nothing to tell when kdeglobals already has these colors: every app
+	// would repaint for nothing (apply-lumar runs this at each lodestar apply).
+	merged := merge(current, scheme)
+	if current != nil && sameINI(current, merged) {
+		return nil
+	}
+	if err := writeINIFile(globals, merged); err != nil {
 		return err
 	}
-	return notify(scheme)
+	return notifyApps(scheme)
 }
+
+// sameINI tells whether a and b hold the same keys, in any order: KDE sorts
+// the keys of the files it rewrites, the schemes don't.
+func sameINI(a, b []Group) bool {
+	sorted := func(gs []Group) []Group {
+		out := make([]Group, len(gs))
+		for i, g := range gs {
+			out[i] = Group{g.Name, slices.Clone(g.Keys)}
+			slices.SortStableFunc(out[i].Keys, func(x, y [2]string) int { return cmp.Compare(x[0], y[0]) })
+		}
+		slices.SortStableFunc(out, func(x, y Group) int { return cmp.Compare(x.Name, y.Name) })
+		return out
+	}
+	return slices.EqualFunc(sorted(a), sorted(b), func(x, y Group) bool {
+		return x.Name == y.Name && slices.Equal(x.Keys, y.Keys)
+	})
+}
+
+// notifyApps is notify; tests replace it, so they never signal the session.
+var notifyApps = notify
 
 // notify sends what KDE's own color scheme switch sends: KGlobalSettings'
 // palette change (Qt apps) and kconfig's change notification for each group

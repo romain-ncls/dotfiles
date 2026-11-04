@@ -2,8 +2,9 @@
 # the lumar page, 2026-11-04). Its own knobs (palette.json: hue, tint,
 # depth, accent), turned into colors with Nalthis's maths (`nalthis
 # tokens`): apply-lumar writes them for shadesmar, Hyprland, Ghostty, and
-# GTK's palette and Brave's theme, which both sessions read, in the colors
-# of the session it runs in: lumar's in Hyprland, Nalthis's in Plasma. It
+# the files both sessions read (kdeglobals for the Qt apps, GTK's palette,
+# Konsole's schemes, Brave's theme) in the colors of the session it runs
+# in: lumar's in Hyprland, Nalthis's in Plasma. It
 # runs on every apply, at each login (lumar-session.service, before the
 # autostarted apps) and when the knobs change (lumar-palette.path);
 # `apply-lumar set depth=0.04` tunes them. The two layouts, flush and
