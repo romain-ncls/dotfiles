@@ -24,6 +24,8 @@ end
 -- Plasma's media player key).
 bind(mod .. " + less", function() G.comms() end)
 bind(mod .. " + twosuperior", function() G.spotify() end)
+-- Meta+~ (Meta+Shift+²): the sound's popup, as Plasma's audio applet (Volume.qml).
+bind(mod .. " + SHIFT + twosuperior", hl.dsp.global("shadesmar:volume"))
 
 -- Windows. Alt+Tab goes through the workspace's windows, the terminal
 -- floating over them included.

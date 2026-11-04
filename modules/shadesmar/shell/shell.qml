@@ -23,10 +23,13 @@ ShellRoot {
     Osd {}
     Launcher {}
     Notifications {
+        id: notifications
+
         screen: barScreen
     }
 
     Bar {
+        notifications: notifications
         screen: barScreen
     }
 }
