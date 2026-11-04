@@ -1,0 +1,68 @@
+#!/bin/sh
+# lumar's colors, from Nalthis's palette: the knobs both sessions share
+# (modules/nalthis/palette.json), which `nalthis tokens` turns into colors.
+# Writes, when they change:
+#   ~/.local/share/lumar/palette.json   shadesmar reads it, and follows it live
+#   ~/.local/share/lumar/colors.lua     Hyprland's config requires it
+#   ~/.config/ghostty/themes/lumar      Ghostty's theme (reread on SIGUSR2)
+# Run by lodestar on every apply, and by lumar-palette.path when the knobs
+# change (Nalthis's page in System Settings, `nalthis tune`).
+set -eu
+
+if ! command -v nalthis >/dev/null; then
+	echo "lumar: no nalthis yet, lodestar apply builds it" >&2
+	exit 0
+fi
+knobs=$(nalthis get | jq -r '.knobs | "\(.hue) \(.tint) \(.depth) \(.accent)"')
+# shellcheck disable=SC2086 # four numbers
+tokens=$(nalthis tokens $knobs)
+
+# The terminal's colors as picked on the lumar page (2026-11-04): fixed hues;
+# black and white follow the palette. And the warning colors.
+palette=$(printf '%s' "$tokens" | jq '. + {
+	red: "#e66e68", green: "#74c878", yellow: "#eec05b",
+	ansi: [.overlay, "#f07f77", "#67bb6b", "#eebc4a", "#65a7fa", "#cb86db", "#48b7bd", .text2,
+	       .text3, "#fd9c94", "#78d47c", "#fed16f", "#8bbeff", "#e599f6", "#52d0d6", .text]
+}')
+
+data=${XDG_DATA_HOME:-$HOME/.local/share}/lumar
+themes=${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/themes
+mkdir -p "$data" "$themes" "${XDG_STATE_HOME:-$HOME/.local/state}/lumar"
+
+changed=false
+# put PATH CONTENT: writes the content if it differs (an argument, not a
+# pipe: a pipe would run this in a subshell and lose `changed`)
+put() {
+	printf '%s\n' "$2" > "$1.new"
+	if cmp -s "$1.new" "$1"; then
+		rm "$1.new"
+	else
+		mv "$1.new" "$1"
+		changed=true
+	fi
+}
+
+put "$data/palette.json" "$palette"
+
+put "$data/colors.lua" "$(printf '%s' "$palette" | jq -r '
+	"-- lumar'"'"'s colors, written by modules/lumar/apply-lumar",
+	"return {",
+	(to_entries[] | select(.value | type == "string") | "    \(.key) = \"\(.value)\","),
+	"}"')"
+
+put "$themes/lumar" "$(printf '%s' "$palette" | jq -r '
+	"# lumar, written by modules/lumar/apply-lumar",
+	"background = \(.base)",
+	"foreground = \(.text)",
+	"cursor-color = \(.accentText)",
+	"selection-background = \(.accent)",
+	"selection-foreground = \(.text)",
+	(.ansi | to_entries[] | "palette = \(.key)=\(.value)")')"
+
+if $changed; then
+	# Ghostty rereads its config; shadesmar follows palette.json by itself;
+	# Hyprland takes its background from colors.lua
+	for p in $(pgrep -x ghostty); do kill -USR2 "$p" 2>/dev/null || true; done
+	hyprctl reload >/dev/null 2>&1 || true
+	echo "lumar: colors written"
+fi
