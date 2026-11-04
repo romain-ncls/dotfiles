@@ -1,9 +1,9 @@
 [Unit]
-Description=lumar's colors follow Nalthis's palette
+Description=lumar's colors follow its knobs
 
 [Path]
-# the knobs both sessions share; Nalthis's page in System Settings writes it
-PathChanged=%h/dotfiles/modules/nalthis/palette.json
+# lumar's knobs (apply-lumar set, or an edit)
+PathChanged=%h/dotfiles/modules/lumar/palette.json
 
 [Install]
 WantedBy=default.target

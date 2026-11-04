@@ -1,21 +1,55 @@
 #!/bin/sh
-# lumar's colors, from Nalthis's palette: the knobs both sessions share
-# (modules/nalthis/palette.json), which `nalthis tokens` turns into colors.
-# Writes, when they change:
+# lumar's colors, from its own knobs (palette.json here: hue, tint, depth,
+# accent, as Nalthis has, but lumar's), which `nalthis tokens` turns into
+# colors: the same maths as Nalthis's, other knobs. Writes, when they change:
 #   ~/.local/share/lumar/palette.json   shadesmar reads it, and follows it live
 #   ~/.local/share/lumar/colors.lua     Hyprland's config requires it
 #   ~/.config/ghostty/themes/lumar      Ghostty's theme (reread on SIGUSR2)
-# Run by lodestar on every apply, and by lumar-palette.path when the knobs
-# change (Nalthis's page in System Settings, `nalthis tune`).
+# and the files both sessions read, in the colors of the session it runs
+# in (lumar's in Hyprland, Nalthis's in Plasma):
+#   ~/.config/gtk-{3,4}.0/nalthis.css   GTK's palette (`nalthis gtk`)
+#   ~/.local/share/lumar/brave-theme    Brave's theme, reread when it starts
+# Run by lodestar on every apply, by lumar-session.service at each login
+# (before the autostarted apps), and by lumar-palette.path when the knobs
+# change. `apply-lumar set hue=262 depth=0.04` saves knobs and applies them.
 set -eu
+
+here=$(dirname "$(realpath "$0")")
+knobsfile=$here/palette.json
+
+if [ "${1:-}" = set ]; then
+	shift
+	for kv in "$@"; do
+		key=${kv%%=*} value=${kv#*=}
+		case $key in
+		hue | tint | depth | accent) ;;
+		*)
+			echo "lumar: knobs are hue, tint, depth and accent" >&2
+			exit 1
+			;;
+		esac
+		jq --arg k "$key" --argjson v "$value" '.[$k] = $v' "$knobsfile" > "$knobsfile.new"
+		mv "$knobsfile.new" "$knobsfile"
+	done
+fi
 
 if ! command -v nalthis >/dev/null; then
 	echo "lumar: no nalthis yet, lodestar apply builds it" >&2
 	exit 0
 fi
-knobs=$(nalthis get | jq -r '.knobs | "\(.hue) \(.tint) \(.depth) \(.accent)"')
+knobs=$(jq -r '"\(.hue) \(.tint) \(.depth) \(.accent)"' "$knobsfile")
 # shellcheck disable=SC2086 # four numbers
 tokens=$(nalthis tokens $knobs)
+
+# The session's own knobs, for the files both sessions read.
+if [ "${XDG_CURRENT_DESKTOP:-}" = Hyprland ]; then
+	session=$knobs
+	session_tokens=$tokens
+else
+	session=$(nalthis get | jq -r '.knobs | "\(.hue) \(.tint) \(.depth) \(.accent)"')
+	# shellcheck disable=SC2086 # four numbers
+	session_tokens=$(nalthis tokens $session)
+fi
 
 # The terminal: about Konsole's Nalthis background (#282e36 at the first
 # knobs; the pane since they lightened, 2026-11-04) and its text (the second
@@ -62,12 +96,12 @@ put "$themes/lumar" "$(printf '%s' "$palette" | jq -r '
 	"selection-foreground = \(.text)",
 	(.ansi | to_entries[] | "palette = \(.key)=\(.value)")')"
 
-# Brave's theme, its Classic layout in the palette's colors: the tab strip
+# Brave's theme, its Classic layout in the session's colors: the tab strip
 # the frame (as the bar), the active tab and toolbar the pane (as Plasma's
 # title bars and toolbars), the address bar and new tab the base. Loaded
 # unpacked once (docs/manual-steps.md); Brave rereads it when it starts.
 mkdir -p "$data/brave-theme"
-put "$data/brave-theme/manifest.json" "$(printf '%s' "$palette" | jq '
+put "$data/brave-theme/manifest.json" "$(printf '%s' "$session_tokens" | jq '
 	def byte: explode | map(if . >= 97 then . - 87 elif . >= 65 then . - 55 else . - 48 end) | .[0] * 16 + .[1];
 	def rgb: ltrimstr("#") | [.[0:2], .[2:4], .[4:6]] | map(byte);
 	{
@@ -86,6 +120,11 @@ put "$data/brave-theme/manifest.json" "$(printf '%s' "$palette" | jq '
 			ntp_background: (.base | rgb), ntp_text: (.text | rgb), ntp_link: (.accentText | rgb)
 		} }
 	}')"
+
+# GTK's palette, in the session's colors (Nautilus, Papers… read it when
+# they start).
+# shellcheck disable=SC2086 # four numbers
+nalthis gtk "${XDG_CONFIG_HOME:-$HOME/.config}" $session
 
 if $changed; then
 	# Ghostty rereads its config; shadesmar follows palette.json by itself;
