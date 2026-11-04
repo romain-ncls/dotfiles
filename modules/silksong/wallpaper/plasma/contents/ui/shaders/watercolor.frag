@@ -8,7 +8,8 @@
 // paints at `speed`, then from `calm` on ever slower towards the end while the world is made; and
 // the end's, once the world is drawn under it, from which the brush goes on to the end at the pace
 // it had then, neither faster nor slower, while the world washes in (`washFor` seconds).
-// Compiled with qsb (see README).
+// Bare, it paints with no paper, over what's under it (the screen as it was, on Hyprland's lock
+// screen). Compiled with qsb (see README).
 #version 440
 
 layout(location = 0) in vec2 qt_TexCoord0;
@@ -26,6 +27,8 @@ layout(std140, binding = 0) uniform buf {
     vec4 veil;      // the hour's light: its colour, and how much of it (a); premultiplied, as
                     // ShaderEffect passes colours
     vec4 light;     // the shafts' colour, and how strong the hour has them (a); premultiplied
+    float bare;     // 1: no paper: where the brush hasn't been, what's under it shows (the screen as
+                    // it was, on Hyprland's lock screen: Painting.qml bare)
 };
 
 layout(binding = 1) uniform sampler2D paint;
@@ -84,11 +87,18 @@ void main() {
     float wet = exp(-(behind * behind) / (0.035 * 0.035)) * step(-0.02, behind);
     float grain = 0.6 * noise(px / 2.0) + 0.4 * noise(px / 5.0);
     vec3 paper = vec3(0.063, 0.058, 0.053) * (1.0 - 0.05 * grain);
-    vec3 c = mix(paper, colour * (1.0 - 0.35 * wet), painted) * (1.0 - veil.a) + veil.rgb;
+    vec3 paint = colour * (1.0 - 0.35 * wet);
+    vec3 c = mix(paper, paint, painted) * (1.0 - veil.a) + veil.rgb;
     // The world washing in: clear where it has, along a soft, ragged front.
     const float soft = 0.08;
     float until = clamp(when + 0.07 * (ragged(px + 170.0) - 0.5), 0.0, 1.0);
     float clear = smoothstep(0.0, 1.0, clamp((develop - until * (1.0 - soft)) / soft, 0.0, 1.0));
     float a = 1.0 - clear;
+    if (bare > 0.5) {
+        // Bare: only the paint, veiled, where the brush has been; what's under it shows elsewhere.
+        float p = painted * a;
+        fragColor = vec4((paint * (1.0 - veil.a) + veil.rgb) * p, p) * qt_Opacity;
+        return;
+    }
     fragColor = vec4(c * a, a) * qt_Opacity;
 }

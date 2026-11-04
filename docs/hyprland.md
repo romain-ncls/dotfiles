@@ -295,8 +295,10 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    lid, sleep and Lock AFK all reach it; sleep waits for the lock
    (`inhibit_sleep = 3`). hyprlock stays as the fallback: without the art or
    the PAM service, if the lock doesn't come up within 5 seconds, or if it
-   ends while locked. Next: the painting starting over the windows, chosen
-   among mockups; then the desktop, if wanted, and the bench.
+   ends while locked. The painting starts over the windows ("over", chosen
+   among mockups), the screens' sizes read from their EDID as KWin does
+   (Hyprland's whole centimetres made it slow and jerky). Next: the desktop,
+   if wanted, and the bench.
 6. **Then whatever was missed**: a grid overview, Klipper-like actions,
    more keyboard-driven binds and terminal apps.
 
