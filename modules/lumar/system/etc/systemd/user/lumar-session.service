@@ -1,9 +1,11 @@
 [Unit]
-Description=The files both sessions read (GTK's palette, Brave's theme) in this session's colors
+Description=The files both sessions read (Qt's and GTK's palettes, Brave's theme) in this session's colors
 PartOf=graphical-session.target
 After=graphical-session-pre.target
-# before the apps that start with the session read them
-Before=xdg-desktop-autostart.target
+# before the apps that start with the session read them; in Plasma, before
+# KWin and the shell too, so they never start in lumar's colors after a
+# Hyprland session
+Before=xdg-desktop-autostart.target plasma-kwin_wayland.service plasma-plasmashell.service
 
 [Service]
 Type=oneshot
