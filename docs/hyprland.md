@@ -265,8 +265,11 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    default, as close to maximized as it gets: no gaps, no borders, square
    windows, the bar docked, see-through and blurred; floating on Meta+G
    (gaps, 10 px corners, the bar floating), kept across logins. Noto Sans;
-   Ghostty in Fira Code, no title bar, the page's terminal colors on the
-   palette's background. Next: the apps with their own UI, then qt6ct.
+   Ghostty in Fira Code, no title bar, the page's terminal colors on Konsole's
+   Nalthis background (the raised surface) and text. The wallpaper: shadesmar's,
+   the newest of the ones liked in Backdrop (~/Pictures/Backdrop). The GNOME
+   apps are in, Hyprland's defaults through hyprland-mimeapps.list. Next: the
+   apps with their own UI, then qt6ct.
 5. **Silksong on desktop and lock screen.** The wrappers above, the bench on
    headless Hyprland, then shadesmar's lock in place of hyprlock: lid,
    suspend, hibernate, Lock AFK, a crash of the shell while locked.
