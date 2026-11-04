@@ -199,7 +199,12 @@ wallpaper and the prompt (`main.qml`'s lock screen half, `LockScreen.qml`): the 
 world, Hornet's day planned meanwhile, and the prompt once every screen has drawn its first frame.
 The scene and the prompt are used as they are, by `file:` URL through the links `scene` and
 `prompt` (through Quickshell's own URLs, the types beside them aren't found in a linked folder);
-the wallpaper's settings are Plasma's lock screen's (`main.xml`'s defaults). `Locker.qml` gives the
+the wallpaper's settings are Plasma's lock screen's (`main.xml`'s defaults). The screens' sizes are
+KWin's too, read from each output's EDID (its detailed timing's millimetres, 476 by 268) as the lock
+screen starts: Hyprland gives the EDID's whole centimetres (480 by 270), with which the world would be
+laid out a little wider and no screen would find its own view, reading the tiles it shows instead
+(many times the work: the lock screen was slow and jerky). Each screen's painting, its world and the
+painting's end are logged, timed, in Quickshell's `log.log`. `Locker.qml` gives the
 prompt the password through PAM (`/etc/pam.d/silksong-lock`, as KDE's lock screen asks it), Caps
 Lock from Hyprland, the battery from UPower; no Sleep, Switch User or keyboard layout. Without the
 game's art it quits at once (status 2), and should the prompt fail, with the session locked (3):
