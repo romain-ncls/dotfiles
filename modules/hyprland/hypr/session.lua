@@ -13,9 +13,19 @@ if generator then
     generator:close()
 end
 
--- Qt apps as in Plasma (kdeglobals: Nalthis's colors and icons) until
--- lumar; Plasma's cursor.
+-- Qt apps as in Plasma: kdeglobals (in lumar's colors here: apply-lumar),
+-- and Plasma's kdedefaults folder under it, where Plasma keeps the global
+-- theme's settings (Darkly, nalthis's icons) and which only Plasma's own
+-- startup adds to the config search path. Exported to D-Bus and systemd
+-- too (the apps and portals they start read them), but not from the dev
+-- rigs, which share the session's systemd. Plasma's cursor.
 hl.env("QT_QPA_PLATFORMTHEME", "kde")
+local kdedefaults = (os.getenv("XDG_CONFIG_HOME") or os.getenv("HOME") .. "/.config") .. "/kdedefaults"
+local dirs = os.getenv("XDG_CONFIG_DIRS") or "/etc/xdg"
+if not (":" .. dirs .. ":"):find(":" .. kdedefaults .. ":", 1, true) then -- once, reloads too
+    dirs = kdedefaults .. ":" .. dirs
+end
+hl.env("XDG_CONFIG_DIRS", dirs, not os.getenv("HYPR_DEV"))
 hl.env("XCURSOR_THEME", "breeze_cursors")
 hl.env("XCURSOR_SIZE", "24")
 

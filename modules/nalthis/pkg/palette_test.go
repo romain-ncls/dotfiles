@@ -88,3 +88,47 @@ func TestEnsureImportPutsKDEsFirst(t *testing.T) {
 		}
 	}
 }
+
+func TestMergeLeavesBaseAlone(t *testing.T) {
+	base := []Group{{"General", [][2]string{{"ColorScheme", "BreezeDark"}}}}
+	merge(base, Scheme("Nalthis", Defaults))
+	if base[0].Keys[0][1] != "BreezeDark" {
+		t.Errorf("base changed: %v", base[0].Keys)
+	}
+}
+
+// apply tells the apps only when kdeglobals changes (apply-lumar runs it at
+// every lodestar apply).
+func TestApplyNotifiesOnlyChanges(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, "config"))
+	t.Setenv("XDG_DATA_HOME", filepath.Join(dir, "data"))
+	calls := 0
+	notifyApps = func([]Group) error { calls++; return nil }
+	t.Cleanup(func() { notifyApps = notify })
+
+	other := Defaults
+	other.Hue += 10
+	for i, k := range []Knobs{Defaults, Defaults, other, other, Defaults} {
+		if err := apply(k); err != nil {
+			t.Fatal(err)
+		}
+		if want := []int{1, 1, 2, 2, 3}[i]; calls != want {
+			t.Errorf("apply %d: %d notifications, want %d", i, calls, want)
+		}
+	}
+}
+
+// KDE sorts kdeglobals' keys when it rewrites it: the same colors, in
+// another order, are no change.
+func TestSameINIIgnoresOrder(t *testing.T) {
+	a := []Group{{"A", [][2]string{{"x", "1"}, {"y", "2"}}}, {"B", [][2]string{{"z", "3"}}}}
+	b := []Group{{"B", [][2]string{{"z", "3"}}}, {"A", [][2]string{{"y", "2"}, {"x", "1"}}}}
+	if !sameINI(a, b) {
+		t.Error("same keys in another order: not the same")
+	}
+	b[0].Keys[0][1] = "4"
+	if sameINI(a, b) {
+		t.Error("another value: the same")
+	}
+}
