@@ -39,22 +39,17 @@ Item {
     readonly property bool canSeat: width > 0 && height > 0 && sized
     onCanSeatChanged: if (canSeat) seated = true
 
-    // The screen as it was (shell.qml), under everything: the painting starts over it (bare), and
-    // it's let go once the painting has washed away (paintingGone).
-    property Item capture: null
+    // The screen as it was (shell.qml: an image of it), under everything: the painting starts over
+    // it (bare), and it's let go once every painting has washed away (paintingGone).
+    property url capture: ""
     signal paintingGone()
-    Item {
-        id: captureHolder
+    Image {
         anchors.fill: parent
+        source: root.capture
+        asynchronous: false
+        cache: false
+        smooth: false
     }
-    onCaptureChanged: {
-        if (capture) {
-            capture.parent = captureHolder;
-            capture.anchors.fill = captureHolder;
-            capture.opacity = 1;
-        }
-    }
-
     Item {
         id: wallpaper
         anchors.fill: parent
@@ -98,7 +93,7 @@ Item {
                 longitude: root.longitude,
                 dayHours: root.dayHours,
                 revealed: Qt.binding(() => view.item?.revealed ?? false),
-                bare: Qt.binding(() => root.capture !== null)
+                bare: Qt.binding(() => root.capture.toString() !== "")
             })
         }
         Connections {
@@ -109,7 +104,7 @@ Item {
                     const pieces = painting.item.pieces.length;
                     console.info("Silksong lock screen:", root.screenName, "painting shown,",
                                  pieces === 1 ? "this screen's own view," : `${pieces} tiles,`,
-                                 root.capture ? "over the screen as it was" : "on the dark paper");
+                                 root.capture.toString() !== "" ? "over the screen as it was" : "on the dark paper");
                 }
             }
             function onUpChanged() {
