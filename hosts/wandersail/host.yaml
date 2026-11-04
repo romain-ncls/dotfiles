@@ -10,9 +10,9 @@ modules:
   - hyprland
   - hyprslide
   - shadesmar
-  - lumar
   - nalthis
   - darkly
+  - lumar # after nalthis: its hook rewrites the files both sessions read
   - panel
   - konsole
   - shell
