@@ -36,9 +36,11 @@ Item {
     // painting shows (world.py times it so): even, `speed` of it a second, for most of what the
     // world takes to have everything it shows (README, Runtime: 1.2 s, twice that on a busy
     // machine); then, from `calm` on, slower and slower towards the end, gently enough that it's
-    // still painting what shows however long the world takes.
-    readonly property real speed: 0.65
-    readonly property real calm: 0.6
+    // still painting what shows however long the world takes. Bare, quicker and even for longer:
+    // over the screen as it was, the world mustn't wash in before the brush has been everywhere
+    // (covered, below), and on the windows its first, small washes hardly show.
+    readonly property real speed: bare ? 0.8 : 0.65
+    readonly property real calm: bare ? 0.85 : 0.6
     // Then how long the world takes to wash in over it.
     readonly property real washFor: 0.7
 
@@ -211,6 +213,9 @@ Item {
             if (!root.allShown && Date.now() - root.shownAt >= 400) {
                 root.allShown = true; // a screen whose painting never showed (switched off) holds no one back
             }
+            if (!root.covered && Date.now() - root.shownAt >= root.coverAt * 1000) {
+                root.covered = true;
+            }
             if (root.uncover && ++root.framesUncovered >= 2 && !root.framed) {
                 root.framed = true;
                 Paintings.framed();
@@ -241,7 +246,17 @@ Item {
     // paintings together while the last washes still go on, light first as the washes were
     // painted: each place goes from painting to world in a few frames along a ragged front, rather
     // than both showing everywhere as a fade would.
-    readonly property bool uncover: revealed
+    readonly property bool uncover: revealed && covered
+    // Bare, the world waits for the brush to have been everywhere: 93% of its time, which with the
+    // brush a tenth quicker than its time (watercolor.frag's behind) is all of it, so that no window
+    // shows on through to the world. Should no frame tell it, a while after the world is in.
+    property bool covered: !bare
+    readonly property real coverAt: timeFor(0.93)
+    Timer {
+        interval: 2000
+        running: root.revealed && !root.covered
+        onTriggered: root.covered = true
+    }
     property int framesUncovered: 0
     property bool framed: false
     property bool leaving: false
@@ -259,6 +274,10 @@ Item {
     function paceOf(c) {
         const p = speed * c;
         return p <= calm ? speed : speed * Math.exp(-(p - calm) / (1 - calm));
+    }
+    // And how long the brush's clock takes to come to p (paceAt's inverse).
+    function timeFor(p) {
+        return (p <= calm ? p : calm - (1 - calm) * Math.log((1 - p) / (1 - calm))) / speed;
     }
     // How long the brush would take to come to the end from now, going on at its pace.
     function finishNow() {
