@@ -235,10 +235,10 @@ its own shell id and state folder. Fine, but link the same path everywhere.
 3. **shadesmar grows**, replacing the stand-ins one by one, in the live
    session: the launcher, notifications, the OSD with spanreed (backdrop's and
    spotify-vol's calls work again), network, Bluetooth, power profiles,
-   clipboard history, Alt+Tab with previews. Done: the launcher (apps by
-   name, the most launched first, or a command; Hyprland starts them, so a
-   restart of the shell leaves them be), notifications (popups, actions;
-   no history yet), the OSD (PipeWire's volume and mute, the brightness
+   clipboard history (Alt+Tab with previews: dropped, below). Done: the
+   launcher (apps by name, the most launched first, or a command; Hyprland
+   starts them, so a restart of the shell leaves them be), notifications
+   (popups, actions; no history yet), the OSD (PipeWire's volume and mute, the brightness
    from its binds, spanreed's calls), the overview (Meta+Tab).
 4. **lumar, from scratch.** One palette, templates rendered at apply (Go
    templates, as now): Hyprland, shadesmar, Ghostty, libadwaita and adw-gtk3
@@ -281,10 +281,13 @@ migrations and update channels (lodestar does that), their titlebar plugin.
 
 - Desktops: Meta+A/Z/Q/S and Ctrl+F1..F4 jump (as now), Meta+Ctrl+arrows
   move in the grid (KDE's default). The side screens only.
-- Windows: Alt+Tab along the tape (wrapping), Meta+Up full width (or
-  maximized), Meta+Left/Right half width (KDE's quick tile), Meta+Down a
-  hidden special workspace (Hyprland has no minimize), Meta+Shift+Left/Right
-  and Meta+Shift+Q/D to the other screen, Ctrl+Alt+Esc kill.
+- Windows: Alt+Tab along the tape (wrapping: Hyprland's cycle, the view
+  scrolling to the window; a switcher with previews, as Plasma's, was tried
+  and dropped on 2026-11-04: romain prefers the plain scroll), Meta+Up full
+  width (or maximized), Meta+Left/Right half width (KDE's quick tile),
+  Meta+Down a hidden special workspace (Hyprland has no minimize),
+  Meta+Shift+Left/Right and Meta+Shift+Q/D to the other screen, Ctrl+Alt+Esc
+  kill.
 - Meta+Return: the terminal, floating. Meta+²: Spotify's scratchpad (the key
   that opens Plasma's media player now). Meta+~: volume (the shell).
 - Meta+Tab, Ctrl+Alt+Tab: shadesmar's overview, Plasma's: each screen's
