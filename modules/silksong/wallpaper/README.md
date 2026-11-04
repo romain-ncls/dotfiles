@@ -203,10 +203,11 @@ before locking, from an overlay of its own that shows nothing and lets every cli
 moves the capture as it is (no copy) onto its lock surface, under everything; the painting is bare
 there (`Painting.qml`'s `bare`, the shader's), its unpainted part showing the capture, and the
 captures are let go once every painting has washed away. A screen with no capture within 400 ms
-starts on the dark paper. Bare, the brush is quicker and even for longer (0.8 of the painting a
-second, slowing from 85% on), and the world washes in only once it has been everywhere (1.2 s):
-timed for the dark paper, the world came while a third of the screen still showed the windows, the
-first, small washes lost on them, and the painting seemed to start halfway. To see a lock's frames,
+starts on the dark paper. Bare, the brush gets up to speed from a standstill over the first 0.8 s
+(`ramp`), then goes on evenly for longer (0.6 of the painting a second, slowing from 85% on), and
+the world washes in only once it has been everywhere (2 s): timed for the dark paper, the brush was
+a quarter through within 0.3 s and the world came while a third of the screen still showed the
+windows, the painting seeming to start halfway. To see a lock's frames,
 `touch $XDG_RUNTIME_DIR/silksong-lock.trace` before locking: `lock-screen` has the next lock log
 Qt's render loop timing in Quickshell's `log.log`.
 The scene and the prompt are used as they are, by `file:` URL through the links `scene` and

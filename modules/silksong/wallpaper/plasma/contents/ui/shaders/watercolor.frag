@@ -29,6 +29,7 @@ layout(std140, binding = 0) uniform buf {
     vec4 light;     // the shafts' colour, and how strong the hour has them (a); premultiplied
     float bare;     // 1: no paper: where the brush hasn't been, what's under it shows (the screen as
                     // it was, on Hyprland's lock screen: Painting.qml bare)
+    float ramp;     // seconds the brush takes to get up to speed (pace())
 };
 
 layout(binding = 1) uniform sampler2D paint;
@@ -58,16 +59,25 @@ float ragged(vec2 px) {
     return n + 0.2 * noise(p);
 }
 
-// How far the painting is after c seconds, before the end: at speed, then slowing towards the end
+// How far the brush's pace alone takes it after c seconds: getting up to speed over the first
+// `ramp` seconds (none on the dark paper; over the screen as it was, from a standstill), then at
+// speed.
+float run(float c) {
+    return c < ramp ? speed * c * c / (2.0 * ramp) : speed * (c - 0.5 * ramp);
+}
+float runOf(float c) {
+    return c < ramp ? speed * c / ramp : speed;
+}
+// How far the painting is after c seconds, before the end: so, then slowing towards the end
 // itself, never quite there (as fast at first: its pace has no jump).
 float pace(float c) {
-    float p = speed * c;
+    float p = run(c);
     return p <= calm ? p : 1.0 - (1.0 - calm) * exp(-(p - calm) / (1.0 - calm));
 }
 // And its pace then.
 float paceOf(float c) {
-    float p = speed * c;
-    return p <= calm ? speed : speed * exp(-(p - calm) / (1.0 - calm));
+    float p = run(c);
+    return p <= calm ? runOf(c) : runOf(c) * exp(-(p - calm) / (1.0 - calm));
 }
 
 void main() {
