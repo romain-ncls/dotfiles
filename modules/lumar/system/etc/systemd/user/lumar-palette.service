@@ -1,0 +1,6 @@
+[Unit]
+Description=lumar's colors from Nalthis's palette
+
+[Service]
+Type=oneshot
+ExecStart=%h/dotfiles/modules/lumar/apply-lumar

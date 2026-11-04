@@ -108,6 +108,8 @@ end)
 -- Meta+D: a peek at the desktop (grid.lua). Meta+Tab, Ctrl+Alt+Tab: the
 -- overview (shadesmar's Overview.qml).
 bind(mod .. " + d", function() G.peek() end)
+-- Meta+G: lumar's other layout, flush or floating (lumar.lua).
+bind(mod .. " + g", function() require("lumar").toggle() end)
 bind(mod .. " + Tab", hl.dsp.global("shadesmar:overview"))
 bind("CTRL + ALT + Tab", hl.dsp.global("shadesmar:overview"))
 
