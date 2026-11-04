@@ -30,7 +30,10 @@ hl.bind("switch:on:Lid Switch", function()
     hl.exec_cmd("if grep -qx 1 /sys/class/power_supply/AC/online; then loginctl lock-session; else systemctl suspend; fi")
 end, { locked = true })
 
--- KDE Connect's tray icon (Plasma shows it as a widget instead).
+-- KDE Connect's tray icon (Plasma shows it as a widget instead). Not in the
+-- dev rigs: their daemon would be a second one with the same identity.
 hl.on("hyprland.start", function()
-    hl.exec_cmd("kdeconnect-indicator")
+    if not os.getenv("HYPR_DEV") then
+        hl.exec_cmd("kdeconnect-indicator")
+    end
 end)
