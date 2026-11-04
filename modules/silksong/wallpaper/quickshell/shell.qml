@@ -115,31 +115,42 @@ ShellRoot {
 
     // The screens as they were, for the paintings to start over (LockSurface.qml, Painting.qml bare):
     // captured just before locking, each from an overlay of its own that shows nothing and lets
-    // every click through, then moved onto its lock surface, as it is (no copy). In memory only,
-    // and let go once every painting has washed away. Without one within 400 ms, the screens start
-    // on the dark paper.
+    // every click through, and copied at once to an image in memory, which the lock surface of
+    // that screen shows; the capture itself, and its overlay, are let go then. (Moving the capture
+    // itself onto its lock surface put it on the wrong screen: Quickshell gives a lock surface its
+    // screen after making it, and a capture can only be in one place.) The images are let go once
+    // every painting has washed away. Without them all within 400 ms, the screens start on the dark
+    // paper.
     property var captureScreens: []
     property bool capturing: true
-    onCapturingChanged: if (!capturing) console.info("Silksong lock screen: the screens as they were, let go")
-    readonly property bool captured: overlays.instances.length === captureScreens.length
-        && overlays.instances.every(o => o.capture.hasContent)
+    onCapturingChanged: {
+        if (!capturing) {
+            grabs = ({});
+            console.info("Silksong lock screen: the screens as they were, let go");
+        }
+    }
+    // Each screen's image, by name (ItemGrabResults, kept while they're shown).
+    property var grabs: ({})
+    function grabbed(name, result) {
+        const g = Object.assign({}, grabs);
+        g[name] = result;
+        grabs = g;
+    }
+    readonly property bool captured: captureScreens.length > 0 && captureScreens.every(s => grabs[s.name] !== undefined)
     function captureOf(screen) {
-        const overlay = overlays.instances.find(o => o.modelData.name === screen?.name);
-        return overlay?.capture.hasContent ? overlay.capture : null;
+        return shell.capturing ? grabs[screen?.name ?? ""]?.url ?? "" : "";
     }
     Variants {
         id: overlays
 
-        model: shell.capturing ? shell.captureScreens : []
+        model: shell.capturing && !shell.captured && !lock.locked ? shell.captureScreens : []
 
         PanelWindow {
             id: overlay
 
             required property var modelData
-            readonly property Item capture: view
 
             screen: modelData
-            visible: !lock.locked
             color: "transparent"
             mask: Region {}
             exclusionMode: ExclusionMode.Ignore
@@ -158,6 +169,12 @@ ShellRoot {
                 captureSource: overlay.modelData
                 live: false
                 opacity: 0
+                onHasContentChanged: {
+                    if (hasContent) {
+                        const name = overlay.modelData.name;
+                        grabToImage(result => shell.grabbed(name, result));
+                    }
+                }
             }
         }
     }
