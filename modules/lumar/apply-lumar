@@ -61,6 +61,31 @@ put "$themes/lumar" "$(printf '%s' "$palette" | jq -r '
 	"selection-foreground = \(.text)",
 	(.ansi | to_entries[] | "palette = \(.key)=\(.value)")')"
 
+# Brave's theme, its Classic layout in the palette's colors: the tab strip
+# the frame (as the bar), the active tab and toolbar the pane (as Plasma's
+# title bars and toolbars), the address bar and new tab the base. Loaded
+# unpacked once (docs/manual-steps.md); Brave rereads it when it starts.
+mkdir -p "$data/brave-theme"
+put "$data/brave-theme/manifest.json" "$(printf '%s' "$palette" | jq '
+	def byte: explode | map(if . >= 97 then . - 87 elif . >= 65 then . - 55 else . - 48 end) | .[0] * 16 + .[1];
+	def rgb: ltrimstr("#") | [.[0:2], .[2:4], .[4:6]] | map(byte);
+	{
+		manifest_version: 3,
+		name: "Lumar",
+		description: "Brave in lumar'"'"'s colors, written by modules/lumar/apply-lumar",
+		version: "1",
+		theme: { colors: {
+			frame: (.frame | rgb), frame_inactive: (.frame | rgb),
+			frame_incognito: (.frame | rgb), frame_incognito_inactive: (.frame | rgb),
+			background_tab: (.frame | rgb), background_tab_inactive: (.frame | rgb),
+			toolbar: (.pane | rgb), toolbar_text: (.text | rgb), toolbar_button_icon: (.text2 | rgb),
+			tab_text: (.text | rgb), tab_background_text: (.text2 | rgb), tab_background_text_inactive: (.text3 | rgb),
+			bookmark_text: (.text2 | rgb),
+			omnibox_background: (.base | rgb), omnibox_text: (.text | rgb),
+			ntp_background: (.base | rgb), ntp_text: (.text | rgb), ntp_link: (.accentText | rgb)
+		} }
+	}')"
+
 if $changed; then
 	# Ghostty rereads its config; shadesmar follows palette.json by itself;
 	# Hyprland takes its background from colors.lua

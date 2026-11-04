@@ -155,6 +155,10 @@ new Secure Boot keys, a db/dbx update (fwupd), a BIOS update or reset. Re-bind:
 ### Apps
 - Brave: load the Teams extension unpacked from
   `~/dotfiles/modules/mutectl/chrome-extension`.
+- Brave: load lumar's theme unpacked from `~/.local/share/lumar/brave-theme`
+  (`brave://extensions`, Developer mode, Load unpacked; apply-lumar writes it
+  from the palette, and Brave rereads it when it starts). Settings >
+  Appearance then shows Lumar as the theme, in place of Classic.
 - JetBrains Toolbox: install GoLand, WebStorm, PyCharm and DataGrip.
 - NetworkManager: import the company's OpenVPN profile and the Wi-Fi
   networks (their passwords are in Bitwarden).
