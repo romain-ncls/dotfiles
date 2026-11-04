@@ -6,8 +6,10 @@ After=graphical-session.target
 ConditionEnvironment=XDG_CURRENT_DESKTOP=Hyprland
 
 [Service]
-Type=dbus
-BusName=org.kde.plasmashell
+# not Type=dbus with BusName=org.kde.plasmashell: Plasma's
+# plasma-plasmashell.service declares that name, and systemd refuses a second
+# unit with it ("Two services allocated for the same bus name")
+Type=exec
 ExecStart=/usr/bin/spanreed
 Restart=on-failure
 
