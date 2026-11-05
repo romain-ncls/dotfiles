@@ -23,8 +23,11 @@
  * uses WeakMap, WeakSet or WeakRef, which crashed that garbage collector
  * (Qt 6.11): what's remembered between calls lives in plain properties of each
  * screen's world and clips or of the day's plan, or in this file's own caches.
+ *
+ * An ECMAScript module, one copy per QML engine as a .pragma library was, so
+ * that a worker thread can import it too and plan the day there (planner.mjs,
+ * planAhead): what's used from outside is exported at the end.
  */
-.pragma library
 
 const WALK_SPEED = 5;     // HeroController.WALK_SPEED
 const RUN_SPEED = 8.25;   // HeroController.RUN_SPEED
@@ -2694,7 +2697,7 @@ function daySteps(world, clips, day) {
         () => critters.next(),
         () => {
             cache = { key: day.key, segments: plan.result().segments, beast: beast, beastlings: beastlings,
-                      critters: critters.result() };
+                      critters: critters.result(), track: track };
             return true;
         }
     ];
@@ -2710,12 +2713,40 @@ function daySteps(world, clips, day) {
     };
 }
 
+// The day's plans for t, made at once: on a worker thread (planner.mjs, with its own copy of this
+// file), for the screens to take as they are (adoptDay). Plain data, as a message carries it: all
+// but the beastlings', worked out as they're needed by functions (planBeastlings), which a message
+// doesn't carry; where Hornet is near their mother instead, which they're made from.
+function planAhead(world, clips, t) {
+    drain(daySteps(world, clips, dayOf(world, clips, t, clipsSignature(clips))));
+    return { key: cache.key, segments: cache.segments, beast: cache.beast, critters: cache.critters, track: cache.track };
+}
+
+// The day's plans made elsewhere (planAhead, planned: what it made), taken as they are if they're
+// for the day t falls in, this world and these clips, the beastlings' made here; whether they were.
+function adoptDay(world, clips, t, planned) {
+    const day = dayOf(world, clips, t, clipsSignature(clips));
+    if (!planned || planned.key !== day.key) {
+        return false;
+    }
+    if (cache.key !== day.key) {
+        const beastlings = planBeastlings(world, clips, day.start.getTime() / 1000, day.dateKey, planned.beast, planned.track);
+        cache = { key: planned.key, segments: planned.segments, beast: planned.beast, beastlings: beastlings,
+                  critters: planned.critters, track: planned.track };
+    }
+    if (preparing !== null && preparing.key === day.key) {
+        preparing = null;
+    }
+    return true;
+}
+
 // The day's plans for t, made a little at a time rather than at once when she's first asked for
 // (WorldScene: a third of a second and more, which would hold the lock screen's frames back): each
 // step(ms) makes them for about that long, and tells whether they're made. Those asking for the
-// same day (DayPlanner.qml, WorldScene's) share the making (preparing, above), one of them doing it
-// at a time (the one that last did, while it goes on asking), so that a step takes no longer for
-// there being several.
+// same day (WorldScene's) share the making (preparing, above), one of them doing it at a time (the
+// one that last did, while it goes on asking), so that a step takes no longer for there being
+// several. Where they can be made on a worker thread instead (DayPlanner.qml, the lock screen's),
+// they are.
 function prepareDay(world, clips, t) {
     const day = dayOf(world, clips, t, clipsSignature(clips));
     if (cache.key !== day.key && (preparing === null || preparing.key !== day.key)) {
@@ -2849,3 +2880,10 @@ function clipsAhead(world, clips, t, horizon) {
     }
     return Object.keys(names).filter(n => clips[n] !== undefined).sort();
 }
+
+export {
+    join, leave, prepareDay, planAhead, adoptDay,
+    hornetAt, hornetChangesAt, clipsAhead,
+    beastAt, beastNext, beastClipsAhead, beastlingsAt, beastlingsNext, beastlingClipsAhead,
+    critterPosesAt, critterClips
+};

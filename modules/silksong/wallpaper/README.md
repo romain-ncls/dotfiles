@@ -62,12 +62,12 @@ settings say when it stands still there (see Runtime).
   drips, low smoke and falling dust, and dust drifting in the shafts. The small life of our
   rooms (`CRITTERS`): the grotto's moss flies behind the rock, dragonflies over the meadow and
   the lake that hold still while Hornet plays her needolin, and Verdania's lilypad flies, which
-  sing along to it and fly to their next perch when she comes close (`life.js crittersAt`). The
+  sing along to it and fly to their next perch when she comes close (`life.mjs crittersAt`). The
   Bell Beast watches her from its station as the game has it (its look detector and interaction
   FSM): it turns to her a moment after she comes within its reach, shakes while she's there,
   greets her when she comes back after a while and sings along to her needolin. Its beastlings
   (`BEASTLING_NODES`, the game's spots) come out of the floor some days to play around it as their
-  FSM has them, and some nights to sleep by it (`life.js planBeast`, `planBeastlings`). Navigation comes
+  FSM has them, and some nights to sleep by it (`life.mjs planBeast`, `planBeastlings`). Navigation comes
   from the same rock, so nothing she stands on is hidden (her bell's floor and walls are rock that
   isn't drawn, laid where the bell's art has them): the ways the game gives her, a drop, a jump or a
   double jump, a ledge caught at the top of a jump and climbed onto, the Drifter's Cloak opened on a
@@ -114,10 +114,10 @@ settings say when it stands still there (see Runtime).
   bezel) with the checklist they are reviewed against.
 - `check_plan.js`: Hornet's day plans against the built world (`node tools/check_plan.js 7`):
   any teleport between moves, and her fastest speed in each kind of move.
-- `check_events.js`: when `life.js` says Hornet and the Bell Beast next change, against what they
+- `check_events.js`: when `life.mjs` says Hornet and the Bell Beast next change, against what they
   show (`node tools/check_events.js [LIFE_JS] [DAYS] [YYYY-MM-DD]`): any change sooner, which a
   screen would draw late.
-- `plan_identity.js`: two versions of `life.js` against each other (`node tools/plan_identity.js
+- `plan_identity.js`: two versions of `life.mjs` against each other (`node tools/plan_identity.js
   REF_LIFE NEW_LIFE [DAYS]`): her plans, the Bell Beast's and the small life's, and what the
   screens ask of them moment by moment, must be identical after a change meant to make them
   cheaper.
@@ -256,23 +256,33 @@ painting's images are chosen once, for its screen's size: the lock screen first 
 wallpaper out at its own size, 800 by 600. Once every screen of the process shows its painting
 (`painting.js`), and a moment later, the worlds are made under them (`WorldScene.qml`, compiled
 then, loaded by URL, compiled away from the GUI thread and made a little at a time between
-frames, `asynchronous`), and Hornet's day is planned meanwhile (`DayPlanner.qml`, life.js
-`prepareDay`, in slices; the world gives out her clips once it's planned). Nothing holds the GUI
+frames, `asynchronous`), and Hornet's day is planned meanwhile, on a worker thread
+(`DayPlanner.qml`, `planner.mjs` with its own copy of `life.mjs`, `planAhead`; the worlds take
+what it plans, `adoptDay`, and give out her clips then): on the GUI thread, in slices between its
+frames (`prepareDay`, as the desktop still plans it), its 0.6 s took a second, the worlds waiting
+for it. On Hyprland it's planned from the moment the lock screen starts (`quickshell/shell.qml`),
+and the worlds have everything they show about half a second after the paintings show. (`life.mjs`
+is an ECMAScript module for the worker to import it: one copy per QML engine, as a `.pragma
+library` was; the beastlings' plans, worked out as they're needed by functions a message doesn't
+carry, are made where it's taken.) Nothing holds the GUI
 thread for long: Qt Wayland lets a window's render thread draw on its own only once the GUI thread
 has taken the compositor's latest word on its surface (a configure), which the compositor sends
 anew as the lock screen's surfaces appear, so a world made at once (half a second, two thirds of
 it her day) stood every brush still meanwhile, `UniformAnimator` or not. The brush keeps an even
 pace, from its first frame to the end (0.8 of the painting a second, timed by how much of it
-shows, `world.py`; `speed`), which comes a little after the world has everything it shows. The
-world is drawn under the painting from the moment it's made, the painting opaque, so that its
-images go to the GPU as they come rather than all in one frame (50 to 80 ms, which stopped
-everything between the brush and the world). Once it has everything it shows on every screen and
-the brushes are in their last 50 ms, the worlds wash in through the paintings together at the
-brush's pace (`washFor`, the painting's whole time at it, 1.25 s, on the brush's own clock: an
-animator started then, through the GUI thread's animation clock, began 0.1 s late), in the order
-the washes were painted, the lighter first, along soft, ragged fronts: each place goes from
-painting to world in a few frames, where a fade would show both at once everywhere, the brush's
-last washes and the world's first meeting. The wash is timed by how much each place changes
+shows, `world.py`; `speed`), 1.14 s. The world is drawn under the painting from the moment it's
+made, the painting opaque, so that its images go to the GPU as they come rather than all in one
+frame (50 to 80 ms, which stopped everything between the brush and the world). Once it has
+everything it shows on every screen and the brushes are 60% through their time (0.68 s), the
+worlds wash in through the paintings together at the brush's pace (`washFor`, the painting's
+whole time at it, 1.25 s, on the brush's own clock: an animator started then, through the GUI
+thread's animation clock, began 0.1 s late), in the order the washes were painted, the lighter
+first, along soft, ragged fronts: each place goes from painting to world in a few frames, where a
+fade would show both at once everywhere. The world comes while the brush paints its last washes,
+for the one to flow into the other: started as the brush ended, even with no frame still between
+them, the brush seemed to stop and the world to start. Behind the brush at its pace, the world
+never comes through where it hasn't painted: by the brush's end, it's at the places the brush
+painted in its first 45%. The wash is timed by how much each place changes
 (`derive.py` `with_wash`, the timing's blue: the world was most like the painting where its
 first, broad washes are, and hardly showed for a quarter of its time), so that it shows evenly;
 a world derived before this washes in by the brush's own timing (run `derive.py` again). Eased (a
@@ -285,11 +295,11 @@ which stands still while only the render thread animates (a second's Timer then 
 Measured in the real lock screen (KWin, three screens, with the 0.7 s wash), the paintings show
 about 0.3 s after it starts, the worlds have everything they show about a second later and have
 washed in 0.7 s after that (at the brush's pace now: 1.25 s, not measured there yet), and no
-frame waits more than about 70 ms. In Hyprland's headless rig (`modules/hyprland/dev`), the brush
-has covered the screen about 1.1 s after the painting shows, the world being in by then, the
-world washes in from there with no frame between them still, and has washed in 2.5 s after the
-painting showed; no frame takes over 35 ms. Before the paintings show, KWin shows black: once the session
-is locked it shows the lock screen's windows alone.
+frame waits more than about 70 ms. In Hyprland's headless rig (`modules/hyprland/dev`), the world
+has everything it shows 0.5 s after the painting shows, washes in from 0.68 s while the brush
+covers the screen (by 1.14 s), and has washed in 2 s after the painting showed; no frame takes
+over 35 ms. Before the paintings show, KWin shows black: once the session is locked it shows the
+lock screen's windows alone.
 
 Elsewhere (the desktop, where Plasma's splash screen covers the wallpaper meanwhile, or a world
 made before the painting), each screen stays black until it has everything it shows (her sheets
@@ -324,5 +334,5 @@ the taskbar leaves out (KRunner, Yakuake) don't count, nor plasmashell's own (th
 settings), nor any while the desktop is shown: clicking the desktop, or Show Desktop, starts it
 again, a tenth of a second later (focus going from one window to another doesn't). The lock
 screen never stands still. A desktop hidden for 10 minutes (another activity's) lets go of all it
-loaded, and comes back from black; once no screen shows the world, `life.js` lets go of the day's
+loaded, and comes back from black; once no screen shows the world, `life.mjs` lets go of the day's
 plans too.

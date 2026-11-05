@@ -232,20 +232,23 @@ Item {
     }
 
     // The world behind (main.qml: drawn under the painting from the moment it's made, the
-    // painting opaque) may come through once it has everything it shows and the brush is all but
-    // done (due); once it may on every screen (painting.js), the end: the worlds wash in through
-    // the paintings together at the brush's pace, in the order the washes were painted, light
-    // first, timed by how much changes (watercolor.frag) so that it shows from the start: each
-    // place goes from painting to world in a few frames along a ragged front, rather than both
-    // showing everywhere as a fade would.
+    // painting opaque) may come through once it has everything it shows and the brush is far
+    // enough along (due); once it may on every screen (painting.js), the end: the worlds wash in
+    // through the paintings together at the brush's pace, in the order the washes were painted,
+    // light first, timed by how much changes (watercolor.frag) so that it shows from the start:
+    // each place goes from painting to world in a few frames along a ragged front, rather than
+    // both showing everywhere as a fade would.
     readonly property bool uncover: revealed && due
-    // Due as the brush ends, its last 50 ms: a place takes a moment to go from painting to world
-    // (watercolor.frag's soft), as the brush's last washes take one to come, the one meeting the
-    // other. Started once the brush was done, the world seemed to wait (0.2 s: its first frame,
-    // two more waited for, and its first washes, much like the painting, hardly showing). Should
-    // no frame tell it, a while after the world is in.
+    // Due with the brush 60% through its time, the world then coming while it paints its last
+    // washes, for the one to flow into the other: started as the brush ended, even with nothing
+    // still between them, the brush seemed to stop and the world to start. Behind it at its pace,
+    // the world never comes through where it hasn't painted (bare: the screen as it was): by the
+    // brush's end, it's at the places the brush painted in its first 45%. The world has
+    // everything it shows by then (half a second after the paintings show, its day planned on a
+    // worker thread: DayPlanner.qml); should it not, it comes once it has. Should no frame tell
+    // it, a while after the world is in.
     property bool due: false
-    readonly property real dueAt: 1 / (1.1 * speed) - 0.05 // the brush's end (watercolor.frag's behind)
+    readonly property real dueAt: 0.6 / (1.1 * speed) // (the brush's end: 1 / (1.1 * speed), watercolor.frag's behind)
     Timer {
         interval: 2000
         running: root.revealed && !root.due

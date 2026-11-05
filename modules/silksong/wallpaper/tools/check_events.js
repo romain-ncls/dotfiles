@@ -1,5 +1,5 @@
 /*
- * Checks when life.js says Hornet and the Bell Beast next change (hornetChangesAt, beastNext)
+ * Checks when life.mjs says Hornet and the Bell Beast next change (hornetChangesAt, beastNext)
  * against what they show, without Plasma:
  *
  *   node tools/check_events.js [LIFE_JS] [DAYS] [YYYY-MM-DD]
@@ -18,8 +18,8 @@ const os = require("os");
 
 const root = path.join(__dirname, "..");
 const data = path.join(os.homedir(), ".local/share/silksong-wallpaper");
-const file = process.argv[2] || path.join(root, "plasma/contents/ui/life.js");
-const src = fs.readFileSync(file, "utf8").replace(".pragma library", "");
+const file = process.argv[2] || path.join(root, "plasma/contents/ui/life.mjs");
+const src = fs.readFileSync(file, "utf8").replace(".pragma library", "").replace(/^export \{[^}]*\};/m, "");
 const Life = new Function(src + "\nreturn { dayStart, hornetAt, hornetChangesAt, beastAt, beastNext };")();
 const grab = (file, prop) => {
     const t = fs.readFileSync(file, "utf8");

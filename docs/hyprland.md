@@ -112,7 +112,7 @@ rejects (`bezier` or `spring`).
   task manager) reads Hyprland's windows, and the lock UI drops KDE's locker,
   battery, sessions and keyboard indicator for `WlSessionLock`, PAM and
   UPower. `bench.py` moves to a headless Hyprland and decides whether
-  anything (`life.js`) is worth more. Hyprland keeps sending frame callbacks
+  anything (`life.mjs`) is worth more. Hyprland keeps sending frame callbacks
   to a wallpaper that windows cover, so the scene must stand still itself, as
   it already does on the desktop.
 - **A small Go helper beside the shell, `spanreed`,** for what QML can't
