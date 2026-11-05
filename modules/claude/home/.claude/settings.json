@@ -11,6 +11,7 @@
     "command": "bash ~/.claude/statusline-command.sh"
   },
   "tui": "fullscreen",
+  "wheelScrollAccelerationEnabled": false,
   "skipWorkflowUsageWarning": true,
   "theme": "dark",
   "editorMode": "normal",

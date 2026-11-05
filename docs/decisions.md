@@ -210,6 +210,19 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 - **The library is data, not config**: copied once from Windows to
   `~/.local/share/com.bilingify.readest/Readest/`, not in the repo.
 
+## Claude Code
+
+- **No wheel acceleration in the fullscreen renderer**
+  (`wheelScrollAccelerationEnabled: false`, 5 Nov 2026). In VS Code's
+  terminal (xterm.js, VS Code ≥ 1.105) Claude Code sizes each wheel step
+  from the gap since the last one: 1 row under 5 ms, up to 36 rows between
+  5 and 80 ms, 3 rows above. xterm.js sends one wheel report per whole line
+  that hi-res wheels and touchpads add up, so the gaps are uneven, and
+  scrolling was slow, then far too fast, then erratic. Without
+  acceleration every step is 3 rows. `/scroll-speed` changes that number:
+  it writes `env.CLAUDE_CODE_SCROLL_SPEED` into the live `settings.json`,
+  so copy the value back here afterwards.
+
 ## Remote desktop (home PC)
 
 - **KRDP (Plasma's RDP server), logging in with the Linux account** (PAM,
