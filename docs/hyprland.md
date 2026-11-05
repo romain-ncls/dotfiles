@@ -151,6 +151,11 @@ rejects (`bezier` or `spring`).
   their own). So everything upgrades together, the release notes read first
   (later: `lodestar upgrade` stopping on a new Hyprland or Quickshell minor
   version), and `Hyprland --verify-config` right after.
+- **The lid does nothing** (5 Nov 2026): no lock, no suspend, at the desk or
+  not, on the charger or on battery. Until then it did as Plasma does
+  (nothing at the desk, locked on the charger, suspended on battery).
+  `hyprland-lid.service` keeps logind off it, whose default would suspend;
+  Plasma still suspends on battery (powerdevil's default).
 
 ## Development
 
@@ -219,7 +224,8 @@ its own shell id and state folder. Fine, but link the same path everywhere.
      host file set it, touchpad, repeat, Num Lock, AZERTY).
    - Every module's shortcuts: the lodestar translation.
    - Lock: hyprlock (PAM) and hypridle (idle, `loginctl lock-session` for
-     Lock AFK, lock before sleep, the lid), `allow_session_lock_restore`.
+     Lock AFK, lock before sleep; the lid does nothing: Decisions),
+     `allow_session_lock_restore`.
      Replaced by shadesmar's lock in phase 5.
    - shadesmar's first bar: desktops, clock, battery, tray (Discord, KDE
      Connect), volume.
@@ -291,14 +297,15 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    far: the lock screen, a Quickshell config of its own (`qs -c
    silksong-lock`, modules/silksong's README) with the Silksong prompt,
    which is now shared with Plasma's (`SilksongPrompt.qml`, a locker for
-   each). `lock-screen` is hypridle's lock_cmd, so Meta+L, the idle, the
-   lid, sleep and Lock AFK all reach it; sleep waits for the lock
+   each). `lock-screen` is hypridle's lock_cmd, so Meta+L, the idle,
+   sleep and Lock AFK all reach it; sleep waits for the lock
    (`inhibit_sleep = 3`). hyprlock stays as the fallback: without the art or
    the PAM service, if the lock doesn't come up within 5 seconds, or if it
    ends while locked. The painting starts over the windows ("over", chosen
    among mockups), the screens' sizes read from their EDID as KWin does
-   (Hyprland's whole centimetres made it slow and jerky). Next: the desktop,
-   if wanted, and the bench.
+   (Hyprland's whole centimetres made it slow and jerky). The desktop keeps
+   shadesmar's wallpaper from Backdrop (5 Nov 2026): Silksong is the lock
+   screen's only. Next: the bench, on the lock screen.
 6. **Then whatever was missed**: a grid overview, Klipper-like actions,
    more keyboard-driven binds and terminal apps.
 

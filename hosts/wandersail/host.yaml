@@ -122,6 +122,7 @@ kde:
       TurnOffDisplayIdleTimeoutSec: -1
     AC/SuspendAndShutdown:
       AutoSuspendAction: 0
+      LidAction: 0 # the lid does nothing on the charger (on battery: Plasma's default, sleep)
     Battery/Display:
       DimDisplayIdleTimeoutSec: 300
   plasmanotifyrc:

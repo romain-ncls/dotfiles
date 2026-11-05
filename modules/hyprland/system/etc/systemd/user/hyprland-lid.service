@@ -1,14 +1,13 @@
-# The lid and the Sleep key in Hyprland, as Plasma has them on wandersail:
-# logind leaves them to the binds while Hyprland runs (session.lua: the lid
-# does nothing at the desk, locks on the charger, suspends on battery; the
-# Sleep key is mutectl's Lock AFK, not a suspend).
+# The lid and the Sleep key in Hyprland: logind leaves them alone while
+# Hyprland runs (its defaults would suspend on both). The lid does nothing
+# (session.lua); the Sleep key is mutectl's Lock AFK, not a suspend.
 [Unit]
-Description=Lid and Sleep key handled by Hyprland's binds
+Description=Lid and Sleep key kept from logind in Hyprland
 PartOf=graphical-session.target
 ConditionEnvironment=XDG_CURRENT_DESKTOP=Hyprland
 
 [Service]
-ExecStart=systemd-inhibit --what=handle-lid-switch:handle-suspend-key --who=Hyprland --why="Hyprland's binds handle them" sleep infinity
+ExecStart=systemd-inhibit --what=handle-lid-switch:handle-suspend-key --who=Hyprland --why="The lid does nothing; the Sleep key is Lock AFK" sleep infinity
 
 [Install]
 WantedBy=hyprland-session.target
