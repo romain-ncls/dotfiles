@@ -152,7 +152,7 @@ function report(r) {
              doubled: r.doubled, stale: r.stale, late_ms: spread(r.late) };
 }
 
-// The run's table, from the samples of one screen (scene: its WorldScene, Life: life.js).
+// The run's table, from the samples of one screen (scene: its WorldScene, Life: life.mjs).
 function analyse(samples, scene, Life) {
     const world = scene.world;
     const clips = scene.clips;

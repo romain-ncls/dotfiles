@@ -7,7 +7,7 @@ import Qt.labs.folderlistmodel
 
 import "world.js" as World
 import "daylight.js" as Daylight
-import "life.js" as Life
+import "life.mjs" as Life
 import "reveal.js" as Reveal
 
 Item {
@@ -475,16 +475,37 @@ Item {
         planSome();
     }
 
-    // The day's plans (life.js prepareDay), made a few milliseconds at a time as the GUI thread
+    // The day's plans (life.mjs prepareDay), made a few milliseconds at a time as the GUI thread
     // goes round, before her clips are given out, rather than at once when she's first asked for:
     // a third of a second and more, which would hold back every frame of the lock screen meanwhile
-    // (its painting's brush: Painting.qml). On the lock screen, begun before (DayPlanner.qml). Once
-    // made, the plans of the days after (from 04:00), or of a new world, are made at once when
-    // asked for (on the desktop, which nothing covers then).
+    // (its painting's brush: Painting.qml). On the lock screen, planned on a worker thread instead
+    // (DayPlanner.qml) and taken as it comes (planned): null while it's planned there, which it
+    // waits for (planning it itself should that take too long), undefined where nothing plans it.
+    // Once made, the plans of the days after (from 04:00), or of a new world, are made at once
+    // when asked for (on the desktop, which nothing covers then).
+    property var planned: undefined
+    onPlannedChanged: planSome()
+    property bool plannedLate: false
+    Timer {
+        interval: 4000
+        running: root.planned === null && !root.dayReady
+        onTriggered: {
+            root.plannedLate = true;
+            root.planSome();
+        }
+    }
     property bool dayReady: false
     property var dayPrep: null
     function planSome() {
         if (dayReady || !world || !spriteClips) {
+            return;
+        }
+        if (planned && Life.adoptDay(world, spriteClips, time, planned)) {
+            dayPrep = null;
+            dayReady = true;
+            return;
+        }
+        if (planned === null && !plannedLate) {
             return;
         }
         if (!dayPrep) {
@@ -1053,7 +1074,7 @@ Item {
         }
     }
 
-    // The small life (tools/world.py CRITTERS, life.js crittersAt): moss flies behind the rock,
+    // The small life (tools/world.py CRITTERS, life.mjs crittersAt): moss flies behind the rock,
     // dragonflies and lilypad flies in Hornet's plane, coloured by the zone they live in (unlit, as
     // the game draws them, in their own tint).
     readonly property var crittersHere: (world?.critters ?? []).filter(c => (c.perches.length ? c.perches.map(p => p[0]) : [c.home[0]])
@@ -1095,7 +1116,7 @@ Item {
         && (beast.x - 5) * unitMm < me.x + me.w && (beast.x + 5) * unitMm > me.x
     readonly property var beastPose: showsBeast && clips ? Life.beastAt(world, clips, time) : null
     readonly property var beastZone: beast ? world.zones.find(z => z.id === beast.zone) ?? null : null
-    // Her children, the beastlings, when they're there (life.js planBeastlings).
+    // Her children, the beastlings, when they're there (life.mjs planBeastlings).
     readonly property var beastlingPoses: showsBeast && clips ? Life.beastlingsAt(world, clips, time) : none
 
     HornetSprite {

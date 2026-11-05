@@ -1,8 +1,9 @@
 // One screen of the Silksong lock screen in Hyprland: what Plasma's lock screen makes of the
 // wallpaper (scene/main.qml, its lock screen half: the world painted in watercolor, then the
-// world, Hornet's day planned meanwhile) and of the prompt (prompt/LockScreen.qml: made once every
-// screen has drawn its first frame), with the scene and the prompt as they are, by URL. The
-// wallpaper's settings are Plasma's lock screen's (main.xml's defaults).
+// world, Hornet's day planned meanwhile: shell.qml's planned) and of the prompt
+// (prompt/LockScreen.qml: made once every screen has drawn its first frame), with the scene and
+// the prompt as they are, by URL. The wallpaper's settings are Plasma's lock screen's (main.xml's
+// defaults).
 import QtQuick
 import QtQuick.Window
 import Quickshell
@@ -42,6 +43,8 @@ Item {
     // The screen as it was (shell.qml: an image of it), under everything and the painting's ground
     // (it starts over it), let go once every painting has washed away (paintingGone).
     property url capture: ""
+    // Hornet's day as shell.qml's planner plans it (WorldScene's planned).
+    property var planned: null
     signal paintingGone()
     Image {
         id: captureImage
@@ -75,7 +78,8 @@ Item {
                 everyFrame: true,
                 nearHz: 60,
                 watchFiles: false,
-                paused: false
+                paused: false,
+                planned: Qt.binding(() => root.planned)
             })
         }
 
@@ -111,7 +115,6 @@ Item {
             function onUpChanged() {
                 if (painting.item.up) {
                     console.info("Silksong lock screen:", root.screenName, "painting up, the world made");
-                    root.planDay();
                 }
             }
             function onLeavingChanged() {
@@ -135,30 +138,6 @@ Item {
                 if (view.item.revealed) {
                     console.info("Silksong lock screen:", root.screenName, "world revealed");
                 }
-            }
-        }
-    }
-
-    // Hornet's day, planned while the world is made (main.qml), let go with the painting.
-    property QtObject dayPlanner: null
-    property Component dayPlannerType: null
-    function planDay() {
-        dayPlannerType = Qt.createComponent(root.file("scene/DayPlanner.qml"), Component.Asynchronous);
-        const make = () => {
-            if (dayPlannerType?.status === Component.Ready && !dayPlanner && !wallpaper.paintingGone) {
-                dayPlanner = dayPlannerType.createObject(root, { dataDir: root.dataDir });
-            }
-        };
-        dayPlannerType.statusChanged.connect(make);
-        make();
-    }
-    Connections {
-        target: wallpaper
-
-        function onPaintingGoneChanged() {
-            if (wallpaper.paintingGone && root.dayPlanner) {
-                root.dayPlanner.destroy();
-                root.dayPlanner = null;
             }
         }
     }

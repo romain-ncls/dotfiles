@@ -127,6 +127,10 @@ ShellRoot {
         if (!capturing) {
             grabs = ({});
             console.info("Silksong lock screen: the screens as they were, let go");
+            if (dayPlanner) { // (below)
+                dayPlanner.destroy();
+                dayPlanner = null;
+            }
         }
     }
     // Each screen's image, by name (ItemGrabResults, kept while they're shown).
@@ -222,6 +226,7 @@ ShellRoot {
                 art: shell.uiDir
                 locker: auth
                 capture: shell.captureOf(surface.screen)
+                planned: shell.planned
                 onPaintingGone: shell.paintingsGone++
                 onBroken: shell.quitWith(3)
             }
@@ -243,5 +248,28 @@ ShellRoot {
         captureScreens = Array.from(Quickshell.screens);
         captureFor.start();
         kit = made;
+        planDay();
     }
+
+    // Hornet's day, planned on a worker thread (scene/DayPlanner.qml) from the moment the lock
+    // screen starts, while the screens are captured and the paintings shown, for every screen's
+    // world to take (LockSurface.qml, WorldScene's planned): the world is then in about 0.45 s
+    // after the paintings show, rather than a second, a little sooner than the brush is done.
+    // Let go once every painting has washed away.
+    property QtObject dayPlanner: null
+    property Component dayPlannerType: null // (kept while it's compiled)
+    function planDay() {
+        dayPlannerType = Qt.createComponent("file://" + Quickshell.shellPath("scene/DayPlanner.qml"), Component.Asynchronous);
+        const make = () => {
+            if (dayPlannerType?.status === Component.Ready && !dayPlanner && capturing) {
+                dayPlanner = dayPlannerType.createObject(shell, { dataDir: shell.dataDir });
+            } else if (dayPlannerType?.status === Component.Error) {
+                console.warn("Silksong lock screen: no day planner:", dayPlannerType.errorString());
+            }
+        };
+        dayPlannerType.statusChanged.connect(make);
+        make();
+    }
+    // (undefined without a planner: the screens plan the day themselves)
+    readonly property var planned: dayPlanner ? dayPlanner.planned : dayPlannerType?.status === Component.Error ? undefined : null
 }
