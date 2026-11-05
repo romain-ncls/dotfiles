@@ -451,8 +451,13 @@ later (yazi, btop, lazygit…).
       to the same desktop on the screens left, grid.lua; tried headless).
 - [ ] A drop-down terminal (Ghostty's quick terminal, or a special workspace
       as Omarchy's Super+\`), on top of the free-floating one.
-- [ ] Focus after a switch stays on the screen it was on (`set_workspace`
-      doesn't move focus, by the source): check.
+- [x] Focus after a switch stays on the screen it was on (tried headless,
+      grid.lua's functions as the binds and the bar call them): a jump or a
+      move in the grid keeps the focus on that screen, on its window there
+      or, on an empty desktop, on the screen alone (not the other screen's
+      window); comms keeps it; a window taken along keeps it; the peek and
+      back give it back. A window of another desktop that takes the focus
+      (a notification's) brings its desktop and keeps the focus.
 
 ## Alternatives considered
 
