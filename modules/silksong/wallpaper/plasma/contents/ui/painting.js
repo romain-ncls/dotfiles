@@ -2,7 +2,7 @@
  * The screens of one process (the lock screen's, or plasmashell's) make their worlds only once
  * every one of them shows its painting (Painting.qml): a world is made on the GUI thread, all at
  * once, and would hold back the first frame of the screens not shown yet. Then the paintings end
- * together, once every world has drawn its first frame, as fast as the one least far along may.
+ * together, once every world has everything it shows and every brush is all but done.
  * One that never shows (its screen off) holds the others back only so long (Painting.qml).
  */
 .pragma library
@@ -28,12 +28,9 @@ function shown() {
     }
 }
 
-// Asked by a painting once the world under it has drawn its first frame: when every one has, all
-// end, for as long as the one least far along needs.
+// Asked by a painting once the world may show under it: when every one's may, all end together.
 function framed() {
     if (paintings.every(p => p.framed || p.leaving)) {
-        const waiting = paintings.filter(p => !p.leaving && p.shown);
-        const finish = Math.max(0, ...waiting.map(p => p.finishNow()));
-        paintings.forEach(p => p.leave(finish || p.finishNow()));
+        paintings.forEach(p => p.leave());
     }
 }

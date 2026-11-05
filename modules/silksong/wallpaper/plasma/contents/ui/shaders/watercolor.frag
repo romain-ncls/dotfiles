@@ -4,10 +4,10 @@
 // dark paper with its grain, each wash spreading with a soft, ragged edge and a darker wet front,
 // the shafts glazed over it as strong as the hour has them, under its veil as the world is. Then
 // the world under it washes in the same way, light first: the painting goes clear wash by wash.
-// All of it told by two clocks (Painting.qml): the brush's, from the first frame, at which it
-// paints at an even `speed` to the end, the world made meanwhile; and the end's, once the world is
-// drawn under it and the brush has been everywhere, from which the world washes in at the brush's
-// same pace (`washFor` seconds: the whole painting's time at it), in the order it was painted.
+// All of it told by the brush's clock (Painting.qml), from the first frame: it paints at an even
+// `speed` to the end, the world made meanwhile; once the world is drawn under it and the brush
+// has been everywhere (`washAt` on that clock), the world washes in at the brush's same pace
+// (`washFor` seconds: the whole painting's time at it), in the order it was painted.
 // Bare, it paints with no paper, over what's under it (the screen as it was, on Hyprland's lock
 // screen). Compiled with qsb (see README).
 #version 440
@@ -20,9 +20,8 @@ layout(std140, binding = 0) uniform buf {
     float qt_Opacity;
     float clock;   // seconds since the brush started
     float speed;   // of the painting's time per second
-    float end;     // how far the end is, 0..1 of endFor
-    float endFor;  // the end's seconds
-    float washFor; // of which the world's washing in, from the start: the painting's time at speed
+    float washAt;  // when the world starts washing in, on the brush's clock (far off until then)
+    float washFor; // how long it takes: the painting's time at speed
     vec4 veil;      // the hour's light: its colour, and how much of it (a); premultiplied, as
                     // ShaderEffect passes colours
     vec4 light;     // the shafts' colour, and how strong the hour has them (a); premultiplied
@@ -60,10 +59,9 @@ float ragged(vec2 px) {
 }
 
 void main() {
-    // The brush, at its even pace; and the end, t seconds in, the world washing in.
-    float t = end * endFor;
+    // The brush, at its even pace; and the world washing in.
     float progress = min(1.0, speed * clock);
-    float develop = clamp(t / washFor, 0.0, 1.0);
+    float develop = clamp((clock - washAt) / washFor, 0.0, 1.0);
     vec4 times = texture(timing, qt_TexCoord0);
     float when = times.r;
     vec3 colour = texture(paint, qt_TexCoord0).rgb * (1.0 - times.g * light.a) + light.rgb * times.g;
@@ -82,9 +80,12 @@ void main() {
         ? mix(texture(ground, groundRect.xy + qt_TexCoord0 * groundRect.zw).rgb,
               brushed * (1.0 - veil.a) + veil.rgb, painted)
         : mix(paper, brushed, painted) * (1.0 - veil.a) + veil.rgb;
-    // The world washing in: clear where it has, along a soft, ragged front.
+    // The world washing in: clear where it has, along a soft, ragged front, in the order the
+    // brush went but timed by how much it changes there (blue, from 1/255: tools/derive.py
+    // with_wash), so that it shows evenly; by the brush's own time where it isn't (0).
+    float washWhen = times.b > 0.5 / 255.0 ? (times.b * 255.0 - 1.0) / 254.0 : when;
     const float soft = 0.08;
-    float until = clamp(when + 0.07 * (ragged(px + 170.0) - 0.5), 0.0, 1.0);
+    float until = clamp(washWhen + 0.07 * (ragged(px + 170.0) - 0.5), 0.0, 1.0);
     float clear = smoothstep(0.0, 1.0, clamp((develop - until * (1.0 - soft)) / soft, 0.0, 1.0));
     float a = 1.0 - clear;
     fragColor = vec4(c * a, a) * qt_Opacity;
