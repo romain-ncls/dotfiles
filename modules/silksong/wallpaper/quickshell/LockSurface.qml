@@ -55,12 +55,12 @@ Item {
         id: wallpaper
         anchors.fill: parent
 
+        // Drawn under the painting from the moment it's made, as main.qml has it.
         Loader {
             id: view
             anchors.fill: parent
             asynchronous: true
             active: root.seated && (!(painting.item?.present ?? false) || painting.item.up)
-            visible: !(painting.item?.present ?? false) || painting.item.uncover
 
             Component.onCompleted: setSource(root.file("scene/WorldScene.qml"), {
                 coverFirst: Qt.binding(() => !(painting.item?.present ?? false)),
@@ -112,6 +112,11 @@ Item {
                 if (painting.item.up) {
                     console.info("Silksong lock screen:", root.screenName, "painting up, the world made");
                     root.planDay();
+                }
+            }
+            function onLeavingChanged() {
+                if (painting.item.leaving) {
+                    console.info("Silksong lock screen:", root.screenName, "world washing in");
                 }
             }
             function onGoneChanged() {

@@ -197,7 +197,6 @@ QtObject {
                 anchors.fill: parent
                 asynchronous: true
                 active: win.seated && width > 0 && height > 0 && (!(painting.item?.present ?? false) || painting.item.up)
-                visible: !(painting.item?.present ?? false) || painting.item.uncover
                 sourceComponent: WorldScene {
                     screens: bench.screens
                     gapMm: Desk.gapMm
