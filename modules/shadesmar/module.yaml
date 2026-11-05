@@ -5,7 +5,8 @@
 # overview, the launcher, notifications and the OSD (the lock screen is
 # modules/silksong's); the stand-ins left (hypridle, nm-applet for its
 # prompts) go as it grows. pkg/ builds spanreed, its Go helper for D-Bus
-# names (Plasma's OSD service). All in the Hyprland session only.
+# names (Plasma's OSD service) and the Bluetooth pairing agent (BlueZ's,
+# asking through the bar's Bluetooth). All in the Hyprland session only.
 packages:
   - cliphist # the clipboard's history
 
