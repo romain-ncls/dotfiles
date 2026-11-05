@@ -41,7 +41,7 @@ import QtQuick.Window
 import QtCore
 
 import "../plasma/contents/ui"
-import "../plasma/contents/ui/life.js" as Life
+import "../plasma/contents/ui/life.mjs" as Life
 import "bench_frames.js" as Frames
 import "desk.js" as Desk
 

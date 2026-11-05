@@ -1,5 +1,5 @@
 /*
- * Checks Hornet's day plans (plasma/contents/ui/life.js) against the built world, without
+ * Checks Hornet's day plans (plasma/contents/ui/life.mjs) against the built world, without
  * Plasma:
  *
  *   node tools/check_plan.js [DAYS]
@@ -17,7 +17,7 @@ const os = require("os");
 
 const root = path.join(__dirname, "..");
 const data = path.join(os.homedir(), ".local/share/silksong-wallpaper");
-const src = fs.readFileSync(path.join(root, "plasma/contents/ui/life.js"), "utf8").replace(".pragma library", "");
+const src = fs.readFileSync(path.join(root, "plasma/contents/ui/life.mjs"), "utf8").replace(".pragma library", "").replace(/^export \{[^}]*\};/m, "");
 const Life = new Function(src + "\nreturn { planDay, planBeast, dayStart, pose, crittersAt, daySegments, cacheOf: () => cache };")();
 const grab = (file, prop) => {
     const t = fs.readFileSync(file, "utf8");
