@@ -1,10 +1,10 @@
 /*
- * Checks that two versions of Hornet's life (plasma/contents/ui/life.js) plan and show exactly
+ * Checks that two versions of Hornet's life (plasma/contents/ui/life.mjs) plan and show exactly
  * the same thing against the built world, without Plasma: for changes meant to make it cheaper,
  * not different.
  *
- *   git show HEAD:modules/silksong/wallpaper/plasma/contents/ui/life.js > REF_LIFE
- *   node tools/plan_identity.js REF_LIFE plasma/contents/ui/life.js [DAYS]
+ *   git show HEAD:modules/silksong/wallpaper/plasma/contents/ui/life.mjs > REF_LIFE
+ *   node tools/plan_identity.js REF_LIFE plasma/contents/ui/life.mjs [DAYS]
  *
  * Compares her day plans (segments, log, waking and bedtime), the Bell Beast's and the small
  * life's for DAYS days from today (40 by default) and on the days around the clock changes and
@@ -23,7 +23,7 @@ const data = path.join(os.homedir(), ".local/share/silksong-wallpaper");
 const NAMES = ["planDay", "planBeast", "planCritters", "dayStart", "hornetAt", "crittersAt", "beastAt", "clipsAhead",
     "beastClipsAhead", "critterClips"];
 const load = file => {
-    const src = fs.readFileSync(file, "utf8").replace(".pragma library", "");
+    const src = fs.readFileSync(file, "utf8").replace(".pragma library", "").replace(/^export \{[^}]*\};/m, "");
     return new Function(src + `\nreturn { ${NAMES.join(", ")}, cacheOf: () => cache };`)();
 };
 const grab = (file, prop) => {

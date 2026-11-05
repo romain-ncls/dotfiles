@@ -445,7 +445,7 @@ MOTES = [
 ]
 
 
-# The small life of our rooms (life.js crittersAt; their clips: extract.py). Moss flies roam the
+# The small life of our rooms (life.mjs crittersAt; their clips: extract.py). Moss flies roam the
 # grotto's air behind the rock, as the grotto's do (dimmed by the game's own tint, at their
 # depth); dragonflies hover over the meadow and the lake, darting up, down, left or right, and
 # hold still while Hornet plays her needolin nearby; lilypad flies sit on the shores, the island
@@ -586,7 +586,7 @@ PROPS = [
 ]
 
 # Where the beastlings (the Bell Beast's children) come out in its station: its room's three
-# "Bellbeast Child Node"s, in room units (life.js planBeastlings).
+# "Bellbeast Child Node"s, in room units (life.mjs planBeastlings).
 BEASTLING_NODES = [(44.56, 8.25), (52.59, 8.25), (55.32, 8.25)]
 
 
@@ -1614,7 +1614,7 @@ def compose():
         "animated": animated,
         "air": air,
         "critters": export_critters(zones_out),
-        # The Bell Beast, where it stands in its room (its animations: life.js planBeast).
+        # The Bell Beast, where it stands in its room (its animations: life.mjs planBeast).
         "beast": ({"x": metas["bell_beast"]["anchors"]["bell_beast"][0],
                    "y": metas["bell_beast"]["anchors"]["bell_beast"][1], "zone": "bell_beast"}
                   if "bell_beast" in metas["bell_beast"].get("anchors", {}) else None),

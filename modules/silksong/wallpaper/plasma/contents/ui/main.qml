@@ -56,7 +56,7 @@ WallpaperItem {
     // from then on, the painting opaque until it washes away: its images go to the GPU as they
     // come, a few at a time, rather than all in the frame it first shows in (50 to 80 ms: a stop
     // between the brush and the world). Loaded by URL, as Scene.qml below: WorldScene.qml and
-    // life.js are only compiled then, not before the painting's first frame (the lock screen
+    // life.mjs are only compiled then, not before the painting's first frame (the lock screen
     // compiles it all at every lock). Its properties come with it, bindings included. Compiled
     // and made asynchronously, a little at a time between frames: made at once, it would hold the
     // painting's brush back (Painting.qml).
@@ -81,13 +81,15 @@ WallpaperItem {
             everyFrame: Qt.binding(() => (root.configuration.Motion ?? 0) === 0),
             nearHz: Qt.binding(() => [60, 60, 30, 0][root.configuration.Motion ?? 0] ?? 60),
             watchFiles: root.desktop,
-            paused: Qt.binding(() => pauser.item?.paused ?? false)
+            paused: Qt.binding(() => pauser.item?.paused ?? false),
+            // (under a painting, planned by DayPlanner: null until it is; else by the scene itself)
+            planned: Qt.binding(() => (painting.item?.present ?? false) ? (root.dayPlanner ? root.dayPlanner.planned : null) : undefined)
         })
     }
-    // Hornet's day planned meanwhile (DayPlanner.qml), from when the world is made: compiled away from
-    // the GUI thread (it imports life.js), then made at once (it's small), not after the world as a
-    // Loader making it asynchronously would; by URL, as WorldScene.qml is (life.js compiled only
-    // then). Let go with the painting.
+    // Hornet's day planned meanwhile (DayPlanner.qml, on a worker thread), from when the world is
+    // made: compiled away from the GUI thread, then made at once (it's small), not after the world
+    // as a Loader making it asynchronously would; by URL, as WorldScene.qml is. Let go with the
+    // painting.
     property QtObject dayPlanner: null
     property Component dayPlannerType: null // (kept while it's compiled)
     function planDay() {
