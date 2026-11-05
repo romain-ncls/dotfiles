@@ -5,19 +5,21 @@
 # shows on the desk, and nothing reaches the session it's run from: the rig has its own Wayland
 # display and its own D-Bus, and its own PAM config with the password "hornet".
 #
-#     tools/lockbench.sh [--locks N] [--hold S] [--load N] [--weight W] [--config DIR] [--keep]
+#     tools/lockbench.sh [--locks N] [--hold S] [--load N] [--weight W] [--battery] [--config DIR] [--keep]
 #
 # For each lock, in ms after it starts: when the paintings show (the first screen, the last),
 # when the worlds have everything they show, when they wash in, when the paintings are gone;
 # over that time, each screen's frames, the longest time between two and how many took over
-# 25 ms (a frame missed at 60 Hz), and the GUI thread's longest hold (which the brush, on the
-# render thread, rides through); then, held locked (--hold, 8 s), the process's CPU (% of one
+# 25 ms (a frame missed at 60 Hz), and the GUI thread's longest gap between two of a window's
+# syncs (held, which the brush, on the render thread, rides through; or with nothing to sync, the
+# world still); then, held locked (--hold, 8 s), the process's CPU (% of one
 # core), GPU (render engine ms a second) and the fewest frames a second of its screens; its
 # peak memory; how it ended. Last, the median of each over the locks (--locks, 3). --load runs
 # N busy loops meanwhile, at the lock's own priority: a machine under load, the rig's
 # compositor kept out of its way as the session's is. --weight runs the lock with that CPU
 # weight (cgroup's cpu.weight, 100 by default): under load (10 loops on 12 threads) 1000 didn't
-# help, the GPU slowing as the CPU takes the laptop's power. --config benches another copy of
+# help, the GPU slowing as the CPU takes the laptop's power. --battery has the lock think it's
+# on battery, its worlds then still (shell.qml's onBattery). --config benches another copy of
 # quickshell/; --keep keeps the logs. The render loop's timing is logged
 # (qt.scenegraph.time.renderloop), which costs a little CPU. One bench at a time (a lock file),
 # the rig and the lock under a memory cap.
@@ -25,7 +27,7 @@ set -u
 here=$(dirname "$(realpath "$0")")
 wallpaper=$(dirname "$here")
 repo=$(realpath "$wallpaper/../../..")
-locks=3 hold=8 load=0 cfg=$wallpaper/quickshell keep=0 weight=
+locks=3 hold=8 load=0 cfg=$wallpaper/quickshell keep=0 weight= power=ac
 while [ $# -gt 0 ]; do
     case $1 in
         --locks) locks=$2; shift 2 ;;
@@ -34,6 +36,7 @@ while [ $# -gt 0 ]; do
         --config) cfg=$(realpath "$2"); shift 2 ;;
         --keep) keep=1; shift ;;
         --weight) weight=$2; shift 2 ;;
+        --battery) power=battery; shift ;;
         *) sed -n '2,/^set -u/{/^set -u/d; s/^# \{0,1\}//p}' "$0"; exit 2 ;;
     esac
 done
@@ -124,11 +127,11 @@ sample() {
 }
 tck=$(getconf CLK_TCK)
 
-echo "lockbench: $locks locks held ${hold} s, load $load${weight:+, CPU weight $weight}, $(git -C "$repo" log -1 --format='%h %s' | cut -c1-70)"
+echo "lockbench: $locks locks held ${hold} s, load $load${weight:+, CPU weight $weight}, on $power, $(git -C "$repo" log -1 --format='%h %s' | cut -c1-70)"
 : > "$tmp/values"
 for n in $(seq 1 "$locks"); do
     log=$tmp/lock-$n.log
-    SILKSONG_LOCK_TEST_PAM=$tmp/pam SILKSONG_DESK=DP-3:476x268,eDP-1:344x215,HDMI-A-1:476x268 \
+    SILKSONG_LOCK_TEST_PAM=$tmp/pam SILKSONG_LOCK_POWER=$power SILKSONG_DESK=DP-3:476x268,eDP-1:344x215,HDMI-A-1:476x268 \
         QT_LOGGING_RULES="qt.scenegraph.time.renderloop=true" \
         systemd-run --user --scope -q -p MemoryMax=3G ${weight:+-p CPUWeight=$weight} qs --log-times -p "$cfg" > "$log" 2>&1 9>&- &
     q=$!
@@ -185,7 +188,7 @@ for n in $(seq 1 "$locks"); do
             }
             cpu = (b[1] - a[1]) / tck / ((t2 - t1) / 1000) * 100
             gpu = (b[2] - a[2]) / 1e6 / ((t2 - t1) / 1000)
-            printf "lock %d: shown %s-%s, world %s, wash %s, gone %s ms · %d screens, %d frames, longest %s ms, %d over 25 ms · GUI held %s ms · locked: CPU %.0f %%, GPU %.1f ms/s, %s fps · %d MB · %s\n",
+            printf "lock %d: shown %s-%s, world %s, wash %s, gone %s ms · %d screens, %d frames, longest %s ms, %d over 25 ms · GUI gap %s ms · locked: CPU %.0f %%, GPU %.1f ms/s, %s fps · %d MB · %s\n",
                 n, show(shown1), show(shown2), show(world), show(wash), show(gone), screens, frames, show(long), missed, show(gui),
                 cpu, gpu, show(fps), hwm, status
             printf "%s %s %s %s %s %s %s %s %.1f %.2f %s %s\n", shown2, world, wash, gone, long, missed, gui, frames, cpu, gpu, fps == "" ? 0 : fps, hwm >> values
@@ -196,7 +199,7 @@ done
     { for (i = 1; i <= NF; i++) v[i][NR] = $i }
     END {
         for (i = 1; i <= 12; i++) { k = asort(v[i], s); m[i] = s[int((k + 1) / 2)] }
-        printf "median: shown %d, world %d, wash %d, gone %d ms · longest frame %d ms, %d over 25 ms · GUI held %d ms · locked: CPU %.0f %%, GPU %.1f ms/s, %d fps · %d MB\n",
+        printf "median: shown %d, world %d, wash %d, gone %d ms · longest frame %d ms, %d over 25 ms · GUI gap %d ms · locked: CPU %.0f %%, GPU %.1f ms/s, %d fps · %d MB\n",
             m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[9], m[10], m[11], m[12]
     }'
 exit 0
