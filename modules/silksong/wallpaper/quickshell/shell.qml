@@ -9,6 +9,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.UPower
 import Quickshell.Wayland
 
 ShellRoot {
@@ -227,6 +228,7 @@ ShellRoot {
                 locker: auth
                 capture: shell.captureOf(surface.screen)
                 planned: shell.planned
+                paused: shell.onBattery
                 onPaintingGone: shell.paintingsGone++
                 onBroken: shell.quitWith(3)
             }
@@ -272,4 +274,12 @@ ShellRoot {
     }
     // (undefined without a planner: the screens plan the day themselves)
     readonly property var planned: dayPlanner ? dayPlanner.planned : dayPlannerType?.status === Component.Error ? undefined : null
+
+    // On battery the worlds stand still (LockSurface's paused): the moment the lock screen came
+    // at, painted and washed in as ever, then still until it's on the charger again, when they go
+    // on from the moment it is. Running, they take 40% of a core and a quarter of the GPU for as
+    // long as it's locked (tools/lockbench.sh). The dev rigs say which with SILKSONG_LOCK_POWER
+    // (battery or ac).
+    readonly property string devPower: Quickshell.env("HYPR_DEV") ? (Quickshell.env("SILKSONG_LOCK_POWER") ?? "") : ""
+    readonly property bool onBattery: devPower !== "" ? devPower === "battery" : UPower.onBattery
 }
