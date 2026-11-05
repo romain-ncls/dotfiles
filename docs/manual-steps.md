@@ -156,5 +156,10 @@ new Secure Boot keys, a db/dbx update (fwupd), a BIOS update or reset. Re-bind:
 - Brave: load the Teams extension unpacked from
   `~/dotfiles/modules/mutectl/chrome-extension`.
 - JetBrains Toolbox: install GoLand, WebStorm, PyCharm and DataGrip.
-- NetworkManager: import the company's OpenVPN profile and the Wi-Fi
-  networks (their passwords are in Bitwarden).
+- NetworkManager: import the company's OpenVPN profiles and the Wi-Fi
+  networks (their passwords are in Bitwarden). The profiles: `nmcli
+  connection import type openvpn file <file>`, then name the connection
+  "Agora" or "Agora SG IHM" (the names `modules/work/vpn-dns` looks for)
+  and give it the user name, the password kept by the wallet and only the
+  VPN's own routes: `nmcli connection modify <name> +vpn.data
+  "username=romain.nicolas, password-flags=1" ipv4.never-default yes`.
