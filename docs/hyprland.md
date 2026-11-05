@@ -121,7 +121,10 @@ rejects (`bezier` or `spring`).
   as they are), `org.freedesktop.ScreenSaver` inhibits (browsers and video
   players; Omarchy's open bug #6475 is not owning it), and logind's `Lock`
   and `PrepareForSleep` (`loginctl lock-session` from mutectl's Lock AFK, lock
-  before suspend and hibernate within a delay inhibitor); it forwards to the
+  before suspend and hibernate within a delay inhibitor), and BlueZ's pairing
+  agent (`org.bluez.Agent1` on the system bus, the default one: the code to
+  compare or to type, a PIN, a yes or no), whose answers come back on the
+  session bus (`org.shadesmar.Spanreed`, from `busctl`); it forwards to the
   shell with `qs ipc call`.
 - **Shortcuts are declared once.** lodestar turns every `shortcuts:` entry
   with `run:` into a Hyprland bind (a generated Lua file the config requires),
@@ -250,8 +253,9 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    calls), the overview (Meta+Tab), and the bar's popups, as Plasma's tray:
    the clipboard's history (cliphist, recorded by clipboard-history.service),
    the network (Wi-Fi, the cable, the VPNs through nmcli; nm-applet stays
-   for its prompts, its icon hidden), Bluetooth (no pairing agent yet: a
-   device wanting a PIN typed needs bluetoothctl), the sound (devices,
+   for its prompts, its icon hidden), Bluetooth (pairing through spanreed's
+   agent: a card above the bar, a window of its own, as a popup of the bar
+   can't take the keyboard), the sound (devices,
    volume, the microphone; Meta+~), the battery (power profiles,
    brightness).
 4. **lumar, from scratch.** One palette, templates rendered at apply (Go

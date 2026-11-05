@@ -1,15 +1,18 @@
 // spanreed: shadesmar's helper for what QML can't do (docs/hyprland.md),
-// owning D-Bus names. For now Plasma's OSD service, which backdrop and
-// spotify-vol call (org.kde.plasmashell, /org/kde/osdService), passed on to
-// the shell's OSD with qs ipc call. Hyprland's session only: in Plasma,
-// plasmashell owns the name.
+// owning D-Bus names. Plasma's OSD service, which backdrop and spotify-vol
+// call (org.kde.plasmashell, /org/kde/osdService), passed on to the shell's
+// OSD with qs ipc call; and the Bluetooth pairing agent (bluetooth.go).
+// Hyprland's session only: in Plasma, plasmashell owns the name and
+// bluedevil is the agent.
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/godbus/dbus/v5/introspect"
@@ -21,27 +24,47 @@ const (
 	osdName = "org.kde.osdService"
 )
 
+// dev: in a dev rig (modules/hyprland/dev), which shares the machine's
+// system bus.
+func dev() bool {
+	return os.Getenv("HYPR_DEV") != ""
+}
+
+// shell calls function fn of the shell's IPC target (qs ipc call):
+// shadesmar's, or in a dev rig the shell at $SPANREED_SHELL, by path, as
+// the rig's shell and the session's are the same config.
+func shell(target, fn string, args ...string) error {
+	which := []string{"-c", "shadesmar"}
+	if p := os.Getenv("SPANREED_SHELL"); p != "" && dev() {
+		which = []string{"-p", p}
+	}
+	cmd := exec.Command("qs", append(append(which, "ipc", "call", target, fn), args...)...)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
 // osd serves the methods of Plasma's OSD service that our tools call.
 type osd struct{}
 
 // ShowText: a message with an icon (backdrop: a wallpaper liked…).
 func (osd) ShowText(icon, text string) *dbus.Error {
-	go shell("text", icon, text)
+	go show("text", icon, text)
 	return nil
 }
 
 // MediaPlayerVolumeChanged: a player's volume (spotify-vol).
 func (osd) MediaPlayerVolumeChanged(percent int32, player, icon string) *dbus.Error {
-	go shell("player", strconv.Itoa(int(percent)), player, icon)
+	go show("player", strconv.Itoa(int(percent)), player, icon)
 	return nil
 }
 
-// shell calls the OSD's function fn in shadesmar (Osd.qml), off the
+// show calls the OSD's function fn in shadesmar (Osd.qml), off the
 // caller's call: the callers wait for a reply.
-func shell(fn string, args ...string) {
-	cmd := exec.Command("qs", append([]string{"-c", "shadesmar", "ipc", "call", "osd", fn}, args...)...)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		log.Printf("osd %s: %v: %s", fn, err, out)
+func show(fn string, args ...string) {
+	if err := shell("osd", fn, args...); err != nil {
+		log.Printf("osd %s: %v", fn, err)
 	}
 }
 
@@ -80,6 +103,10 @@ func main() {
 	if reply != dbus.RequestNameReplyPrimaryOwner {
 		log.Printf("%s is taken (Plasma's session?)", busName)
 		os.Exit(1)
+	}
+	bluetooth := func(fn string, args ...string) error { return shell("bluetooth", fn, args...) }
+	if err := serveAgent(conn, bluetooth); err != nil {
+		log.Printf("bluetooth: no pairing agent: %v", err)
 	}
 	select {}
 }

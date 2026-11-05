@@ -1,5 +1,5 @@
 [Unit]
-Description=spanreed: shadesmar's D-Bus helper (Plasma's OSD service)
+Description=spanreed: shadesmar's D-Bus helper (Plasma's OSD service, the Bluetooth pairing agent)
 PartOf=graphical-session.target
 After=graphical-session.target
 # in Plasma, plasmashell owns the name
