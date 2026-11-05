@@ -29,16 +29,10 @@ hl.env("XDG_CONFIG_DIRS", dirs, not os.getenv("HYPR_DEV"))
 hl.env("XCURSOR_THEME", "breeze_cursors")
 hl.env("XCURSOR_SIZE", "24")
 
--- The lid, as Plasma has it (hyprland-lid.service keeps logind off it, and
--- off the Sleep key, which is mutectl's Lock AFK):
--- nothing at the desk, the screen locked on the charger, suspend on battery
--- (locked first by hypridle).
-hl.bind("switch:on:Lid Switch", function()
-    if #hl.get_monitors() > 1 then
-        return
-    end
-    hl.exec_cmd("if grep -qx 1 /sys/class/power_supply/AC/online; then loginctl lock-session; else systemctl suspend; fi")
-end, { locked = true })
+-- The lid does nothing, at the desk or not, on the charger or on battery: no
+-- lock, no suspend (docs/hyprland.md, Decisions). hyprland-lid.service keeps
+-- logind off it, whose default would suspend, and off the Sleep key, which
+-- is mutectl's Lock AFK.
 
 -- KDE Connect's tray icon (Plasma shows it as a widget instead). Not in the
 -- dev rigs: their daemon would be a second one with the same identity.
