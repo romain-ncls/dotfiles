@@ -52,11 +52,13 @@ WallpaperItem {
     }
     onVisibleChanged: if (visible) released = false
 
-    // On the lock screen, made once every screen shows its painting (below), hidden under it until
-    // it uncovers the world. Loaded by URL, as Scene.qml below: WorldScene.qml and life.js are
-    // only compiled then, not before the painting's first frame (the lock screen compiles it all
-    // at every lock). Its properties come with it, bindings included. Compiled and made
-    // asynchronously, a little at a time between frames: made at once, it would hold the
+    // On the lock screen, made once every screen shows its painting (below), and drawn under it
+    // from then on, the painting opaque until it washes away: its images go to the GPU as they
+    // come, a few at a time, rather than all in the frame it first shows in (50 to 80 ms: a stop
+    // between the brush and the world). Loaded by URL, as Scene.qml below: WorldScene.qml and
+    // life.js are only compiled then, not before the painting's first frame (the lock screen
+    // compiles it all at every lock). Its properties come with it, bindings included. Compiled
+    // and made asynchronously, a little at a time between frames: made at once, it would hold the
     // painting's brush back (Painting.qml).
     Loader {
         id: view
@@ -64,7 +66,6 @@ WallpaperItem {
         asynchronous: true
         active: root.seated && root.configuration.SceneId === "world" && !root.released
             && (!(painting.item?.present ?? false) || painting.item.up)
-        visible: !(painting.item?.present ?? false) || painting.item.uncover
 
         Component.onCompleted: setSource(Qt.resolvedUrl("WorldScene.qml"), {
             coverFirst: Qt.binding(() => !(painting.item?.present ?? false)),

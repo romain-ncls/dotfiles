@@ -2,10 +2,10 @@
  * The world painted in watercolor (tools/world.py build_painting), on screen in the first frame
  * while the world is made behind it (main.qml): locking shows the world being painted on dark
  * paper rather than black. The brush moves on the render thread (UniformAnimator), so it keeps
- * painting at its even pace while the GUI thread makes the world; once the world is drawn under it
- * and the brush has been everywhere, the world washes in through it at that same pace, light
- * first. Painted from the day's colours, it's veiled by the hour's light as the world is. Plain
- * QtQuick, like WorldScene.
+ * painting at its even pace while the GUI thread makes the world under it; once the world has
+ * everything it shows and the brush is all but done, the world washes in through it at that same
+ * pace, light first, the one meeting the other. Painted from the day's colours, it's veiled by the
+ * hour's light as the world is. Plain QtQuick, like WorldScene.
  */
 import QtQuick
 import QtQuick.Window
@@ -57,7 +57,7 @@ Item {
     property bool shown: false
     // Every screen of the process shows its painting (painting.js), or it has waited long enough.
     property bool allShown: false
-    // Then the worlds may be made (main.qml), a moment later (below).
+    // Then the worlds may be made, under the paintings (main.qml), a moment later (below).
     property bool up: false
     // Washed away: the world alone shows.
     property bool gone: false
@@ -157,8 +157,7 @@ Item {
                                                           piece.width / root.width, piece.height / root.height)
                 property real clock: 0
                 property real speed: root.speed
-                property real end: 0
-                property real endFor: root.endFor
+                property real washAt: root.washAt
                 property real washFor: root.washFor
                 property color veil: root.veil
                 property color light: root.light
@@ -166,7 +165,8 @@ Item {
                 fragmentShader: Qt.resolvedUrl("shaders/watercolor.frag.qsb")
             }
             // The brush's clock, in seconds: started as it's made, it runs from the first frame,
-            // on the render thread.
+            // on the render thread; the world washes in on it too (washAt), for an animator
+            // started later, through the GUI thread's animation clock, began 0.1 s late.
             UniformAnimator {
                 target: brush
                 uniform: "clock"
@@ -174,16 +174,6 @@ Item {
                 to: 600
                 duration: 600000
                 running: true
-            }
-            // The end's (leaving, below), on the render thread too; then the world alone shows.
-            UniformAnimator {
-                target: brush
-                uniform: "end"
-                from: 0
-                to: 1
-                duration: root.endFor * 1000
-                running: root.leaving
-                onFinished: root.gone = true
             }
         }
     }
@@ -205,7 +195,7 @@ Item {
     property real shownAt: 0
     Connections {
         target: root.Window.window
-        enabled: root.present && !root.leaving
+        enabled: root.present && !root.gone
 
         function onFrameSwapped() {
             if (!root.shown) {
@@ -216,12 +206,11 @@ Item {
             if (!root.allShown && Date.now() - root.shownAt >= 400) {
                 root.allShown = true; // a screen whose painting never showed (switched off) holds no one back
             }
-            if (!root.covered && Date.now() - root.shownAt >= root.coverAt * 1000) {
-                root.covered = true;
+            if (!root.due && Date.now() - root.shownAt >= root.dueAt * 1000) {
+                root.due = true;
             }
-            if (root.uncover && ++root.framesUncovered >= 2 && !root.framed) {
-                root.framed = true;
-                Paintings.framed();
+            if (root.leaving && Date.now() - root.shownAt >= (root.washAt + root.washFor) * 1000 + 100) {
+                root.gone = true; // washed away (with a frame to spare)
             }
         }
     }
@@ -242,55 +231,56 @@ Item {
         onTriggered: root.up = true
     }
 
-    // The world behind may show (main.qml) once it has everything it shows and the brush has been
-    // everywhere, under the painting: its images go to the GPU at its first frame, which holds the
-    // brush back a moment. Once that frame is drawn (the next but one) on every screen
-    // (painting.js), the end: the worlds wash in through the paintings together at the brush's
-    // pace, light first as the washes were painted: each place goes from painting to world in a few
-    // frames along a ragged front, rather than both showing everywhere as a fade would.
-    readonly property bool uncover: revealed && covered
-    // Not before the brush has been everywhere: 93% of its time, which with the brush a tenth
-    // quicker than its time (watercolor.frag's behind) is all of it, so that the world never comes
-    // through where it hasn't painted (bare: the screen as it was) nor while it's still going.
-    // Should no frame tell it, a while after the world is in.
-    property bool covered: false
-    readonly property real coverAt: 0.93 / speed
+    // The world behind (main.qml: drawn under the painting from the moment it's made, the
+    // painting opaque) may come through once it has everything it shows and the brush is all but
+    // done (due); once it may on every screen (painting.js), the end: the worlds wash in through
+    // the paintings together at the brush's pace, in the order the washes were painted, light
+    // first, timed by how much changes (watercolor.frag) so that it shows from the start: each
+    // place goes from painting to world in a few frames along a ragged front, rather than both
+    // showing everywhere as a fade would.
+    readonly property bool uncover: revealed && due
+    // Due as the brush ends, its last 50 ms: a place takes a moment to go from painting to world
+    // (watercolor.frag's soft), as the brush's last washes take one to come, the one meeting the
+    // other. Started once the brush was done, the world seemed to wait (0.2 s: its first frame,
+    // two more waited for, and its first washes, much like the painting, hardly showing). Should
+    // no frame tell it, a while after the world is in.
+    property bool due: false
+    readonly property real dueAt: 1 / (1.1 * speed) - 0.05 // the brush's end (watercolor.frag's behind)
     Timer {
         interval: 2000
-        running: root.revealed && !root.covered
-        onTriggered: root.covered = true
+        running: root.revealed && !root.due
+        onTriggered: root.due = true
     }
-    property int framesUncovered: 0
     property bool framed: false
-    property bool leaving: false
-    // The end's timing, in seconds (watercolor.frag): the brush's last, should it not be done yet
-    // (set as it starts, leave()), and the world washing in meanwhile, from the start.
-    property real finishFor: 0
-    readonly property real endFor: Math.max(finishFor, washFor)
-    // How long the brush would take to come to the end from now.
-    function finishNow() {
-        return Math.max(0, 1 - speed * (Date.now() - shownAt) / 1000) / speed;
+    onUncoverChanged: {
+        if (uncover && !framed) {
+            framed = true;
+            Paintings.framed();
+        }
     }
-    // The end, the brush taking finish seconds to come to it.
-    function leave(finish) {
+    property bool leaving: false
+    // When the world starts washing in, on the brush's clock (watercolor.frag): from now, the
+    // clock counting from the first frame, as shownAt does. Far off until then.
+    property real washAt: 1e6
+    function leave() {
         if (!leaving) {
-            finishFor = finish;
+            washAt = (Date.now() - shownAt) / 1000;
             leaving = true;
         }
     }
     Timer {
         interval: 500 // should no frame come, or another screen's not
-        running: root.uncover && !root.leaving
+        running: root.uncover && root.due && !root.leaving
         onTriggered: {
-            root.leave(root.finishNow());
+            root.leave();
             Paintings.framed();
         }
     }
-    // Should no piece be there to wash in (none on this screen), gone at once; should the end
-    // never be told, gone a while after.
+    // Should no piece be there to wash in (none on this screen), gone at once; should no frame
+    // tell it (onFrameSwapped), gone a while after.
     onLeavingChanged: if (leaving && pieces.length === 0) gone = true
     Timer {
-        interval: root.endFor * 1000 + 1000
+        interval: root.washFor * 1000 + 1000
         running: root.leaving
         onTriggered: root.gone = true
     }

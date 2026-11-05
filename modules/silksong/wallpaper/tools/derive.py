@@ -16,7 +16,8 @@
   there, as Qt itself reads them from the tiles (tools/derive.qml): already scaled to the screen,
   and cut to the bands of rows that hold anything. A screen then reads those few rather than
   every tile it shows, whole, and keeps about half as many texels. The world's painting (which
-  the lock screen shows in its first frame) as one image of each screen's size, and its timing.
+  the lock screen shows in its first frame) as one image of each screen's size, and its timing,
+  with the world's own as it washes in through the painting there (with_wash).
 - Sheet sets, in hornet@<density>/: each sheet Sprites.qml lists at each screen's density, at the
   size the wallpaper asks for it there, scaled by Qt itself: read as it is, rather than read whole
   and scaled down.
@@ -41,7 +42,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageChops
 
 HERE = Path(__file__).resolve().parent
 DATA = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "silksong-wallpaper"
@@ -142,26 +143,54 @@ def cut(drawn, out, folder):
     return pieces
 
 
-def whole_view(drawn, size, out, folder, stem, scale=1.0):
-    """A screen's view of an opaque image laid as tiles (the world's painting, its timing) in one
-    image of its size, views/<stem>.png: the texels it shows of each tile, where they go. There's
-    nothing to cut away; one image is read sooner than several. Smaller by scale where it's smooth
-    (the painting's timing, a quarter): stretched back as it's drawn."""
-    img = Image.new("RGBA", tuple(size), (0, 0, 0, 255))
+def whole(drawn, size, out, over=None):
+    """A screen's view of an image laid as tiles in one image of its size: the texels it shows of
+    each tile, where they go; opaque ones (the world's painting, its timing) on black, a layer's
+    over what's under it (over)."""
+    img = over.copy() if over is not None else Image.new("RGBA", tuple(size), (0, 0, 0, 255))
     for texels in drawn:
         with Image.open(out / texels["file"]) as piece:
-            piece.load()
+            piece = piece.convert("RGBA")
         w, h = round(piece.width * texels["sx"]), round(piece.height * texels["sy"])
         if (w, h) != piece.size:
             piece = piece.resize((w, h), Image.BILINEAR)
-        img.paste(piece, (round(texels["fx"] + texels["tx"] * texels["sx"]), round(texels["fy"] + texels["ty"] * texels["sy"])))
-    if scale != 1.0:
-        img = img.resize((round(img.width * scale), round(img.height * scale)), Image.LANCZOS)
+        x, y = round(texels["fx"] + texels["tx"] * texels["sx"]), round(texels["fy"] + texels["ty"] * texels["sy"])
+        if over is not None:
+            img.alpha_composite(piece, (max(0, x), max(0, y)), (max(0, -x), max(0, -y)))
+        else:
+            img.paste(piece, (x, y))
+    return img
+
+
+def whole_view(img, folder, stem):
+    """A screen's whole view (whole()), views/<stem>.png: there's nothing to cut away; one image is
+    read sooner than several."""
     file = f"views/{stem}.png"
     data = io.BytesIO()
     img.save(data, format="PNG")
     put(folder / file, data.getvalue())
     return file
+
+
+def with_wash(time_, paint, world):
+    """The painting's timing (time_: when the brush reaches each pixel, red), with the world's
+    own in blue: when it washes in there, through the painting (plasma/contents/ui/Painting.qml),
+    in the same order, but spread by how much it changes, from the painting to the world (at
+    rest: its layers, without the air nor anyone in it), so that it shows evenly. Else, the world
+    being most like the painting where the painting's broad first washes are, it hardly showed
+    for its first quarter. From 1 to 255: 0, a timing made before, and the world follows red."""
+    change = ImageChops.difference(paint.convert("RGB"), world.convert("RGB")).convert("L")
+    change = change.resize(time_.size, Image.BOX)
+    when = time_.getchannel("R")
+    weights = [0] * 256
+    for w, c in zip(when.tobytes(), change.tobytes()):
+        weights[w] += c
+    total, before, lut = max(sum(weights), 1), 0, []
+    for w in weights:
+        lut.append(1 + round(254 * (before + w / 2) / total))
+        before += w
+    red, green, _, alpha = time_.split()
+    return Image.merge("RGBA", (red, green, when.point(lut), alpha))
 
 
 def main():
@@ -191,8 +220,14 @@ def main():
             paint, time_ = layers.pop("paint", []), layers.pop("time", [])
             views.append(dict(view, layers={name: cut(texels, out, folder) for name, texels in layers.items()}))
             if paint and time_:
-                views[-1]["painting"] = {"paint": whole_view(paint, view["px"], out, folder, f"painting_{i}"),
-                                         "time": whole_view(time_, view["px"], out, folder, f"painting_time_{i}", 0.25)}
+                # (its timing a quarter of the size, where it's smooth: stretched back as it's drawn)
+                paint, time_ = whole(paint, view["px"], out), whole(time_, view["px"], out)
+                time_ = time_.resize((round(time_.width / 4), round(time_.height / 4)), Image.LANCZOS)
+                at_rest = Image.new("RGBA", tuple(view["px"]), (0, 0, 0, 255))
+                for name in ("back", "mid", "front"):
+                    at_rest = whole(layers.get(name, []), view["px"], out, at_rest)
+                views[-1]["painting"] = {"paint": whole_view(paint, folder, f"painting_{i}"),
+                                         "time": whole_view(with_wash(time_, paint, at_rest), folder, f"painting_time_{i}")}
         for set_folder, px_per_unit in drawn["sheetSets"].items():
             sheet_sets[set_folder] = px_per_unit
             for name in dict.fromkeys(Path(clip["file"]).name for clip in clips.values()):
