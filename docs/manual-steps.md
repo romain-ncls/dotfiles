@@ -160,6 +160,7 @@ new Secure Boot keys, a db/dbx update (fwupd), a BIOS update or reset. Re-bind:
   networks (their passwords are in Bitwarden). The profiles: `nmcli
   connection import type openvpn file <file>`, then name the connection
   "Agora" or "Agora SG IHM" (the names `modules/work/vpn-dns` looks for)
-  and give it the user name, the password kept by the wallet and only the
+  and give it the user name (Agora: `romain.nicolas`, Agora SG IHM:
+  `soeman.romain.nicolas`), the password kept by the wallet and only the
   VPN's own routes: `nmcli connection modify <name> +vpn.data
-  "username=romain.nicolas, password-flags=1" ipv4.never-default yes`.
+  "username=<user>, password-flags=1" ipv4.never-default yes`.
