@@ -305,7 +305,9 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    among mockups), the screens' sizes read from their EDID as KWin does
    (Hyprland's whole centimetres made it slow and jerky). The desktop keeps
    shadesmar's wallpaper from Backdrop (5 Nov 2026): Silksong is the lock
-   screen's only. Next: the bench, on the lock screen.
+   screen's only. The bench is the lock screen's, as `lock-screen` runs it, in
+   the headless rig (modules/silksong's `tools/lockbench.sh`; `bench.py` stays
+   Plasma's). Left: the lid, suspend and hibernate on the machine.
 6. **Then whatever was missed**: a grid overview, Klipper-like actions,
    more keyboard-driven binds and terminal apps.
 

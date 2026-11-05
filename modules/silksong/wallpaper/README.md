@@ -148,6 +148,17 @@ settings say when it stands still there (see Runtime).
   screen's every tick, `--trace-frames` sums up, for the grass, the Bell Beast, the bells, Hornet
   and the small life, how often each changed and any frame skipped, held or drawn late;
   `--profile` the render times of every frame.
+- `lockbench.sh`: Hyprland's lock screen as `lock-screen` runs it (`quickshell/`), in a headless
+  Hyprland (`modules/hyprland/dev/headless.sh`), locked, held and unlocked with a test password a
+  few times over: when the paintings show, the worlds are in, wash in and the paintings are
+  gone, each screen's frames over that time (the longest gap, those over 25 ms), the GUI
+  thread's longest hold, then held locked CPU, GPU and frames a second, and memory; their
+  medians. `--load N` runs N busy loops meanwhile. On 2026-11-05 (wandersail): the paintings
+  show 0.47 s after it starts, the worlds are in 0.48 s later and wash in at 1.17 s, gone at
+  2.5 s, no frame over 25 ms; locked, 40 % of a core, 28 % of the GPU (280 ms a second), 60 fps.
+  Under 10 busy loops on its 12 threads, the worlds come after the brushes (the pause back) and
+  a few frames are missed, worse as the CPU takes the laptop's power from the GPU; a higher CPU
+  weight for the lock doesn't help.
 
 ## Lock screen
 
