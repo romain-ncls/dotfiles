@@ -290,7 +290,8 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    and the second text color. The wallpaper: shadesmar's, the newest of the
    ones liked in Backdrop (~/Pictures/Backdrop). The GNOME apps are in,
    Hyprland's defaults through hyprland-mimeapps.list; Brave's theme too
-   (docs/manual-steps.md); the file chooser is Nautilus's. Done.
+   (docs/manual-steps.md); the file chooser is GTK's (Nautilus's needs
+   GNOME Shell). Done.
 5. **Silksong on desktop and lock screen.** The wrappers above, the bench on
    headless Hyprland, then shadesmar's lock in place of hyprlock: lid,
    suspend, hibernate, Lock AFK, a crash of the shell while locked. Done so
@@ -406,7 +407,7 @@ costs.
 | archives | File Roller, Nautilus's own extract | Ark |
 | terminal | Ghostty | Konsole |
 | screenshots | grim, slurp, shadesmar | Spectacle |
-| file chooser | Nautilus's (xdg-desktop-portal-gnome, `FileChooser` only in `hyprland-portals.conf`; the rest from xdg-desktop-portal-hyprland and -gtk), for the apps that ask the portal: GTK 4's (by default now), Brave | KDE's |
+| file chooser | GTK's (xdg-desktop-portal-gtk, `FileChooser` in `hyprland-portals.conf`), for the apps that ask the portal: GTK 4's (by default now), Brave. Not Nautilus's: xdg-desktop-portal-gnome serves only its settings outside GNOME Shell ("Non-compatible display server") | KDE's |
 
 Kate goes (not used). Still Qt: qBittorrent, EasyEffects (Kirigami since
 8), KDE Connect, qrca, and the Qt apps' own file dialog (KDE's, drawn in
