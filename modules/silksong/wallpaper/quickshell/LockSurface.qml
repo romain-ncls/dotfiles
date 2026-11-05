@@ -45,6 +45,8 @@ Item {
     property url capture: ""
     // Hornet's day as shell.qml's planner plans it (WorldScene's planned).
     property var planned: null
+    // The world standing still (on battery: shell.qml's onBattery).
+    property bool paused: false
     signal paintingGone()
     Image {
         id: captureImage
@@ -78,7 +80,7 @@ Item {
                 everyFrame: true,
                 nearHz: 60,
                 watchFiles: false,
-                paused: false,
+                paused: Qt.binding(() => root.paused),
                 planned: Qt.binding(() => root.planned)
             })
         }

@@ -152,8 +152,10 @@ settings say when it stands still there (see Runtime).
   Hyprland (`modules/hyprland/dev/headless.sh`), locked, held and unlocked with a test password a
   few times over: when the paintings show, the worlds are in, wash in and the paintings are
   gone, each screen's frames over that time (the longest gap, those over 25 ms), the GUI
-  thread's longest hold, then held locked CPU, GPU and frames a second, and memory; their
-  medians. `--load N` runs N busy loops meanwhile. On 2026-11-05 (wandersail): the paintings
+  thread's longest gap between syncs, then held locked CPU, GPU and frames a second, and memory;
+  their medians. `--load N` runs N busy loops meanwhile, `--battery` has the lock think it's on
+  battery (its worlds then still: locked, 1 % of a core, 3 ms a second of the GPU, no frames).
+  On 2026-11-05 (wandersail): the paintings
   show 0.47 s after it starts, the worlds are in 0.48 s later and wash in at 1.17 s, gone at
   2.5 s, no frame over 25 ms; locked, 40 % of a core, 28 % of the GPU (280 ms a second), 60 fps.
   Under 10 busy loops on its 12 threads, the worlds come after the brushes (the pause back) and
@@ -217,9 +219,13 @@ the shader's), its unpainted part showing the image, and the images are let go o
 has washed away. (Moving the capture itself onto its lock surface put some on the wrong screen:
 Quickshell gives a lock surface its screen after making it, and a capture can only be in one
 place.) Without every screen's image within 400 ms, the screens start on the dark paper. The brush
-and the world keep the dark paper's pace (Runtime): the world washes in as the brush ends, and
-where the brush hasn't been yet the painting draws the image itself, opaque
-(`Painting.qml`'s `ground`), rather than leave holes the world would show through. To see a
+and the world keep the dark paper's pace (Runtime): the world washes in while the brush paints
+its last washes, and where the brush hasn't been yet the painting draws the image itself, opaque
+(`Painting.qml`'s `ground`), rather than leave holes the world would show through. On battery
+the worlds stand still (`shell.qml`'s `onBattery`, UPower's): the moment the lock came at,
+painted and washed in as ever, then still, until it's on the charger again, when they go on from
+the moment it is; running, they take 40 % of a core and a quarter of the GPU for as long as it's
+locked, still 1 % and 3 ms a second (`tools/lockbench.sh --battery`). To see a
 lock's frames, `touch $XDG_RUNTIME_DIR/silksong-lock.trace` before locking: `lock-screen` has the
 next lock log Qt's render loop timing in Quickshell's `log.log`.
 The scene and the prompt are used as they are, by `file:` URL through the links `scene` and
