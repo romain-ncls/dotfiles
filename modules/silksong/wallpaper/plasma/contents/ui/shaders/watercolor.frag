@@ -5,10 +5,9 @@
 // the shafts glazed over it as strong as the hour has them, under its veil as the world is. Then
 // the world under it washes in the same way, light first: the painting goes clear wash by wash.
 // All of it told by two clocks (Painting.qml): the brush's, from the first frame, at which it
-// paints at `speed`, then from `calm` on slower and slower, easing towards `slowest`, while the
-// world is made; and the end's, once the world is drawn under it, from which the brush goes on at
-// the pace it had then, neither faster nor slower, and the world washes in behind it at that same
-// pace (`washFor` seconds: the whole painting's time at it), so that neither ever outruns the other.
+// paints at an even `speed` to the end, the world made meanwhile; and the end's, once the world is
+// drawn under it and the brush has been everywhere, from which the world washes in at the brush's
+// same pace (`washFor` seconds: the whole painting's time at it), in the order it was painted.
 // Bare, it paints with no paper, over what's under it (the screen as it was, on Hyprland's lock
 // screen). Compiled with qsb (see README).
 #version 440
@@ -20,19 +19,15 @@ layout(std140, binding = 0) uniform buf {
     mat4 qt_Matrix;
     float qt_Opacity;
     float clock;   // seconds since the brush started
-    float speed;   // of the painting's time per second, at first
-    float calm;    // how far it gets at that pace, before slowing
+    float speed;   // of the painting's time per second
     float end;     // how far the end is, 0..1 of endFor
     float endFor;  // the end's seconds
-    float washFor; // of which the world's washing in, from the start: the painting's time at the pace
-                   // the brush had as the end began
+    float washFor; // of which the world's washing in, from the start: the painting's time at speed
     vec4 veil;      // the hour's light: its colour, and how much of it (a); premultiplied, as
                     // ShaderEffect passes colours
     vec4 light;     // the shafts' colour, and how strong the hour has them (a); premultiplied
     float bare;     // 1: no paper: where the brush hasn't been, the ground shows (the screen as
                     // it was, on Hyprland's lock screen: Painting.qml bare)
-    float ramp;     // seconds the brush takes to get up to speed (pace())
-    float slowest;  // the pace the brush eases towards from calm on, in painting a second
     vec4 groundRect; // bare: the part of the ground (the whole screen) this piece covers
 };
 
@@ -64,36 +59,10 @@ float ragged(vec2 px) {
     return n + 0.2 * noise(p);
 }
 
-// How far the brush's pace alone takes it after c seconds: getting up to speed over the first
-// `ramp` seconds (none on the dark paper; over the screen as it was, from a standstill), then at
-// speed.
-float run(float c) {
-    return c < ramp ? speed * c * c / (2.0 * ramp) : speed * (c - 0.5 * ramp);
-}
-float runOf(float c) {
-    return c < ramp ? speed * c / ramp : speed;
-}
-// How far the painting is after c seconds, before the end: so, then from calm on easing towards
-// the slowest pace (pace's share of the run's going from 1 to slowest / speed), on to the end and
-// past it (its progress stops there): its pace has no jump.
-float pace(float c) {
-    float p = run(c);
-    float f = slowest / speed;
-    return p <= calm ? p
-        : calm + f * (p - calm) + (1.0 - f) * (1.0 - calm) * (1.0 - exp(-(p - calm) / (1.0 - calm)));
-}
-// And its pace then.
-float paceOf(float c) {
-    float p = run(c);
-    float f = slowest / speed;
-    return p <= calm ? runOf(c) : runOf(c) * (f + (1.0 - f) * exp(-(p - calm) / (1.0 - calm)));
-}
-
 void main() {
-    // The end, t seconds in: the brush going on at the pace it had as it started (the clocks run
-    // together: clock - t then), the world washing in.
+    // The brush, at its even pace; and the end, t seconds in, the world washing in.
     float t = end * endFor;
-    float progress = min(1.0, pace(clock - t) + paceOf(clock - t) * t);
+    float progress = min(1.0, speed * clock);
     float develop = clamp(t / washFor, 0.0, 1.0);
     vec4 times = texture(timing, qt_TexCoord0);
     float when = times.r;
