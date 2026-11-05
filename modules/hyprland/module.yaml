@@ -20,7 +20,6 @@ packages:
   # Hyprland's defaults for them in hyprland-mimeapps.list; Plasma keeps KDE's
   - nautilus
   - gvfs # Nautilus's trash and mounts (Plasma uses KIO)
-  - xdg-desktop-portal-gnome # the file chooser apps open is Nautilus's (hyprland-portals.conf)
   - papers
   - loupe
   - file-roller
