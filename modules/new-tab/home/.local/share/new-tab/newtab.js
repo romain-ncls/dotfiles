@@ -399,7 +399,15 @@ function masonry(container, islands) {
 		}
 	};
 	layout();
-	new ResizeObserver(layout).observe(container);
+	// After a resize, the columns change on the next frame, not in the
+	// observer's callback: that would resize what it observes, which
+	// Chromium reports as an error ("ResizeObserver loop completed with
+	// undelivered notifications").
+	let frame = 0;
+	new ResizeObserver(() => {
+		cancelAnimationFrame(frame);
+		frame = requestAnimationFrame(layout);
+	}).observe(container);
 }
 
 tick();
