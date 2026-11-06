@@ -103,7 +103,7 @@ main {
 	border-top: 1px solid var(--line);
 }
 
-/* A list of links: the favicon on a light tile, so dark ones show too. */
+/* A list of links. */
 .links { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .link {
 	display: flex;
@@ -114,17 +114,42 @@ main {
 	transition: background .15s;
 }
 .link:hover { background: color-mix(in oklab, var(--text) 10%, transparent); }
+
+/* Favicons, at the size Brave keeps them (32px): as they are on the glass,
+   unless their kind says otherwise (faviconKind in newtab.js). What has
+   corners rounds them like the islands. */
 .icon {
+	--size: 32px;
+	--round: calc(var(--size) * .24);
 	flex: none;
 	display: grid;
 	place-items: center;
-	width: 32px;
-	height: 32px;
-	border-radius: 10px;
+	width: var(--size);
+	height: var(--size);
+}
+.icon > * {
+	width: var(--size);
+	height: var(--size);
+	filter: drop-shadow(0 1px 2px rgb(0 0 0 / .3));
+}
+.icon.square > * { border-radius: var(--round); }
+.icon.dark {
+	border-radius: var(--round);
 	background: color-mix(in oklab, var(--text) 92%, white);
 	box-shadow: 0 2px 6px rgb(0 0 0 / .25);
 }
-.icon img { width: 20px; height: 20px; }
+.icon.dark > * { width: max(62.5%, 12px); height: max(62.5%, 12px); filter: none; }
+.initial {
+	display: grid;
+	place-items: center;
+	border-radius: var(--round);
+	font-size: calc(var(--size) * .5);
+	font-weight: 700;
+	text-transform: uppercase;
+	color: var(--text2);
+	background: color-mix(in oklab, var(--text) 12%, transparent);
+	box-shadow: inset 0 0 0 1px var(--line);
+}
 .name { font-size: 14.5px; font-weight: 500; white-space: nowrap; }
 .note {
 	margin-left: auto;
@@ -177,7 +202,8 @@ main {
 	transition: background .15s;
 }
 .cell:hover { background: color-mix(in oklab, var(--tone) 28%, transparent); }
-.cell img { width: 16px; height: 16px; }
+.cell .icon { --size: 16px; }
+.cell .icon.none { display: none; }
 
 /* A tenant: a search of the tenant list, its results over the islands
    below; a name it doesn't know opens on each host. */

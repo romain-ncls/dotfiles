@@ -51,12 +51,53 @@ async function readJSON(path) {
 }
 
 // Brave's own favicon cache: no request leaves the machine, and a site
-// never visited gets the default icon.
+// never visited gets Brave's globe.
 function favicon(url, size = 32) {
 	const u = new URL(chrome.runtime.getURL("/_favicon/"));
 	u.searchParams.set("pageUrl", url);
 	u.searchParams.set("size", String(size));
 	return u.href;
+}
+
+// A favicon is shown as it is, on the glass, unless its pixels say
+// otherwise (the favicons come from the extension's origin, so a canvas reads
+// them):
+//   none    Brave has none, only its globe: the link's initial instead
+//   square  it fills its square to the corners: rounded like the rest
+//   dark    a dark shape on nothing, lost on the glass: on a light tile
+async function pixels(src) {
+	const img = new Image();
+	img.src = src;
+	await img.decode();
+	const g = new OffscreenCanvas(32, 32).getContext("2d", { willReadFrequently: true });
+	g.drawImage(img, 0, 0, 32, 32);
+	return g.getImageData(0, 0, 32, 32).data;
+}
+let globe;
+async function faviconKind(src) {
+	globe ??= pixels(favicon("https://new-tab.invalid/"));
+	const [d, g] = await Promise.all([pixels(src), globe]);
+	if (d.every((v, i) => v === g[i])) return "none";
+	const opaque = (x, y) => d[(y * 32 + x) * 4 + 3] > 200;
+	if (opaque(1, 1) && opaque(30, 1) && opaque(1, 30) && opaque(30, 30)) return "square";
+	// How bright its colors are (HSV's value: a vivid red shows on the
+	// glass as well as white does), weighed by how opaque.
+	let value = 0, weight = 0;
+	for (let i = 0; i < d.length; i += 4) {
+		value += Math.max(d[i], d[i + 1], d[i + 2]) / 255 * d[i + 3];
+		weight += d[i + 3];
+	}
+	return weight && value / weight < 0.4 ? "dark" : "";
+}
+
+function icon(url, name) {
+	const src = favicon(url);
+	const e = h("span", { class: "icon" });
+	faviconKind(src).then((kind) => {
+		e.append(kind === "none" ? h("span", { class: "initial" }, name.trim().charAt(0)) : h("img", { src, alt: "" }));
+		if (kind) e.classList.add(kind);
+	}, () => e.append(h("img", { src, alt: "" })));
+	return e;
 }
 
 // The clock, to the minute.
@@ -102,7 +143,7 @@ async function wallpaper() {
 function links(list) {
 	return h("ul", { class: "links" }, list.map((l) =>
 		h("li", {}, h("a", { class: "link", href: l.url, title: l.url },
-			h("span", { class: "icon" }, h("img", { src: favicon(l.url), alt: "" })),
+			icon(l.url, l.name),
 			h("span", { class: "name" }, l.name),
 			l.note && h("span", { class: "note" }, l.note)))));
 }
@@ -117,7 +158,7 @@ function grid(g) {
 				const url = row.urls?.[i];
 				if (!url) return h("span");
 				return h("a", { class: `cell ${tone}`, href: url, title: url },
-					g.icons && h("img", { src: favicon(url), alt: "" }), label);
+					g.icons && icon(url, label), label);
 			}),
 		];
 	}));

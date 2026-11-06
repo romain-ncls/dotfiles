@@ -288,7 +288,13 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   `~/.config/new-tab/links.js` (kept with the backups), a JS module rather
   than JSON for comments and trailing commas, imported by the page as is.
 - **Favicons come from Brave's own cache** (`_favicon`): nothing leaves the
-  machine, and a site shows a globe until it has been visited once.
+  machine. A site never visited has only Brave's globe; the page shows the
+  link's initial instead.
+- **Favicons sit on the glass as they are**, not on a tile: a square or round
+  icon on a square tile looked like a frame in a frame. The page reads each
+  one's pixels and decides by rule, not by site: one that fills its square
+  gets rounded corners, a dark one (lost on the dark glass) goes on a light
+  tile.
 - **The tenant search reads the infra repo with gh**, not with the browser's
   GitHub session: an extension can only use that session on github.com's web
   pages, and listing files there means scraping them; GitHub's API takes a
