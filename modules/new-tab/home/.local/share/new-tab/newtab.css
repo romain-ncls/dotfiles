@@ -37,8 +37,17 @@ a { color: inherit; text-decoration: none; }
 
 /* The wallpaper, darkened at the top for the clock and at the bottom for
    its caption: the copy first-paint.js sets, or a new picture fading in over
-   it (an img, placed the same way). */
-#wall { position: fixed; inset: 0; z-index: -1; background: var(--wall) center / cover; }
+   it (an img, placed the same way). The whole window wide (100vw), under a
+   scrollbar too: one appearing in a short window would resize it. */
+#wall {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	z-index: -1;
+	background: var(--wall) center / cover;
+}
 #wall img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: fade .4s ease-out; }
 #wall::after {
 	content: "";
@@ -63,9 +72,13 @@ a { color: inherit; text-decoration: none; }
 }
 :root:not(.ready) :is(#clock, .island, #caption) {
 	opacity: 0;
-	transform: translateY(20px);
 	animation: show 0s 1s forwards;
 }
+/* The caption only fades: it sits at the bottom of the page, and rising
+   from below it would push past it, a scrollbar for a moment, which moves
+   everything. The islands have the page's padding and the caption below
+   them. */
+:root:not(.ready) :is(#clock, .island) { transform: translateY(20px); }
 @keyframes show { to { opacity: 1; transform: none; } }
 
 main {

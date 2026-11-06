@@ -316,7 +316,11 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   moves on its own: an opacity on their parent would cut the islands'
   `backdrop-filter` off from the wallpaper while it fades. The wallpaper's
   copy is made a second later, once all that is over: making it holds the
-  page for a moment, which stalled the islands mid-rise.
+  page for a moment, which stalled the islands mid-rise. The caption, at
+  the bottom of the page, only fades: rising from below, it pushed past the
+  page's end, and the scrollbar that appeared for a moment moved everything.
+  The wallpaper spans the window under any scrollbar (`100vw`), so one
+  appearing in a short window doesn't resize it.
 - **The tenant search reads the infra repo with gh**, not with the browser's
   GitHub session: an extension can only use that session on github.com's web
   pages, and listing files there means scraping them; GitHub's API takes a
