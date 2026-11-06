@@ -36,9 +36,16 @@ a { color: inherit; text-decoration: none; }
 :focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
 
 /* The wallpaper, darkened at the top for the clock and at the bottom for
-   its caption. */
-#wall { position: fixed; inset: 0; z-index: -1; }
-#wall img { display: block; width: 100%; height: 100%; object-fit: cover; }
+   its caption. Its preview (first-paint.js) shows until it comes. */
+#wall { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
+#wall::before {
+	content: "";
+	position: absolute;
+	inset: -30px;
+	background: var(--preview) center / cover;
+	filter: blur(14px);
+}
+#wall img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 #wall.fade img { animation: fade .4s ease-out; }
 #wall::after {
 	content: "";

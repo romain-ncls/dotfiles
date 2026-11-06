@@ -120,22 +120,78 @@ function applyPalette(palette) {
 	}
 }
 
-// The wallpaper fades in only when it took a while: a picture already
-// decoded for another tab shows at once.
+// The wallpaper. Backdrop's pictures are large (a progressive 4K JPEG takes
+// 160 ms to decode), so the first tab to show one keeps two copies of it:
+// one the size of the screen, in the page's cache, which the next tabs
+// decode in 10 ms, and a small preview, which first-paint.js shows from the
+// first frame. The picture fades in only when it took a while.
+const wallKey = "new-tab.wall";
+const wallCache = "new-tab.wall";
+
+// The screen in device pixels (or the window, should it be larger): what a
+// copy of the picture has to cover.
+function screenSize() {
+	return [
+		Math.round(Math.max(screen.width, innerWidth) * devicePixelRatio),
+		Math.round(Math.max(screen.height, innerHeight) * devicePixelRatio),
+	];
+}
+
+// The picture at another size, well resampled, on a canvas.
+async function resized(img, width, height) {
+	const bitmap = await createImageBitmap(img, { resizeWidth: width, resizeHeight: height, resizeQuality: "high" });
+	const canvas = h("canvas", { width, height });
+	canvas.getContext("2d").drawImage(bitmap, 0, 0);
+	bitmap.close();
+	return canvas;
+}
+
+// Keeps the picture just shown for the next tabs: its preview, and when it
+// came from Backdrop's file, its copy the size of the screen (its own size
+// on a larger screen), in place of the last picture's.
+async function keepCopies(img, name, cache, key, makeCopy) {
+	const iw = img.naturalWidth, ih = img.naturalHeight;
+	if (makeCopy && cache) {
+		const [sw, sh] = screenSize();
+		const scale = Math.min(1, Math.max(sw / iw, sh / ih));
+		const canvas = await resized(img, Math.round(iw * scale), Math.round(ih * scale));
+		const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
+		for (const old of await cache.keys()) await cache.delete(old);
+		await cache.put(key, new Response(blob, { headers: { "x-screen": `${sw}x${sh}` } }));
+	}
+	const preview = (await resized(img, 320, Math.round(320 * ih / iw))).toDataURL("image/jpeg", 0.8);
+	localStorage.setItem(wallKey, JSON.stringify({ file: name, preview }));
+}
+
 async function wallpaper() {
 	const current = (await readJSON("backdrop/state.json"))?.current;
 	if (!current?.file) return;
+	const name = current.file.split("/").pop();
+	const start = performance.now();
+	// A copy made for a screen at least as large as this one.
+	const key = "https://new-tab.invalid/wall/" + encodeURIComponent(name);
+	const cache = await caches.open(wallCache).catch(() => null);
+	const copy = await cache?.match(key).catch(() => null);
+	const [cw, ch] = (copy?.headers.get("x-screen") ?? "0x0").split("x").map(Number);
+	const [sw, sh] = screenSize();
+	const fits = cw >= sw && ch >= sh;
 	const img = new Image();
 	img.alt = "";
-	img.src = "backdrop/current/" + encodeURIComponent(current.file.split("/").pop());
-	const start = performance.now();
+	img.src = fits ? URL.createObjectURL(await copy.blob()) : "backdrop/current/" + encodeURIComponent(name);
 	try {
 		await img.decode();
 	} catch {
+		if (fits) cache.delete(key); // a broken copy: the next tab makes another
 		return;
 	}
 	$("wall").classList.toggle("fade", performance.now() - start > 60);
 	$("wall").append(img);
+	if (fits) URL.revokeObjectURL(img.src);
+	let kept = null;
+	try {
+		kept = JSON.parse(localStorage.getItem(wallKey));
+	} catch {}
+	if (!fits || kept?.file !== name) requestIdleCallback(() => keepCopies(img, name, cache, key, !fits));
 	const lines = [h("strong", {}, current.title), h("span", {}, current.place), h("small", {}, current.credit)];
 	$("caption").append(current.infoUrl ? h("a", { href: current.infoUrl }, lines) : h("div", {}, lines));
 }

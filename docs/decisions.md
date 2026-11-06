@@ -295,6 +295,16 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   one's pixels and decides by rule, not by site: one that fills its square
   gets rounded corners, a dark one (lost on the dark glass) goes on a light
   tile.
+- **The wallpaper is there from the first frame.** Backdrop's pictures are
+  progressive 4K JPEGs, 160 ms to decode: every new tab opened on the dark
+  background first. The page keeps its own copies of the current picture: one
+  the size of the screen in its Cache Storage (10 ms to decode, so it's
+  usually ready before the first paint), and a small preview in
+  localStorage that `first-paint.js`, a plain script in the head, shows
+  blurred until then. The page makes them rather than Backdrop or a hook:
+  it knows the screen's size, and they follow each new picture by
+  themselves. After a change of picture, its first tab opens on the last
+  one's preview and fades to the new one.
 - **The tenant search reads the infra repo with gh**, not with the browser's
   GitHub session: an extension can only use that session on github.com's web
   pages, and listing files there means scraping them; GitHub's API takes a
