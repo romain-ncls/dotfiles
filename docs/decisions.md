@@ -273,10 +273,11 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 - **An unpacked extension that replaces the new tab** (`chrome_url_overrides`,
   6 Nov 2026): islands of work links over Backdrop's wallpaper, in the
   session's colors. As in Chrome, the address bar keeps the focus on an
-  extension's new tab, so typing a URL still works. Not the
-  `NewTabPageLocation` policy (any policy makes Brave say it's managed by an
-  organization), nor Brave's "homepage" new tab (a `file://` page can't read
-  Backdrop's state).
+  extension's new tab, so typing a URL still works. Not Brave's "homepage"
+  new tab, or the `NewTabPageLocation` policy pointed at a `file://` page:
+  such a page can't read Backdrop's state, nor Brave's favicons. Brave
+  loads it at each start (lodestar's `brave: extensions`), so there's no
+  "Load unpacked" by hand.
 - **Its data comes through symbolic links**, which `link-data` puts in the
   extension's folder: Brave serves an unpacked extension's files through links
   wherever they point, so the page reads Backdrop's `state.json` and current
@@ -334,8 +335,9 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 - **No footer**: under an extension's new tab Brave adds a bar of its own
   with the extension's name and a Customize button. `NewTabPage.FooterVisible`
   off in Brave's preferences (`json:`) hides it, as its right-click "Hide
-  footer" does; the `NTPFooterExtensionAttributionEnabled` policy would make
-  Brave managed.
+  footer" does. (The `NTPFooterExtensionAttributionEnabled` policy would too;
+  it was set aside because a policy makes Brave say it's managed by an
+  organization, but mutectl's policy already does.)
 
 ## Num Lock (numlock module)
 

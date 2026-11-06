@@ -1,8 +1,12 @@
-# Brave's new tab, an unpacked extension in ~/.local/share/new-tab
-# (loaded by hand, docs/manual-steps.md). Islands of links over Backdrop's
-# wallpaper, in the session's colors. The links are private (names of
-# servers and clients): ~/.config/new-tab/links.js, not in this repo; their
-# format is at the top of newtab.js.
+# Brave's new tab, an unpacked extension in ~/.local/share/new-tab, which
+# Brave loads at each start. Islands of links over Backdrop's wallpaper, in
+# the session's colors. The links are private (names of servers and
+# clients): ~/.config/new-tab/links.js, not in this repo; their format is at
+# the top of newtab.js.
+brave:
+  extensions:
+    - ~/.local/share/new-tab
+
 hooks:
   - run: link-data # the links, the tenants, Backdrop's state and lumar's palette, into the extension
     when: always

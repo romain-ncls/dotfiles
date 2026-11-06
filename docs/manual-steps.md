@@ -154,11 +154,10 @@ new Secure Boot keys, a db/dbx update (fwupd), a BIOS update or reset. Re-bind:
 - KDE Connect: the phone's *Lock AFK* command runs `lock-afk`.
 
 ### Apps
-- Brave: load the new tab unpacked from `~/.local/share/new-tab`
-  (`brave://extensions`, Developer mode, Load unpacked), and answer *Keep it*
-  when the first new tab asks. Its links (`links.js`) and the repo its tenant
-  search reads (`tenants.env`) are in `~/.config/new-tab`, from the backup;
-  the search needs gh logged in (`gh auth login`).
+- Brave's new tab (which Brave loads by itself): answer *Keep it* when the
+  first new tab asks. Its links (`links.js`) and the repo its tenant search
+  reads (`tenants.env`) are in `~/.config/new-tab`, from the backup; the
+  search needs gh logged in (`gh auth login`).
 - JetBrains Toolbox: install GoLand, WebStorm, PyCharm and DataGrip.
 - NetworkManager: import the company's OpenVPN profiles and the Wi-Fi
   networks (their passwords are in Bitwarden). The profiles: `nmcli
