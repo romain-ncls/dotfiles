@@ -1,22 +1,28 @@
 {
   "permissions": {
-    "defaultMode": "auto",
     "allow": [
       "mcp__raindrop__delete_bookmarks",
       "mcp__raindrop__delete_collections"
-    ]
+    ],
+    "defaultMode": "auto"
   },
   "statusLine": {
     "type": "command",
     "command": "bash ~/.claude/statusline-command.sh"
   },
+  "effortLevel": "xhigh",
   "tui": "fullscreen",
-  "wheelScrollAccelerationEnabled": false,
   "skipWorkflowUsageWarning": true,
   "theme": "dark",
   "editorMode": "normal",
   "preferredNotifChannel": "auto",
+  "wheelScrollAccelerationEnabled": false,
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "xhigh"
+    }
+  }
 }
