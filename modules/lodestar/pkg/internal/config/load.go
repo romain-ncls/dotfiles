@@ -39,6 +39,7 @@ type Config struct {
 	WindowRules      []KDEEntry
 	Shortcuts        []ShortcutItem
 	JSON             []JSONTarget
+	Brave            *BraveSpec // nil: lodestar leaves brave-flags.conf alone
 	Hooks            []HookItem
 	Limine           string // the hand-written part of limine.conf, or ""
 }
@@ -87,6 +88,13 @@ type HookItem struct {
 	Hook
 	Dir  string // the module or host folder
 	From string
+}
+
+// BraveSpec is Brave's merged command line: flags in module order, then the
+// extension folders (~/…, or absolute: a module's own folder).
+type BraveSpec struct {
+	Flags      []Item
+	Extensions []Item
 }
 
 // FirewallSpec is the merged firewall: the ports to open.
@@ -218,6 +226,9 @@ func Load(repo, host string) (*Config, error) {
 		if err := m.firewall(); err != nil {
 			return nil, err
 		}
+	}
+	if prev, ok := m.files[BraveFlagsFile]; ok && c.Brave != nil {
+		return nil, fmt.Errorf("%s: written by lodestar from the brave: entries, so %s can't provide it", BraveFlagsFile, prev.From)
 	}
 	for _, f := range m.files {
 		c.Files = append(c.Files, f)
@@ -484,7 +495,7 @@ func (m *merger) localPackage(from, dir string, pkg *Pkg) error {
 	return nil
 }
 
-// rest merges the KDE settings, shortcuts, JSON keys, hooks and firewall.
+// rest merges the KDE settings, shortcuts, JSON keys, Brave, hooks and firewall.
 func (m *merger) rest(from, dir string, mod *Module) error {
 	c := m.c
 	if mod.Firewall != nil {
@@ -598,6 +609,12 @@ func (m *merger) rest(from, dir string, mod *Module) error {
 		}
 	}
 
+	if mod.Brave != nil {
+		if err := m.brave(from, dir, mod.Brave); err != nil {
+			return err
+		}
+	}
+
 	for i, h := range mod.Hooks {
 		where := fmt.Sprintf("%s: hooks[%d]", from, i)
 		if h.Run == "" {
@@ -644,6 +661,61 @@ func slug(name string) string {
 		}
 	}
 	return strings.TrimSuffix(sb.String(), "-")
+}
+
+// BraveFlagsFile is Brave's command line, which lodestar writes when a module
+// declares brave:. Arch's brave launcher (brave-bin) reads it, one argument
+// per line.
+const BraveFlagsFile = "~/.config/brave-flags.conf"
+
+// brave merges a module's Brave flags and extension folders.
+func (m *merger) brave(from, dir string, b *Brave) error {
+	c := m.c
+	if c.Brave == nil {
+		c.Brave = &BraveSpec{}
+	}
+	for i, flag := range b.Flags {
+		where := fmt.Sprintf("%s: brave.flags[%d]", from, i)
+		name, _, _ := strings.Cut(flag, "=")
+		switch {
+		case !strings.HasPrefix(name, "--") || len(name) < 3 || strings.ContainsAny(name, " \t"):
+			return fmt.Errorf("%s: %q is not a flag like --password-store=kwallet6", where, flag)
+		case name == "--load-extension":
+			return fmt.Errorf("%s: list the folders in brave.extensions: lodestar joins every module's into one --load-extension", where)
+		}
+		same := func(it Item) bool { n, _, _ := strings.Cut(it.Name, "="); return n == name }
+		if k := slices.IndexFunc(c.Brave.Flags, same); k >= 0 {
+			c.Brave.Flags[k] = Item{Name: flag, From: from} // a later module, or the host, wins
+			continue
+		}
+		c.Brave.Flags = append(c.Brave.Flags, Item{Name: flag, From: from})
+	}
+	for i, e := range b.Extensions {
+		where := fmt.Sprintf("%s: brave.extensions[%d]", from, i)
+		path := e
+		switch {
+		case strings.HasPrefix(e, "~/") && len(e) > 2, strings.HasPrefix(e, "/"):
+			// Written by an apply or a hook: it may not exist yet.
+		case e == "" || strings.HasPrefix(e, "~"):
+			return fmt.Errorf("%s: %q is not a folder: ~/…, or a folder of the module", where, e)
+		default:
+			abs, err := filepath.Abs(filepath.Join(dir, filepath.FromSlash(e))) // --repo may be relative
+			if err != nil {
+				return fmt.Errorf("%s: %w", where, err)
+			}
+			if _, err := os.Stat(filepath.Join(abs, "manifest.json")); err != nil {
+				return fmt.Errorf("%s: not an extension: %w", where, err)
+			}
+			path = abs
+		}
+		if strings.Contains(path, ",") {
+			return fmt.Errorf("%s: %q has a comma, which separates the folders of --load-extension", where, e)
+		}
+		if !slices.ContainsFunc(c.Brave.Extensions, func(it Item) bool { return it.Name == path }) {
+			c.Brave.Extensions = append(c.Brave.Extensions, Item{Name: path, From: from})
+		}
+	}
+	return nil
 }
 
 // FirewallFile is the ruleset lodestar writes when a module declares firewall:.

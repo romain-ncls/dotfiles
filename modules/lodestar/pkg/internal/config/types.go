@@ -48,6 +48,10 @@ type Module struct {
 	Shortcuts []Shortcut `yaml:"shortcuts,omitempty"`
 	// Keys merged into JSON files that apps rewrite themselves.
 	JSON []JSONMerge `yaml:"json,omitempty"`
+	// Brave's command line: flags, and unpacked extensions it loads at each
+	// start. lodestar writes ~/.config/brave-flags.conf (read by Brave's
+	// launcher) from every module's, and owns it.
+	Brave *Brave `yaml:"brave,omitempty"`
 	// Scripts run during apply, for what is not a file or a key.
 	Hooks []Hook `yaml:"hooks,omitempty"`
 	// The module's local package when its PKGBUILD lives in another repo, or
@@ -83,6 +87,17 @@ type JSONMerge struct {
 	Merge string `yaml:"merge"`
 	// Skip while this process runs (it would overwrite the file on exit).
 	UnlessRunning string `yaml:"unless-running,omitempty"`
+}
+
+// Brave lists flags for Brave's command line and the unpacked extensions it
+// loads.
+type Brave struct {
+	// Flags, one argument each: --password-store=kwallet6. A later module's
+	// (or the host's) replaces an earlier one with the same switch.
+	Flags []string `yaml:"flags,omitempty"`
+	// Folders of unpacked extensions: ~/… (written by an apply or a hook),
+	// or a folder of the module. Every module's go in one --load-extension.
+	Extensions []string `yaml:"extensions,omitempty"`
 }
 
 // Hook runs a script during apply.

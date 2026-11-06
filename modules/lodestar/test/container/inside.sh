@@ -78,6 +78,10 @@ ok "local package built and installed; temporary sudo rule removed"
 grep -q 'tcp dport { 1714-1764 } accept' /etc/nftables.conf && grep -q 'udp dport { 1714-1764, 5353 } accept' /etc/nftables.conf || fail "nftables.conf: $(cat /etc/nftables.conf)"
 [[ -L /etc/systemd/system/multi-user.target.wants/nftables.service ]] || fail "nftables.service not enabled"
 ok "firewall ruleset written (checked by nft) and enabled"
+b=$cfg/brave-flags.conf
+[[ $(grep -v '^#' $b) == $'--password-store=basic\n--load-extension=/repo/modules/desktop/ext,/home/romain/.local/share/new-tab' ]] || fail "brave-flags.conf: $(cat $b)"
+[[ $(stat -c %U $b) == romain ]] || fail "brave-flags.conf owner"
+ok "Brave's flags and extensions in brave-flags.conf"
 
 say "second plan: nothing to do"
 out=$(ls_ plan)
@@ -113,14 +117,16 @@ grep -q '"/etc/issue"' /var/lib/lodestar/state.json || fail "system state not up
 ok "root part through sudo, home part as the user"
 rm /repo/modules/base/system/etc/issue /repo/modules/shell/home/.config/test/x
 
-say "drop a KDE key and a shortcut"
+say "drop a KDE key, a shortcut and brave:"
 sed -i '/BlurStrength/d; /Effect-blur/d' /repo/modules/desktop/module.yaml
 sed -i '/- name: Mute/,+2d' /repo/modules/desktop/module.yaml
+sed -i '/^brave:$/,$d' /repo/modules/desktop/module.yaml
 ls_ apply --yes
 grep -q BlurStrength $cfg/kwinrc && fail "BlurStrength still set"
 [[ -e $desk ]] && fail "shortcut desktop file still there"
 grep -q 'lodestar-mute' $cfg/kglobalshortcutsrc && fail "shortcut key still there"
-ok "dropped KDE key deleted, dropped shortcut removed"
+[[ -e $b ]] && fail "brave-flags.conf still there"
+ok "dropped KDE key deleted, dropped shortcut and Brave flags removed"
 out=$(ls_ plan)
 [[ $out == "Nothing to do"* ]] || { echo "$out"; fail "plan after KDE removals is not empty"; }
 

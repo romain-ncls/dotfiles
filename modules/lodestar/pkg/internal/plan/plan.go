@@ -193,11 +193,13 @@ func Compute(in Input) (*Plan, error) {
 	errs = append(errs, p.units(in, false), p.units(in, true))
 	p.user(in, u)
 	home := append(slices.Clone(c.Files), shortcutFiles(c)...)
+	home = append(home, braveFlagsFile(c, p.Home)...)
 	for _, f := range home {
 		if f.Scope == config.Home {
 			errs = append(errs, p.file(in, r, f))
 		}
 	}
+	p.braveRestart(in)
 	errs = append(errs, p.kde(in))
 	errs = append(errs, p.json(in))
 	errs = append(errs, p.removals(in, in.HomeSt, config.Home))

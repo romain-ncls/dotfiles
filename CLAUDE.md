@@ -34,6 +34,7 @@ written in a `host.yaml` or `module.yaml` are relative to its folder.
 | Breeze window exceptions, KWin window rules | `breeze-exceptions:`, `window-rules:` (lodestar owns the whole list) |
 | global shortcuts | `shortcuts:` in the module that provides the command |
 | keys of an app's JSON settings (Readest) | `json:` |
+| Brave's flags, unpacked extensions it loads | `brave: {flags, extensions}` (lodestar writes `~/.config/brave-flags.conf`) |
 | a tool of ours (code + PKGBUILD) | `modules/<tool>/pkg/`; a tool with its own repo: `pkg: {git, ref, path}` |
 | what isn't a file or a key | `hooks:` (a script of the module, `when: changed` or `always`) |
 | the hand-written part of `/boot/limine.conf` | `boot.limine` in the host file |

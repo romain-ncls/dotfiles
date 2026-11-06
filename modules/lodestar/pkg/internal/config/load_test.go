@@ -288,13 +288,18 @@ json:
 
 func TestLoadStep2Errors(t *testing.T) {
 	for name, tc := range map[string]struct{ module, want string }{
-		"bad port":       {"firewall:\n  tcp:\n    - 70000\n", "not a port"},
-		"reversed range": {"firewall:\n  tcp:\n    - 20-10\n", "not a port"},
-		"half shortcut":  {"shortcuts:\n  - name: x\n    keys: Meta+X\n", "either name"},
-		"json outside":   {"json:\n  - path: /etc/x.json\n    merge: x.json\n", "must start with ~/"},
-		"hook as":        {"hooks:\n  - run: x\n    as: nobody\n", "user or root"},
-		"git no ref":     {"pkg:\n  git: https://x/y.git\n", "ref is required"},
-		"kde file path":  {"kde:\n  a/b:\n    G:\n      K: v\n", "file name"},
+		"bad port":          {"firewall:\n  tcp:\n    - 70000\n", "not a port"},
+		"reversed range":    {"firewall:\n  tcp:\n    - 20-10\n", "not a port"},
+		"half shortcut":     {"shortcuts:\n  - name: x\n    keys: Meta+X\n", "either name"},
+		"json outside":      {"json:\n  - path: /etc/x.json\n    merge: x.json\n", "must start with ~/"},
+		"hook as":           {"hooks:\n  - run: x\n    as: nobody\n", "user or root"},
+		"git no ref":        {"pkg:\n  git: https://x/y.git\n", "ref is required"},
+		"kde file path":     {"kde:\n  a/b:\n    G:\n      K: v\n", "file name"},
+		"brave no dashes":   {"brave:\n  flags:\n    - password-store=x\n", "not a flag"},
+		"brave load flag":   {"brave:\n  flags:\n    - --load-extension=/x\n", "brave.extensions"},
+		"brave no manifest": {"brave:\n  extensions:\n    - missing\n", "not an extension"},
+		"brave comma":       {"brave:\n  extensions:\n    - ~/a,b\n", "has a comma"},
+		"brave other home":  {"brave:\n  extensions:\n    - ~other/x\n", "not a folder"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := Load(writeRepo(t, map[string]string{
@@ -324,5 +329,47 @@ func TestPkgbuildNames(t *testing.T) {
 		if err != nil || strings.Join(names, " ") != want {
 			t.Errorf("%q: got %q, %v; want %q", text, names, err, want)
 		}
+	}
+}
+
+// brave: flags keep the modules' order, a later one (or the host's) replaces
+// the same switch; extension folders stay ~/… or become absolute, once each.
+func TestLoadBrave(t *testing.T) {
+	repo := writeRepo(t, map[string]string{
+		"hosts/box/host.yaml": "modules:\n  - a\n  - b\nuser:\n  name: r\n" +
+			"brave:\n  flags:\n    - --ozone-platform=wayland\n",
+		"modules/a/module.yaml": "brave:\n  flags:\n    - --password-store=kwallet6\n    - --ozone-platform=x11\n" +
+			"  extensions:\n    - ~/.local/share/new-tab\n    - ext\n",
+		"modules/a/ext/manifest.json": "{}",
+		"modules/b/module.yaml":       "brave:\n  flags:\n    - --password-store=basic\n  extensions:\n    - ~/.local/share/new-tab\n",
+	})
+	c, err := Load(repo, "box")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var flags, exts []string
+	for _, f := range c.Brave.Flags {
+		flags = append(flags, f.Name+" ("+f.From+")")
+	}
+	for _, e := range c.Brave.Extensions {
+		exts = append(exts, e.Name)
+	}
+	if got, want := strings.Join(flags, ", "), "--password-store=basic (b), --ozone-platform=wayland (host box)"; got != want {
+		t.Errorf("flags = %s, want %s", got, want)
+	}
+	if got, want := strings.Join(exts, ","), "~/.local/share/new-tab,"+filepath.Join(repo, "modules/a/ext"); got != want {
+		t.Errorf("extensions = %s, want %s", got, want)
+	}
+}
+
+// A module can't ship the file lodestar writes from brave:.
+func TestLoadBraveOwnsFlagsFile(t *testing.T) {
+	_, err := Load(writeRepo(t, map[string]string{
+		"hosts/box/host.yaml":                     "modules:\n  - a\n  - b\nuser:\n  name: r\n",
+		"modules/a/home/.config/brave-flags.conf": "--password-store=kwallet6\n",
+		"modules/b/module.yaml":                   "brave:\n  extensions:\n    - ~/x\n",
+	}), "box")
+	if err == nil || !strings.Contains(err.Error(), "written by lodestar from the brave: entries, so a can't provide it") {
+		t.Fatalf("err = %v", err)
 	}
 }

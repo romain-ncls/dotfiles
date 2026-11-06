@@ -39,3 +39,9 @@ firewall:
   udp:
     - 1714-1764
     - 5353
+brave:
+  flags:
+    - --password-store=basic
+  extensions:
+    - ext
+    - ~/.local/share/new-tab

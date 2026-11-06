@@ -153,8 +153,6 @@ new Secure Boot keys, a db/dbx update (fwupd), a BIOS update or reset. Re-bind:
 - KDE Connect: the phone's *Lock AFK* command runs `lock-afk`.
 
 ### Apps
-- Brave: load the Teams extension unpacked from
-  `~/dotfiles/modules/mutectl/chrome-extension`.
 - JetBrains Toolbox: install GoLand, WebStorm, PyCharm and DataGrip.
 - NetworkManager: import the company's OpenVPN profiles and the Wi-Fi
   networks (their passwords are in Bitwarden). The profiles: `nmcli

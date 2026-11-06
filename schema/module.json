@@ -13333,6 +13333,27 @@
       "type": "array",
       "description": "Keys merged into JSON files that apps rewrite themselves."
     },
+    "brave": {
+      "properties": {
+        "flags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Flags, one argument each: --password-store=kwallet6. A later module's\n(or the host's) replaces an earlier one with the same switch."
+        },
+        "extensions": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Folders of unpacked extensions: ~/… (written by an apply or a hook),\nor a folder of the module. Every module's go in one --load-extension."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Brave's command line: flags, and unpacked extensions it loads at each\nstart. lodestar writes ~/.config/brave-flags.conf (read by Brave's\nlauncher) from every module's, and owns it."
+    },
     "hooks": {
       "items": {
         "properties": {

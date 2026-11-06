@@ -210,6 +210,7 @@ shortcuts:
 | KDE lists | `breeze-exceptions:`, `window-rules:` | entry removed, the rest renumbered | entries added in the GUI |
 | Shortcuts | `shortcuts:` | removed | — |
 | JSON keys | `json:` | left (no default is known) | live value differs |
+| Brave's flags and unpacked extensions | `brave:` | removed (lodestar generates the whole `brave-flags.conf`) | — |
 | Hooks | `hooks:` | — | — |
 
 ### Packages
@@ -394,6 +395,28 @@ json:
     merge: readest.json           # relative to the module folder
     unless-running: readest       # Readest overwrites the file when it exits
 ```
+
+### Brave
+
+Brave's launcher (`/usr/bin/brave`, from brave-bin) reads its command line
+from `~/.config/brave-flags.conf`, one argument per line. Several modules need
+a say in it, so lodestar writes the whole file from the modules' `brave:`
+entries, and a module can't ship it:
+
+```yaml
+brave:
+  flags:
+    - --password-store=kwallet6   # a later module's, or the host's, replaces the same switch
+  extensions:
+    - chrome-extension            # a folder of the module
+    - ~/.local/share/new-tab      # or one an apply or a hook writes
+```
+
+Every module's extensions go in one `--load-extension=` (Brave only reads the
+last one): Brave loads them at each start, with no "Load unpacked" by hand.
+An unpacked extension's ID comes from its folder, so it stays the same and
+keeps its data. Brave reads the file only when it starts: plan says so when it
+changes while Brave runs.
 
 ### Hooks
 
