@@ -58,7 +58,10 @@ changed in System Settings since the last apply: `lodestar kde review --list`.
 - `lodestar drift` should be clean before committing.
 - Commit messages: `feat:`, `fix:`, `chore:`, `docs:` (with a scope when it
   helps: `feat(lodestar): …`). Commits are SSH-signed.
-- Work on `main`; push right after every commit (no need to ask).
+- A change that is one commit goes on `main`. Work that may take several
+  commits goes on its own branch (`feat/<name>`), and reaches `main`
+  squashed into one commit when the user says it's done. Push right after
+  every commit (no need to ask).
 
 ## Constraints when Claude does the work
 
