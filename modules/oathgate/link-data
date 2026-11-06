@@ -1,0 +1,18 @@
+#!/bin/sh
+# Links what Oathgate's new tab reads into its folder: Brave serves an
+# unpacked extension's files through symbolic links wherever they point.
+#   backdrop/  Backdrop's state, for the current wallpaper and its caption
+#   lumar/     lumar's palette, the session's colors (when there is one)
+#   links.js   the links, private: ~/.config/oathgate/links.js
+# A link to something missing is fine: the page does without it.
+set -eu
+data=${XDG_DATA_HOME:-$HOME/.local/share}
+dir=$data/oathgate
+mkdir -p "$dir"
+
+link() {
+	[ "$(readlink "$dir/$2" 2>/dev/null)" = "$1" ] || ln -sfn "$1" "$dir/$2"
+}
+link "$data/backdrop" backdrop
+link "$data/lumar" lumar
+link "${XDG_CONFIG_HOME:-$HOME/.config}/oathgate/links.js" links.js

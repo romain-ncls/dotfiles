@@ -268,6 +268,28 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 - **Not Vesktop**: it doesn't run OpenASAR, and the official client is what
   mutectl's plugin was written against.
 
+## Brave's new tab (Oathgate, work laptop)
+
+- **An unpacked extension that replaces the new tab** (`chrome_url_overrides`,
+  6 Nov 2026): islands of work links over Backdrop's wallpaper, in the
+  session's colors. As in Chrome, the address bar keeps the focus on an
+  extension's new tab, so typing a URL still works. Not the
+  `NewTabPageLocation` policy (any policy makes Brave say it's managed by an
+  organization), nor Brave's "homepage" new tab (a `file://` page can't read
+  Backdrop's state).
+- **Its data comes through symbolic links**, which `link-data` puts in the
+  extension's folder: Brave serves an unpacked extension's files through links
+  wherever they point, so the page reads Backdrop's `state.json` and current
+  picture, lumar's palette and the links without a server. It reads
+  `current`'s `file`, `title`, `place`, `credit` and `infoUrl` from Backdrop's
+  state: a change to those has to follow there.
+- **The links are private**: they name servers, a firewall's address and
+  client tenants, and this repo is public. They live in
+  `~/.config/oathgate/links.js` (kept with the backups), a JS module rather
+  than JSON for comments and trailing commas, imported by the page as is.
+- **Favicons come from Brave's own cache** (`_favicon`): nothing leaves the
+  machine, and a site shows a globe until it has been visited once.
+
 ## Num Lock (numlock module)
 
 - **Plymouth's LUKS prompt**: since version 22 Plymouth reads keyboards

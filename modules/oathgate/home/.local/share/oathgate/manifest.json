@@ -1,0 +1,8 @@
+{
+  "manifest_version": 3,
+  "name": "Oathgate",
+  "description": "Brave's new tab: islands of links over Backdrop's wallpaper (modules/oathgate in ~/dotfiles).",
+  "version": "1",
+  "chrome_url_overrides": { "newtab": "newtab.html" },
+  "permissions": ["favicon"]
+}

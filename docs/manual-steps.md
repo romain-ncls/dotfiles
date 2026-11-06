@@ -102,9 +102,9 @@ If the Windows boot animation looks stretched, from an elevated prompt:
    `~/.ssh`, `~/.gnupg`, `~/.kube`, `~/.claude`,
    `~/.local/share/{mkcert,backdrop,silksong-wallpaper,kwalletd,easyeffects,com.bilingify.readest}`,
    `~/.config/{BraveSoftware,JetBrains,kdeconnect,Vencord}`, and the private
-   fish files `~/.config/fish/conf.d/{private,secrets}.fish` (names of servers
-   and clients, Bitwarden lookups; the rest of the fish config is the shell
-   module).
+   files (names of servers and clients, Bitwarden lookups): fish's
+   `~/.config/fish/conf.d/{private,secrets}.fish` (the rest of the fish config
+   is the shell module) and Oathgate's links, `~/.config/oathgate`.
    `~/.ssh` brings back this laptop's own key, already on GitHub: skip
    "SSH key" above, and `lodestar apply` again for `allowed_signers`.
 4. Log out and back in.
@@ -153,6 +153,10 @@ new Secure Boot keys, a db/dbx update (fwupd), a BIOS update or reset. Re-bind:
 - KDE Connect: the phone's *Lock AFK* command runs `lock-afk`.
 
 ### Apps
+- Brave: load Oathgate, the new tab, unpacked from `~/.local/share/oathgate`
+  (`brave://extensions`, Developer mode, Load unpacked), and answer *Keep it*
+  when the first new tab asks. Its links are `~/.config/oathgate/links.js`,
+  from the backup.
 - JetBrains Toolbox: install GoLand, WebStorm, PyCharm and DataGrip.
 - NetworkManager: import the company's OpenVPN profiles and the Wi-Fi
   networks (their passwords are in Bitwarden). The profiles: `nmcli

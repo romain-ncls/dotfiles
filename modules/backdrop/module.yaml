@@ -1,5 +1,6 @@
 # Backdrop: the desktop wallpaper, from Windows Spotlight, Bing and Wallhaven,
-# picked by likes and dislikes (its state: ~/.local/share/backdrop).
+# picked by likes and dislikes (its state: ~/.local/share/backdrop, whose
+# state.json Oathgate's new tab reads for the current picture and caption).
 user-services:
   - backdrop.service
 
