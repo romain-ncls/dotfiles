@@ -6,3 +6,10 @@
 hooks:
   - run: link-data # the links, Backdrop's state and lumar's palette, into the extension
     when: always
+
+# Without the bar Brave adds under an extension's new tab (the extension's
+# name and a Customize button): what its right-click "Hide footer" writes.
+json:
+  - path: ~/.config/BraveSoftware/Brave-Browser/Default/Preferences
+    merge: brave-preferences.json
+    unless-running: brave # Brave rewrites its preferences on exit

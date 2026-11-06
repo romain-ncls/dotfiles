@@ -289,6 +289,11 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   than JSON for comments and trailing commas, imported by the page as is.
 - **Favicons come from Brave's own cache** (`_favicon`): nothing leaves the
   machine, and a site shows a globe until it has been visited once.
+- **No footer**: under an extension's new tab Brave adds a bar of its own
+  with the extension's name and a Customize button. `NewTabPage.FooterVisible`
+  off in Brave's preferences (`json:`) hides it, as its right-click "Hide
+  footer" does; the `NTPFooterExtensionAttributionEnabled` policy would make
+  Brave managed.
 
 ## Num Lock (numlock module)
 
