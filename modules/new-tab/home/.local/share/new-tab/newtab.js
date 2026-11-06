@@ -196,7 +196,9 @@ async function wallpaper(current) {
 		return;
 	}
 	$("wall").append(img);
-	requestIdleCallback(() => keepCopy(img, name, sw, sh));
+	// Once the page has come in: making the copy holds the page for a moment
+	// (190 ms in a test), which would stall the islands as they rise.
+	setTimeout(() => requestIdleCallback(() => keepCopy(img, name, sw, sh)), 1000);
 }
 
 // The picture's title, place and credit, at the bottom left.
@@ -405,7 +407,11 @@ function masonry(container, islands) {
 		const columns = Array.from({ length: n }, () => h("div", { class: "column" }));
 		container.replaceChildren(...columns);
 		for (const isl of islands) {
-			columns.reduce((a, b) => (b.offsetHeight < a.offsetHeight ? b : a)).append(isl);
+			const column = columns.reduce((a, b) => (b.offsetHeight < a.offsetHeight ? b : a));
+			// Its turn in the wave the islands come in by (newtab.css): left
+			// to right and top to bottom.
+			isl.style.setProperty("--order", columns.indexOf(column) + column.childElementCount);
+			column.append(isl);
 		}
 	};
 	layout();
