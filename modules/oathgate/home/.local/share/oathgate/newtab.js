@@ -228,7 +228,7 @@ function tenant(hosts, list) {
 	function showRecent() {
 		recent.replaceChildren(...recentTenants().map((t) =>
 			h("a", { href: t.url, title: t.url, onclick: () => remember(t), onauxclick: () => remember(t) },
-				h("span", { class: `dot tone-${toneOf(t.env)}` }), t.name)));
+				t.name, h("span", { class: `env tone-${toneOf(t.env)}` }, t.env))));
 	}
 
 	anchors.forEach((a, i) => {
