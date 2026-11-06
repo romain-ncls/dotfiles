@@ -1,0 +1,26 @@
+<!-- The new tab's logo: islands over a sea, a wallpaper's horizon. Its edges
+     fall on the 16 px grid (multiples of 8). The extension's icons, from the
+     module folder:
+     for s in 16 32 48 128; do rsvg-convert -w $s -h $s icon.svg -o home/.local/share/new-tab/icons/$s.png; done -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d4a80"/>
+      <stop offset="1" stop-color="#4b9ae0"/>
+    </linearGradient>
+    <clipPath id="tile">
+      <rect x="8" y="8" width="112" height="112" rx="24"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tile)">
+    <rect x="8" y="8" width="112" height="112" fill="url(#sky)"/>
+    <path d="M8 90 C28 80 46 80 64 87 S102 78 120 83 V120 H8 Z" fill="#2a64a2"/>
+    <path d="M8 104 C30 95 50 96 70 103 S104 97 120 100 V120 H8 Z" fill="#1b365c"/>
+  </g>
+  <g fill="#f4f8fd">
+    <rect x="24" y="24" width="32" height="56" rx="7"/>
+    <rect x="64" y="24" width="40" height="24" rx="7"/>
+    <rect x="64" y="56" width="40" height="24" rx="7"/>
+  </g>
+  <rect x="8.5" y="8.5" width="111" height="111" rx="23.5" fill="none" stroke="#ffffff" stroke-opacity=".14"/>
+</svg>
