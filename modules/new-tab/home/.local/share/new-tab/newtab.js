@@ -97,11 +97,11 @@ function icon(url, name) {
 	const e = h("span", { class: "icon" });
 	iconsDrawn.push((async () => {
 		const kind = await faviconKind(src).catch(() => "");
+		if (kind) e.classList.add(kind);
 		if (kind === "none") return e.append(h("span", { class: "initial" }, name.trim().charAt(0)));
 		const img = h("img", { src, alt: "" });
 		await img.decode().catch(() => {});
 		e.append(img);
-		if (kind) e.classList.add(kind);
 	})());
 	return e;
 }
