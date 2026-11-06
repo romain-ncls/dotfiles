@@ -4,8 +4,13 @@
 # servers and clients): ~/.config/oathgate/links.js, not in this repo; their
 # format is at the top of newtab.js.
 hooks:
-  - run: link-data # the links, Backdrop's state and lumar's palette, into the extension
+  - run: link-data # the links, the tenants, Backdrop's state and lumar's palette, into the extension
     when: always
+
+# The tenant field's search: fetch-tenants lists the tenants hourly from a
+# GitHub repo with gh, the repo set in ~/.config/oathgate/tenants.env (private).
+user-services:
+  - oathgate-tenants.timer
 
 # Without the bar Brave adds under an extension's new tab (the extension's
 # name and a Customize button): what its right-click "Hide footer" writes.

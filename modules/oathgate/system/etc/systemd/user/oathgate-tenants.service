@@ -1,0 +1,7 @@
+[Unit]
+Description=Oathgate's tenant list, from the repo set in ~/.config/oathgate/tenants.env
+ConditionPathExists=%h/.config/oathgate/tenants.env
+
+[Service]
+Type=oneshot
+ExecStart=%h/dotfiles/modules/oathgate/fetch-tenants

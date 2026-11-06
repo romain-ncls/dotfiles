@@ -1,0 +1,50 @@
+#!/bin/sh
+# Lists the tenants for the search of Oathgate's tenant field, from a GitHub
+# repo read with gh (logged in): under a folder of environments, each
+# tenant's folder has a kustomization.yaml whose Traefik rule reads
+# Host(`host`) && PathRegexp(`/tenant(/|$)`); its environment is the folder
+# above it. The repo is private config, ~/.config/oathgate/tenants.env:
+#   repo=owner/name
+#   ref=main
+#   path=the/folder/of/environments
+# Writes ~/.cache/oathgate/tenants.json. Run hourly by oathgate-tenants.timer;
+# now: systemctl --user start oathgate-tenants
+set -eu
+. "${XDG_CONFIG_HOME:-$HOME/.config}/oathgate/tenants.env"
+out=${XDG_CACHE_HOME:-$HOME/.cache}/oathgate/tenants.json
+mkdir -p "${out%/*}"
+now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+tree=$(gh api "repos/$repo/git/trees/$ref:$path?recursive=1")
+sha=$(printf '%s' "$tree" | jq -r .sha)
+
+# Nothing changed under the folder: only the time of the check.
+if [ -f "$out" ] && [ "$(jq -r .tree "$out")" = "$sha" ]; then
+	jq --arg now "$now" '.checked = $now' "$out" >"$out.tmp" && mv "$out.tmp" "$out"
+	exit 0
+fi
+
+# The kustomizations' text, 50 per GraphQL query (all at once, GitHub can
+# time out), then each one's tenant. A query that failed leaves texts
+# missing: the list then stays as it was.
+paths=$(printf '%s' "$tree" | jq -c '[.tree[] | select(.type == "blob" and (.path | endswith("/kustomization.yaml"))) | .path]')
+printf '%s' "$paths" | jq -r --arg ref "$ref" --arg path "$path" '
+	to_entries | group_by(.key / 50 | floor)[]
+	| "query($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { "
+	  + (map("k\(.key): object(expression: \("\($ref):\($path)/\(.value)" | tojson)) { ... on Blob { text } }") | join(" "))
+	  + " } }"' |
+	while IFS= read -r query; do
+		gh api graphql -f query="$query" -f owner="${repo%/*}" -f name="${repo#*/}" --jq .data.repository
+	done |
+	jq -s --argjson paths "$paths" --arg now "$now" --arg sha "$sha" '
+		add as $texts
+		| if ($texts | length) != ($paths | length) then error("some kustomizations did not come") else . end
+		| {
+			checked: $now,
+			tree: $sha,
+			tenants: [$paths | to_entries[]
+				| ($texts["k\(.key)"].text // "" | capture("Host\\(`(?<host>[^`]+)`\\) && \\(?PathRegexp\\(`/(?<name>[^(`/]+)")) as $m
+				| {name: $m.name, env: (.value | split("/") | .[-3]), url: "https://\($m.host)/\($m.name)/"}]
+				| unique_by([.name, .env, .url])
+		}' >"$out.tmp"
+mv "$out.tmp" "$out"

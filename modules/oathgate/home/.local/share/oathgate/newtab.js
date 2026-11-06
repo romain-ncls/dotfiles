@@ -6,6 +6,8 @@
 //               servers and clients), kept with the backups
 //   backdrop/   Backdrop's state.json: the current wallpaper and its caption
 //   lumar/      palette.json, the session's colors, when apply-lumar wrote one
+//   tenants.json  the tenants a tenant field searches, from fetch-tenants:
+//               { checked, tenants: [{ name, env, url }] }
 //
 // links.js exports the islands, in order:
 //   export default [{ title, grid?, tenant?, links? }, …]
@@ -14,9 +16,10 @@
 //           { columns: ["App", …], icons?: true,
 //             rows: [{ name, tone?, note?, urls: ["https://…", …] }] }
 //           ("" leaves a cell empty; icons: true shows each cell's favicon)
-//   tenant: a field for a tenant, opened on each host:
-//           [{ name, url: "https://host/{tenant}/", tone? }]
-//           (Enter opens the first host; the last tenants are kept)
+//   tenant: a field for a tenant: [{ name, url: "https://host/{tenant}/", tone? }]
+//           It searches tenants.json (arrows, Enter; Ctrl+Enter: a new tab).
+//           A name not in the list, or any without one, opens on each host
+//           (Enter: the first). The last tenants opened are kept.
 // A tone colors an environment: prod, preprod, demo or dev. By default it's
 // the row's or the host's name.
 
@@ -120,71 +123,145 @@ function grid(g) {
 	}));
 }
 
-const recentKey = "oathgate.tenants";
+// The tenants opened last: { name, env, url }.
+const recentKey = "oathgate.recent";
 function recentTenants() {
 	try {
 		const list = JSON.parse(localStorage.getItem(recentKey));
-		return Array.isArray(list) ? list : [];
+		return Array.isArray(list) ? list.filter((t) => typeof t?.url === "string") : [];
 	} catch {
 		return [];
 	}
 }
+function remember(t) {
+	try {
+		localStorage.setItem(recentKey, JSON.stringify([t, ...recentTenants().filter((x) => x.url !== t.url)].slice(0, 6)));
+	} catch {}
+}
 
-function tenant(hosts) {
-	const input = h("input", { type: "text", placeholder: "Tenant", "aria-label": "Tenant", spellcheck: "false", autocomplete: "off" });
+// The tenants whose name has q: the name itself first, then those it
+// starts, then those with q after a dash; prod before the others.
+function search(tenants, q) {
+	q = q.toLowerCase();
+	const found = [];
+	for (const t of tenants) {
+		const name = t.name.toLowerCase();
+		const at = name.indexOf(q);
+		if (at < 0) continue;
+		const rank = name === q ? 0 : at === 0 ? 1 : /[^a-z0-9]/.test(name[at - 1]) ? 2 : 3;
+		found.push({ t, key: [rank, t.env === "prod" ? 0 : 1, name.length, name, t.env] });
+	}
+	found.sort((a, b) => {
+		const i = a.key.findIndex((k, i) => k !== b.key[i]);
+		return i < 0 ? 0 : a.key[i] < b.key[i] ? -1 : 1;
+	});
+	return found.slice(0, 7).map((f) => f.t);
+}
+
+function tenant(hosts, list) {
+	const known = (list?.tenants ?? []).filter((t) => t?.name && t?.url);
+	const input = h("input", {
+		type: "text",
+		spellcheck: "false",
+		autocomplete: "off",
+		role: "combobox",
+		"aria-label": "Tenant",
+		placeholder: known.length ? `Search ${known.length} tenants` : "Tenant",
+		title: list?.checked && `The tenant list, checked ${new Date(list.checked).toLocaleString()}`,
+	});
+	// mousedown would take the focus from the field, and blurring it hides
+	// the results before the click lands
+	const results = h("div", { class: "results", role: "listbox", hidden: true, onmousedown: (e) => e.preventDefault() });
 	const anchors = hosts.map((x) => h("a", { class: `host tone-${toneOf(x.name, x.tone)}` }, x.name));
+	const onHosts = h("div", { class: "hosts" }, anchors);
 	const recent = h("div", { class: "recent" });
-	const name = () => input.value.trim().replace(/^\/+|\/+$/g, "");
+	const query = () => input.value.trim().replace(/^\/+|\/+$/g, "");
+	let shown = [];
+	let active = 0;
 
+	// a name typed: the tenant on each host
+	const typed = (i) => ({ name: query(), env: hosts[i].name, url: hosts[i].url.replaceAll("{tenant}", encodeURIComponent(query())) });
+
+	function open(t, newTab) {
+		remember(t);
+		if (newTab) {
+			window.open(t.url);
+			showRecent();
+		} else location.href = t.url;
+	}
+	function mark() {
+		[...results.children].forEach((r, i) => r.classList.toggle("active", i === active));
+	}
+	function result(t, q, i) {
+		const at = t.name.toLowerCase().indexOf(q.toLowerCase());
+		return h("a", {
+			class: "result",
+			role: "option",
+			href: t.url,
+			title: t.url,
+			onmouseenter: () => { active = i; mark(); },
+			onclick: () => remember(t),
+			onauxclick: () => remember(t),
+		},
+			h("span", { class: "tenant-name" }, t.name.slice(0, at), h("mark", {}, t.name.slice(at, at + q.length)), t.name.slice(at + q.length)),
+			h("span", { class: `env tone-${toneOf(t.env)}` }, t.env),
+			h("span", { class: "tenant-host" }, new URL(t.url).host));
+	}
 	function update() {
-		const t = name();
+		const q = query();
+		shown = q && known.length ? search(known, q) : [];
+		active = 0;
+		results.replaceChildren(...shown.map((t, i) => result(t, q, i)));
+		results.hidden = !shown.length || document.activeElement !== input;
+		onHosts.hidden = known.length > 0 && (!q || shown.length > 0);
 		anchors.forEach((a, i) => {
-			if (t) {
-				a.href = hosts[i].url.replaceAll("{tenant}", encodeURIComponent(t));
+			if (q) {
+				a.href = typed(i).url;
 				a.removeAttribute("aria-disabled");
 			} else {
 				a.removeAttribute("href");
 				a.setAttribute("aria-disabled", "true");
 			}
 		});
-	}
-	function remember() {
-		const t = name();
-		if (!t) return;
-		try {
-			localStorage.setItem(recentKey, JSON.stringify([t, ...recentTenants().filter((x) => x !== t)].slice(0, 6)));
-		} catch {}
+		mark();
 	}
 	function showRecent() {
 		recent.replaceChildren(...recentTenants().map((t) =>
-			h("button", { type: "button", onclick: () => { input.value = t; update(); input.focus(); } }, t)));
+			h("a", { href: t.url, title: t.url, onclick: () => remember(t), onauxclick: () => remember(t) },
+				h("span", { class: `dot tone-${toneOf(t.env)}` }), t.name)));
 	}
 
-	for (const a of anchors) {
-		a.addEventListener("click", remember);
-		a.addEventListener("auxclick", remember);
-	}
+	anchors.forEach((a, i) => {
+		a.addEventListener("click", () => remember(typed(i)));
+		a.addEventListener("auxclick", () => remember(typed(i)));
+	});
 	input.addEventListener("input", update);
+	input.addEventListener("focus", () => { results.hidden = !shown.length; });
+	input.addEventListener("blur", () => { results.hidden = true; });
 	input.addEventListener("keydown", (e) => {
-		const href = anchors[0]?.getAttribute("href");
-		if (e.key !== "Enter" || !href) return;
-		remember();
-		if (e.ctrlKey || e.metaKey) {
-			window.open(href);
-			showRecent();
-		} else location.href = href;
+		if ((e.key === "ArrowDown" || e.key === "ArrowUp") && shown.length) {
+			e.preventDefault();
+			active = (active + (e.key === "ArrowDown" ? 1 : shown.length - 1)) % shown.length;
+			mark();
+		} else if (e.key === "Escape") {
+			input.value = "";
+			update();
+		} else if (e.key === "Enter") {
+			const t = shown[active] ?? (query() && hosts.length ? typed(0) : null);
+			if (t) open(t, e.ctrlKey || e.metaKey);
+		}
 	});
 	update();
 	showRecent();
-	return h("div", { class: "tenant" }, input, h("div", { class: "hosts" }, anchors), recent);
+	return h("div", { class: "tenant" }, h("div", { class: "search" }, input, results), onHosts, recent);
 }
 
-function island(def) {
+function island(def, tenants) {
 	try {
 		return h("section", { class: "island" },
 			def.title && h("h2", {}, def.title),
 			def.grid && grid(def.grid),
-			def.tenant && tenant(def.tenant),
+			def.tenant && tenant(def.tenant, tenants),
 			def.links?.length && links(def.links));
 	} catch (e) {
 		return notice(`The island “${def?.title ?? "?"}” in links.js: ${e.message}`);
@@ -195,11 +272,11 @@ function notice(...lines) {
 	return h("section", { class: "island notice" }, h("h2", {}, "Oathgate"), lines.map((l) => h("p", {}, l)));
 }
 
-async function loadIslands() {
+async function loadIslands(tenants) {
 	try {
 		const { default: list } = await import(`./links.js?${Date.now()}`);
 		if (!Array.isArray(list)) return [notice("links.js should export an array of islands: export default [ … ]")];
-		return list.map(island);
+		return list.map((def) => island(def, tenants));
 	} catch (e) {
 		const where = h("code", {}, "~/.config/oathgate/links.js");
 		return [e instanceof SyntaxError
@@ -208,7 +285,6 @@ async function loadIslands() {
 				"The format is at the top of newtab.js, in the dotfiles' modules/oathgate.")];
 	}
 }
-
 // Masonry: each island goes to the shortest column, in order, as many
 // columns as fit.
 function masonry(container, islands) {
@@ -230,8 +306,8 @@ function masonry(container, islands) {
 }
 
 tick();
-const shown = wallpaper();
-const [palette, islands] = await Promise.all([readJSON("lumar/palette.json"), loadIslands()]);
+const wallpaperShown = wallpaper();
+const [palette, islands] = await Promise.all([readJSON("lumar/palette.json"), readJSON("tenants.json").then(loadIslands)]);
 applyPalette(palette);
 masonry($("islands"), islands);
-await shown;
+await wallpaperShown;

@@ -289,6 +289,16 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   than JSON for comments and trailing commas, imported by the page as is.
 - **Favicons come from Brave's own cache** (`_favicon`): nothing leaves the
   machine, and a site shows a globe until it has been visited once.
+- **The tenant search reads the infra repo with gh**, not with the browser's
+  GitHub session: an extension can only use that session on github.com's web
+  pages, and listing files there means scraping them; GitHub's API takes a
+  token, which gh already keeps in the keyring. `fetch-tenants`, hourly from
+  a user timer, lists the folder's tree (one REST call, nothing more while it
+  hasn't changed) and reads the kustomizations 50 per GraphQL query: one query
+  for the whole tree timed out on GitHub's side (502), and one for all 160
+  files took 7 of its 10 seconds. A tenant's URL is its Traefik rule's host
+  and path, as an environment's tenants can be on several hosts. Which repo
+  and folder is private (`~/.config/oathgate/tenants.env`).
 - **No footer**: under an extension's new tab Brave adds a bar of its own
   with the extension's name and a Customize button. `NewTabPage.FooterVisible`
   off in Brave's preferences (`json:`) hides it, as its right-click "Hide

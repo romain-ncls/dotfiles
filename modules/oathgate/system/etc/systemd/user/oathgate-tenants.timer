@@ -1,0 +1,9 @@
+[Unit]
+Description=Oathgate's tenant list, hourly
+
+[Timer]
+OnStartupSec=2min
+OnUnitActiveSec=1h
+
+[Install]
+WantedBy=timers.target
