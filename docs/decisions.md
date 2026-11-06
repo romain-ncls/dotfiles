@@ -307,9 +307,11 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   size, and the copy follows each new picture by itself (the first tab after
   a change opens on the last picture and fades to the new one).
 - **The page comes in one piece**: the clock, the islands and the caption
-  stay hidden until all are built, icons drawn, then fade in as they rise
-  12px (about 300 ms; a fade alone felt flat), the clock first and the
-  islands in a wave 35 ms apart, left to right and top to bottom, instead of
+  stay hidden until all are built, icons drawn, then rise 20px into place
+  (half a second; a fade alone felt flat), opaque within 200 ms so the rise
+  shows (a 12px one that ended while they were still faint read as a fade),
+  the clock first and the islands in a wave 35 ms apart, left to right and
+  top to bottom, instead of
   the clock, the islands and each icon appearing on their own frames. Each
   moves on its own: an opacity on their parent would cut the islands'
   `backdrop-filter` off from the wallpaper while it fades. The wallpaper's

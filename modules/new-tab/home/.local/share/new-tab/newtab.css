@@ -50,19 +50,20 @@ a { color: inherit; text-decoration: none; }
 
 /* The clock, the islands and the caption come in together, complete, when
    newtab.js adds .ready, rather than piece by piece (and after a second
-   anyway, should it fail): they fade in as they rise a little. Each on its
-   own: a translucent parent would cut the islands' glass off from the
+   anyway, should it fail): they rise into place, opaque early so the rise
+   shows (one that ends while they are still faint reads as a fade). Each on
+   its own: a translucent parent would cut the islands' glass off from the
    wallpaper. A transition rather than an animation, which would play again
    whenever the columns change. */
 :is(#clock, .island, #caption) {
 	/* The clock and the caption first, then the islands in a wave, 35 ms
 	   apart (--order: 0 top left, then each column and row adds 1). */
 	--delay: calc((var(--order, -1) + 1) * 35ms);
-	transition: opacity .25s ease-out var(--delay), transform .32s cubic-bezier(.2, .7, .2, 1) var(--delay);
+	transition: opacity .2s ease-out var(--delay), transform .5s cubic-bezier(.25, .5, .25, 1) var(--delay);
 }
 :root:not(.ready) :is(#clock, .island, #caption) {
 	opacity: 0;
-	transform: translateY(12px);
+	transform: translateY(20px);
 	animation: show 0s 1s forwards;
 }
 @keyframes show { to { opacity: 1; transform: none; } }
