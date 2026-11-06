@@ -295,16 +295,22 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   one's pixels and decides by rule, not by site: one that fills its square
   gets rounded corners, a dark one (lost on the dark glass) goes on a light
   tile.
-- **The wallpaper is there from the first frame.** Backdrop's pictures are
-  progressive 4K JPEGs, 160 ms to decode: every new tab opened on the dark
-  background first. The page keeps its own copies of the current picture: one
-  the size of the screen in its Cache Storage (10 ms to decode, so it's
-  usually ready before the first paint), and a small preview in
-  localStorage that `first-paint.js`, a plain script in the head, shows
-  blurred until then. The page makes them rather than Backdrop or a hook:
-  it knows the screen's size, and they follow each new picture by
-  themselves. After a change of picture, its first tab opens on the last
-  one's preview and fades to the new one.
+- **The wallpaper is there from the first frame, in place.** Backdrop's
+  pictures are progressive 4K JPEGs, 160 ms to decode: every new tab opened
+  on the dark background first. The page keeps a copy of the current one,
+  the size of the screen, in localStorage (about 1 MB as a `data:` URL),
+  and `first-paint.js`, a plain script in the head, makes it the background
+  before the first paint. localStorage because it's the only storage a page
+  can read before painting; not a small blurred preview, which was stretched
+  differently from the picture and jumped when the picture replaced it. The
+  page makes the copy rather than Backdrop or a hook: it knows the screen's
+  size, and the copy follows each new picture by itself (the first tab after
+  a change opens on the last picture and fades to the new one).
+- **The page comes in one piece**: the clock, the islands and the caption
+  stay hidden until all are built, icons drawn, then fade in together
+  (150 ms), instead of the clock, the islands and each icon appearing on
+  their own frames. Each fades on its own: an opacity on their parent would
+  cut the islands' `backdrop-filter` off from the wallpaper while it fades.
 - **The tenant search reads the infra repo with gh**, not with the browser's
   GitHub session: an extension can only use that session on github.com's web
   pages, and listing files there means scraping them; GitHub's API takes a

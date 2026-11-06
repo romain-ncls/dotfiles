@@ -1,13 +1,12 @@
 // Before the first paint (a plain script in the head, which the page waits
-// for): a small preview of the wallpaper behind everything, so a new tab
-// opens on the picture rather than on the dark background while newtab.js
-// loads it. newtab.js keeps the preview, in localStorage, the only storage
-// read this early.
+// for): the wallpaper behind everything, from the copy newtab.js keeps in
+// localStorage (the only storage read this early), so a new tab opens on
+// the picture, in place, rather than on the dark background.
 try {
-	const preview = JSON.parse(localStorage.getItem("new-tab.wall"))?.preview;
-	if (preview?.startsWith("data:image/")) {
-		document.documentElement.style.setProperty("--preview", `url("${preview}")`);
+	const image = localStorage.getItem("new-tab.wall.image");
+	if (image?.startsWith("data:image/")) {
+		document.documentElement.style.setProperty("--wall", `url("${image}")`);
 	}
 } catch {
-	// No preview: the background until the picture comes.
+	// No copy: the background until newtab.js shows Backdrop's file.
 }

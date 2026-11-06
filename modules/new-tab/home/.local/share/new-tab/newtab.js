@@ -90,13 +90,19 @@ async function faviconKind(src) {
 	return weight && value / weight < 0.4 ? "dark" : "";
 }
 
+// The icons being drawn: the page shows once they all are.
+const iconsDrawn = [];
 function icon(url, name) {
 	const src = favicon(url);
 	const e = h("span", { class: "icon" });
-	faviconKind(src).then((kind) => {
-		e.append(kind === "none" ? h("span", { class: "initial" }, name.trim().charAt(0)) : h("img", { src, alt: "" }));
+	iconsDrawn.push((async () => {
+		const kind = await faviconKind(src).catch(() => "");
+		if (kind === "none") return e.append(h("span", { class: "initial" }, name.trim().charAt(0)));
+		const img = h("img", { src, alt: "" });
+		await img.decode().catch(() => {});
+		e.append(img);
 		if (kind) e.classList.add(kind);
-	}, () => e.append(h("img", { src, alt: "" })));
+	})());
 	return e;
 }
 
@@ -121,12 +127,12 @@ function applyPalette(palette) {
 }
 
 // The wallpaper. Backdrop's pictures are large (a progressive 4K JPEG takes
-// 160 ms to decode), so the first tab to show one keeps two copies of it:
-// one the size of the screen, in the page's cache, which the next tabs
-// decode in 10 ms, and a small preview, which first-paint.js shows from the
-// first frame. The picture fades in only when it took a while.
-const wallKey = "new-tab.wall";
-const wallCache = "new-tab.wall";
+// 160 ms to decode), so the page keeps a copy of the current one the size of
+// the screen in localStorage, which first-paint.js puts behind everything
+// before the first frame. A new picture (or a larger screen) is shown from
+// Backdrop's file, fading in over the last one, and replaces the copy.
+const wallKey = "new-tab.wall"; // { file, screen: "1920x1200" }
+const wallImageKey = "new-tab.wall.image"; // the copy, a data: URL
 
 // The screen in device pixels (or the window, should it be larger): what a
 // copy of the picture has to cover.
@@ -146,52 +152,56 @@ async function resized(img, width, height) {
 	return canvas;
 }
 
-// Keeps the picture just shown for the next tabs: its preview, and when it
-// came from Backdrop's file, its copy the size of the screen (its own size
-// on a larger screen), in place of the last picture's.
-async function keepCopies(img, name, cache, key, makeCopy) {
+// Keeps a copy of the picture just shown, the size of the screen (its own
+// size on a larger screen), for the next tabs.
+async function keepCopy(img, name, sw, sh) {
 	const iw = img.naturalWidth, ih = img.naturalHeight;
-	if (makeCopy && cache) {
-		const [sw, sh] = screenSize();
-		const scale = Math.min(1, Math.max(sw / iw, sh / ih));
-		const canvas = await resized(img, Math.round(iw * scale), Math.round(ih * scale));
-		const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
-		for (const old of await cache.keys()) await cache.delete(old);
-		await cache.put(key, new Response(blob, { headers: { "x-screen": `${sw}x${sh}` } }));
+	const scale = Math.min(1, Math.max(sw / iw, sh / ih));
+	const canvas = await resized(img, Math.round(iw * scale), Math.round(ih * scale));
+	const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+	const image = await new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onload = () => resolve(reader.result);
+		reader.onerror = () => reject(reader.error);
+		reader.readAsDataURL(blob);
+	});
+	try {
+		localStorage.setItem(wallImageKey, image);
+		localStorage.setItem(wallKey, JSON.stringify({ file: name, screen: `${sw}x${sh}` }));
+	} catch {
+		// More than localStorage holds (a screen far larger than 1920×1200):
+		// no copy, each tab decodes Backdrop's file.
+		localStorage.removeItem(wallImageKey);
+		localStorage.removeItem(wallKey);
 	}
-	const preview = (await resized(img, 320, Math.round(320 * ih / iw))).toDataURL("image/jpeg", 0.8);
-	localStorage.setItem(wallKey, JSON.stringify({ file: name, preview }));
 }
 
-async function wallpaper() {
-	const current = (await readJSON("backdrop/state.json"))?.current;
+async function wallpaper(current) {
 	if (!current?.file) return;
 	const name = current.file.split("/").pop();
-	const start = performance.now();
-	// A copy made for a screen at least as large as this one.
-	const key = "https://new-tab.invalid/wall/" + encodeURIComponent(name);
-	const cache = await caches.open(wallCache).catch(() => null);
-	const copy = await cache?.match(key).catch(() => null);
-	const [cw, ch] = (copy?.headers.get("x-screen") ?? "0x0").split("x").map(Number);
 	const [sw, sh] = screenSize();
-	const fits = cw >= sw && ch >= sh;
-	const img = new Image();
-	img.alt = "";
-	img.src = fits ? URL.createObjectURL(await copy.blob()) : "backdrop/current/" + encodeURIComponent(name);
-	try {
-		await img.decode();
-	} catch {
-		if (fits) cache.delete(key); // a broken copy: the next tab makes another
-		return;
-	}
-	$("wall").classList.toggle("fade", performance.now() - start > 60);
-	$("wall").append(img);
-	if (fits) URL.revokeObjectURL(img.src);
 	let kept = null;
 	try {
 		kept = JSON.parse(localStorage.getItem(wallKey));
 	} catch {}
-	if (!fits || kept?.file !== name) requestIdleCallback(() => keepCopies(img, name, cache, key, !fits));
+	const [cw, ch] = String(kept?.screen ?? "0x0").split("x").map(Number);
+	const shown = document.documentElement.style.getPropertyValue("--wall") !== "";
+	if (shown && kept?.file === name && cw >= sw && ch >= sh) return;
+	const img = new Image();
+	img.alt = "";
+	img.src = "backdrop/current/" + encodeURIComponent(name);
+	try {
+		await img.decode();
+	} catch {
+		return;
+	}
+	$("wall").append(img);
+	requestIdleCallback(() => keepCopy(img, name, sw, sh));
+}
+
+// The picture's title, place and credit, at the bottom left.
+function caption(current) {
+	if (!current?.title) return;
 	const lines = [h("strong", {}, current.title), h("span", {}, current.place), h("small", {}, current.credit)];
 	$("caption").append(current.infoUrl ? h("a", { href: current.infoUrl }, lines) : h("div", {}, lines));
 }
@@ -410,9 +420,23 @@ function masonry(container, islands) {
 	}).observe(container);
 }
 
+// The page comes in one piece: the clock, the islands and the caption stay
+// hidden (newtab.css) until all are there, icons drawn, and then fade in
+// together: after 400 ms at the latest.
 tick();
-const wallpaperShown = wallpaper();
-const [palette, islands] = await Promise.all([readJSON("lumar/palette.json"), readJSON("tenants.json").then(loadIslands)]);
-applyPalette(palette);
-masonry($("islands"), islands);
-await wallpaperShown;
+const current = readJSON("backdrop/state.json").then((state) => state?.current);
+current.then(wallpaper);
+try {
+	const [palette, islands, wall] = await Promise.all([
+		readJSON("lumar/palette.json"),
+		readJSON("tenants.json").then(loadIslands),
+		current,
+	]);
+	applyPalette(palette);
+	masonry($("islands"), islands);
+	caption(wall);
+	await Promise.race([Promise.all(iconsDrawn), new Promise((resolve) => setTimeout(resolve, 400))]);
+} finally {
+	void document.body.offsetHeight; // the islands styled hidden first, so they fade in
+	document.documentElement.classList.add("ready");
+}
