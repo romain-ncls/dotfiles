@@ -421,8 +421,8 @@ function masonry(container, islands) {
 }
 
 // The page comes in one piece: the clock, the islands and the caption stay
-// hidden (newtab.css) until all are there, icons drawn, and then fade in
-// together: after 400 ms at the latest.
+// hidden (newtab.css) until all are there, icons drawn, and then rise and
+// fade in together: after 400 ms at the latest.
 tick();
 const current = readJSON("backdrop/state.json").then((state) => state?.current);
 current.then(wallpaper);
@@ -437,6 +437,6 @@ try {
 	caption(wall);
 	await Promise.race([Promise.all(iconsDrawn), new Promise((resolve) => setTimeout(resolve, 400))]);
 } finally {
-	void document.body.offsetHeight; // the islands styled hidden first, so they fade in
+	void document.body.offsetHeight; // the islands styled hidden first, so they come in
 	document.documentElement.classList.add("ready");
 }

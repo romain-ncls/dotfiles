@@ -307,10 +307,11 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   size, and the copy follows each new picture by itself (the first tab after
   a change opens on the last picture and fades to the new one).
 - **The page comes in one piece**: the clock, the islands and the caption
-  stay hidden until all are built, icons drawn, then fade in together
-  (150 ms), instead of the clock, the islands and each icon appearing on
-  their own frames. Each fades on its own: an opacity on their parent would
-  cut the islands' `backdrop-filter` off from the wallpaper while it fades.
+  stay hidden until all are built, icons drawn, then fade in together as
+  they rise 12px (about 300 ms; a fade alone felt flat), instead of the
+  clock, the islands and each icon appearing on their own frames. Each moves
+  on its own: an opacity on their parent would cut the islands'
+  `backdrop-filter` off from the wallpaper while it fades.
 - **The tenant search reads the infra repo with gh**, not with the browser's
   GitHub session: an extension can only use that session on github.com's web
   pages, and listing files there means scraping them; GitHub's API takes a
