@@ -1,0 +1,7 @@
+[Unit]
+Description=The new tab's tenant list, from the repo set in ~/.config/new-tab/tenants.env
+ConditionPathExists=%h/.config/new-tab/tenants.env
+
+[Service]
+Type=oneshot
+ExecStart=%h/dotfiles/modules/new-tab/fetch-tenants

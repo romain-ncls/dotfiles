@@ -1,8 +1,8 @@
-// Oathgate, Brave's new tab: islands of links over Backdrop's wallpaper, in
+// Brave's new tab: islands of links over Backdrop's wallpaper, in
 // the session's colors. It's an unpacked extension (docs/manual-steps.md).
 // Brave serves an unpacked extension's files through symbolic links wherever
 // they point, so the hook link-data links in what the page reads:
-//   links.js    the links: ~/.config/oathgate/links.js, private (names of
+//   links.js    the links: ~/.config/new-tab/links.js, private (names of
 //               servers and clients), kept with the backups
 //   backdrop/   Backdrop's state.json: the current wallpaper and its caption
 //   lumar/      palette.json, the session's colors, when apply-lumar wrote one
@@ -124,7 +124,7 @@ function grid(g) {
 }
 
 // The tenants opened last: { name, env, url }.
-const recentKey = "oathgate.recent";
+const recentKey = "new-tab.recent";
 function recentTenants() {
 	try {
 		const list = JSON.parse(localStorage.getItem(recentKey));
@@ -269,7 +269,7 @@ function island(def, tenants) {
 }
 
 function notice(...lines) {
-	return h("section", { class: "island notice" }, h("h2", {}, "Oathgate"), lines.map((l) => h("p", {}, l)));
+	return h("section", { class: "island notice" }, h("h2", {}, "New tab"), lines.map((l) => h("p", {}, l)));
 }
 
 async function loadIslands(tenants) {
@@ -278,11 +278,11 @@ async function loadIslands(tenants) {
 		if (!Array.isArray(list)) return [notice("links.js should export an array of islands: export default [ … ]")];
 		return list.map((def) => island(def, tenants));
 	} catch (e) {
-		const where = h("code", {}, "~/.config/oathgate/links.js");
+		const where = h("code", {}, "~/.config/new-tab/links.js");
 		return [e instanceof SyntaxError
 			? notice(h("span", {}, where, ": ", e.message))
 			: notice(h("span", {}, "No links yet: write them in ", where, "."),
-				"The format is at the top of newtab.js, in the dotfiles' modules/oathgate.")];
+				"The format is at the top of newtab.js, in the dotfiles' modules/new-tab.")];
 	}
 }
 // Masonry: each island goes to the shortest column, in order, as many

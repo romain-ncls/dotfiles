@@ -1,17 +1,17 @@
 #!/bin/sh
-# Lists the tenants for the search of Oathgate's tenant field, from a GitHub
-# repo read with gh (logged in): under a folder of environments, each
+# Lists the tenants for the search of the new tab's tenant field, from a
+# GitHub repo read with gh (logged in): under a folder of environments, each
 # tenant's folder has a kustomization.yaml whose Traefik rule reads
 # Host(`host`) && PathRegexp(`/tenant(/|$)`); its environment is the folder
-# above it. The repo is private config, ~/.config/oathgate/tenants.env:
+# above it. The repo is private config, ~/.config/new-tab/tenants.env:
 #   repo=owner/name
 #   ref=main
 #   path=the/folder/of/environments
-# Writes ~/.cache/oathgate/tenants.json. Run hourly by oathgate-tenants.timer;
-# now: systemctl --user start oathgate-tenants
+# Writes ~/.cache/new-tab/tenants.json. Run hourly by new-tab-tenants.timer;
+# now: systemctl --user start new-tab-tenants
 set -eu
-. "${XDG_CONFIG_HOME:-$HOME/.config}/oathgate/tenants.env"
-out=${XDG_CACHE_HOME:-$HOME/.cache}/oathgate/tenants.json
+. "${XDG_CONFIG_HOME:-$HOME/.config}/new-tab/tenants.env"
+out=${XDG_CACHE_HOME:-$HOME/.cache}/new-tab/tenants.json
 mkdir -p "${out%/*}"
 now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 

@@ -268,7 +268,7 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 - **Not Vesktop**: it doesn't run OpenASAR, and the official client is what
   mutectl's plugin was written against.
 
-## Brave's new tab (Oathgate, work laptop)
+## Brave's new tab (work laptop)
 
 - **An unpacked extension that replaces the new tab** (`chrome_url_overrides`,
   6 Nov 2026): islands of work links over Backdrop's wallpaper, in the
@@ -285,7 +285,7 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   state: a change to those has to follow there.
 - **The links are private**: they name servers, a firewall's address and
   client tenants, and this repo is public. They live in
-  `~/.config/oathgate/links.js` (kept with the backups), a JS module rather
+  `~/.config/new-tab/links.js` (kept with the backups), a JS module rather
   than JSON for comments and trailing commas, imported by the page as is.
 - **Favicons come from Brave's own cache** (`_favicon`): nothing leaves the
   machine, and a site shows a globe until it has been visited once.
@@ -298,7 +298,7 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   for the whole tree timed out on GitHub's side (502), and one for all 160
   files took 7 of its 10 seconds. A tenant's URL is its Traefik rule's host
   and path, as an environment's tenants can be on several hosts. Which repo
-  and folder is private (`~/.config/oathgate/tenants.env`).
+  and folder is private (`~/.config/new-tab/tenants.env`).
 - **No footer**: under an extension's new tab Brave adds a bar of its own
   with the extension's name and a Customize button. `NewTabPage.FooterVisible`
   off in Brave's preferences (`json:`) hides it, as its right-click "Hide

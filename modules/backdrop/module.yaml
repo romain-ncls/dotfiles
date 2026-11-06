@@ -1,6 +1,7 @@
 # Backdrop: the desktop wallpaper, from Windows Spotlight, Bing and Wallhaven,
 # picked by likes and dislikes (its state: ~/.local/share/backdrop, whose
-# state.json Oathgate's new tab reads for the current picture and caption).
+# state.json Brave's new tab (modules/new-tab) reads for the current picture
+# and its caption).
 user-services:
   - backdrop.service
 

@@ -1,5 +1,5 @@
 [Unit]
-Description=Oathgate's tenant list, hourly
+Description=The new tab's tenant list, hourly
 
 [Timer]
 OnStartupSec=2min
