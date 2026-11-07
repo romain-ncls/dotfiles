@@ -18,7 +18,7 @@
   "preferredNotifChannel": "auto",
   "wheelScrollAccelerationEnabled": false,
   "env": {
-    "CLAUDE_CODE_SCROLL_SPEED": "5"
+    "CLAUDE_CODE_SCROLL_SPEED": "3"
   },
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,

@@ -221,8 +221,14 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   scrolling was slow, then far too fast, then erratic. Without
   acceleration every wheel step moves a fixed number of rows: 3 in xterm.js
   terminals, 1 in Konsole.
-- **5 rows per wheel step** (`env.CLAUDE_CODE_SCROLL_SPEED: "5"`, 7 Nov
-  2026), in every terminal, because 3 and 1 were too slow. The value replaces
+- **3 rows per wheel step** (`env.CLAUDE_CODE_SCROLL_SPEED: "3"`, 7 Nov
+  2026), in every terminal. An app that takes the mouse gets one wheel report
+  per full click from Konsole: a report carries no amount, so Konsole adds up
+  the hi-res wheel's fractions and sends whole clicks only (a click that falls
+  short sends nothing, the next one sends two). At 1 row per report Claude
+  Code scrolled 3 times slower than Konsole's own scrollback (3 lines per
+  click); 3 matches it, 5 was too fast. Free-spin still jumps 3 rows at a
+  time: line-by-line scrolling needs the classic renderer. The value replaces
   the default (1–20, rounded down without acceleration). `/scroll-speed`
   changes it and writes it into the live `settings.json`, so copy the value
   back here afterwards.
