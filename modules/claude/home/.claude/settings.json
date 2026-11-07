@@ -17,6 +17,9 @@
   "editorMode": "normal",
   "preferredNotifChannel": "auto",
   "wheelScrollAccelerationEnabled": false,
+  "env": {
+    "CLAUDE_CODE_SCROLL_SPEED": "5"
+  },
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,

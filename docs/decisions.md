@@ -219,9 +219,13 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   5 and 80 ms, 3 rows above. xterm.js sends one wheel report per whole line
   that hi-res wheels and touchpads add up, so the gaps are uneven, and
   scrolling was slow, then far too fast, then erratic. Without
-  acceleration every step is 3 rows. `/scroll-speed` changes that number:
-  it writes `env.CLAUDE_CODE_SCROLL_SPEED` into the live `settings.json`,
-  so copy the value back here afterwards.
+  acceleration every wheel step moves a fixed number of rows: 3 in xterm.js
+  terminals, 1 in Konsole.
+- **5 rows per wheel step** (`env.CLAUDE_CODE_SCROLL_SPEED: "5"`, 7 Nov
+  2026), in every terminal, because 3 and 1 were too slow. The value replaces
+  the default (1–20, rounded down without acceleration). `/scroll-speed`
+  changes it and writes it into the live `settings.json`, so copy the value
+  back here afterwards.
 
 ## Remote desktop (home PC)
 
