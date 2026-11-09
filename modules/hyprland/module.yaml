@@ -24,8 +24,8 @@ packages:
   - loupe
   - file-roller
   - nm-connection-editor # editing connections (a VPN's settings): the shell only uses them
-  # stand-ins until shadesmar has its own (docs/hyprland.md, first login);
-  # hyprlock stays as the lock screen's fallback (hypr/lock-screen)
+  # hypridle: idle and sleep lock from outside the shell (docs/hyprland.md,
+  # Decisions); hyprlock: the lock screen's fallback (hypr/lock-screen)
   - hyprlock
   - hypridle
 
