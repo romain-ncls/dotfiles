@@ -202,9 +202,10 @@ BarButton {
         WlrLayershell.namespace: "shadesmar-pairing"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
 
+        // (once shown, as BarPopup's)
         HyprlandFocusGrab {
             windows: [card]
-            active: card.visible
+            active: card.backingWindowVisible
             onCleared: bt.answer(false, "")
         }
 
