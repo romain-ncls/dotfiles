@@ -446,8 +446,8 @@ later (yazi, btop, lazygit…).
       the grid and back, as Plasma's (it only appears and disappears now).
 - [x] Brave stays on its Classic layout (no bar above the tabs) in lumar's
       colors: a Chrome theme apply-lumar renders from the palette
-      (`~/.local/share/lumar/brave-theme`, loaded unpacked once:
-      docs/manual-steps.md): the tab strip the frame, the active tab and
+      (`~/.local/share/lumar/brave-theme`, which Brave loads at each start:
+      lumar's `brave: extensions`): the tab strip the frame, the active tab and
       toolbar the pane, the address bar and new tab the base. One profile,
       two sessions: each login rewrites it in its session's colors (Brave
       rereads it when it starts). Discord and VS Code already
