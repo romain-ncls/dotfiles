@@ -20,3 +20,9 @@ user-services:
 hooks:
   - run: apply-lumar
     when: always # cheap
+
+# Brave's theme, which apply-lumar writes: Brave loads it at each start, and
+# so rereads it in the colors of the session it starts in.
+brave:
+  extensions:
+    - ~/.local/share/lumar/brave-theme

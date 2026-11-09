@@ -158,11 +158,8 @@ new Secure Boot keys, a db/dbx update (fwupd), a BIOS update or reset. Re-bind:
   first new tab asks. Its links (`links.js`) and the repo its tenant search
   reads (`tenants.env`) are in `~/.config/new-tab`, from the backup; the
   search needs gh logged in (`gh auth login`).
-- Brave: load lumar's theme unpacked from `~/.local/share/lumar/brave-theme`
-  (`brave://extensions`, Developer mode, Load unpacked; apply-lumar writes it,
-  in the session's colors at each login, and Brave rereads it when it
-  starts). Settings > Appearance then shows Lumar as the theme, in place
-  of Classic.
+- Brave: lumar's theme loads by itself too (lumar's `brave: extensions`):
+  Settings > Appearance shows Lumar as the theme, in place of Classic.
 - JetBrains Toolbox: install GoLand, WebStorm, PyCharm and DataGrip.
 - NetworkManager: join the Wi-Fi networks (their passwords are in
   Bitwarden). The VPNs need nothing: lodestar writes them from Bitwarden
