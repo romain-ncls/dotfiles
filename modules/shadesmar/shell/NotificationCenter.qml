@@ -1,7 +1,7 @@
 // The bell: the notifications whose popup has gone (Notifications.qml), the
 // count of those unread. Its popup: Do not disturb; the history, the newest
-// first (a click runs one's default action, the cross dismisses it), and
-// Clear.
+// first (a click runs one's default action, or opens the file it's about;
+// the cross dismisses it), and Clear.
 import QtQuick
 import Quickshell
 
@@ -73,6 +73,7 @@ BarButton {
             ListRow {
                 required property var modelData
                 readonly property var defaultAction: modelData.actions.find(a => a.identifier === "default") ?? null
+                readonly property string file: center.notifications.files(modelData).find(u => center.notifications.kept(u)) ?? ""
 
                 iconSource: center.notifications.picture(modelData) || center.notifications.icon(modelData)
                 title: modelData.summary
@@ -84,6 +85,9 @@ BarButton {
                     if (defaultAction) {
                         popup.close()
                         defaultAction.invoke()
+                    } else if (file !== "") {
+                        popup.close()
+                        center.notifications.open(modelData, file)
                     }
                 }
                 onRemoved: modelData.dismiss()
