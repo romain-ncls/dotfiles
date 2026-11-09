@@ -1,9 +1,9 @@
 // The network, as Plasma's applet: the bar shows the Wi-Fi's signal, or the
 // cable. The popup: the Wi-Fi's switch and networks (a click connects or
 // disconnects; a new secured one asks its password here), the cable, and
-// the VPNs, through nmcli (Quickshell's NetworkManager knows no VPN;
-// nm-applet, in the background, still asks for their OTP and for secrets;
-// Tray.qml hides its icon).
+// the VPNs, through nmcli (Quickshell's NetworkManager knows no VPN). What a
+// connection asks, spanreed's secret agent passes on: a card where the
+// popup opens.
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -72,6 +72,100 @@ BarButton {
         triggeredOnStart: true
         interval: 2000
         onTriggered: listVpns.running = true
+    }
+
+    // What a connection asks (spanreed's secret agent, network.go): a Wi-Fi's
+    // password, a VPN's one-time code, in a card above the bar; kept ones are
+    // only said to be ("saved": an empty field keeps it). The answer goes back
+    // through `spanreed answer` (SPANREED: a dev rig's build), the secrets on
+    // its stdin.
+    // {id, setting, name, message, fields: [{key, label, secret, saved}]}
+    property var request: null
+
+    function answer(ok) {
+        const r = request
+        if (!r)
+            return
+        const values = {}
+        for (let i = 0; ok && i < fields.count; i++)
+            values[fields.itemAt(i).key] = fields.itemAt(i).text
+        request = null
+        reply.stdinEnabled = true
+        reply.exec([Quickshell.env("SPANREED") || "spanreed", "answer"])
+        reply.write(JSON.stringify({ id: r.id, ok: ok, values: values }))
+        reply.stdinEnabled = false
+    }
+
+    // the fields still empty that have nothing kept
+    function missing() {
+        for (let i = 0; i < fields.count; i++) {
+            const f = fields.itemAt(i)
+            if (f && !f.saved && f.text === "")
+                return f
+        }
+        return null
+    }
+
+    Process {
+        id: reply
+    }
+
+    IpcHandler {
+        target: "network"
+
+        // the request: one JSON object (setting, name, message, fields)
+        function ask(id: int, request: string): void {
+            // a new one replaces the one asked before
+            if (net.request)
+                net.answer(false)
+            card.place()
+            net.request = Object.assign(JSON.parse(request), { id: id })
+        }
+        // NetworkManager gave up, or nobody answered
+        function cancel(id: int): void {
+            if (net.request && net.request.id === id)
+                net.request = null
+        }
+    }
+
+    BarCard {
+        id: card
+
+        bar: net.bar
+        from: net
+        shown: net.request !== null
+        icon: !net.request ? "" : net.request.setting === "vpn" ? "network-vpn-symbolic" : net.request.setting === "802-11-wireless-security" ? "network-wireless-symbolic" : "network-wired-symbolic"
+        title: net.request ? net.request.name : ""
+        message: net.request ? net.request.message : ""
+        yes: "Connect"
+        ready: fields.count > 0 && net.missing() === null
+        onAccepted: net.answer(true)
+        onDismissed: net.answer(false)
+
+        Repeater {
+            id: fields
+
+            model: net.request ? net.request.fields : []
+
+            CardField {
+                required property var modelData
+                required property int index
+                readonly property string key: modelData.key
+                readonly property bool saved: modelData.saved
+
+                focus: index === 0
+                secret: modelData.secret
+                hint: saved ? `${modelData.label}: saved` : modelData.label
+                // the next empty one, or connect
+                onAccepted: {
+                    const next = net.missing()
+                    if (next)
+                        next.forceActiveFocus()
+                    else
+                        net.answer(true)
+                }
+            }
+        }
     }
 
     BarPopup {

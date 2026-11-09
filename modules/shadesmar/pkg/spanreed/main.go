@@ -1,13 +1,18 @@
 // spanreed: shadesmar's helper for what QML can't do (docs/hyprland.md),
 // owning D-Bus names. Plasma's OSD service, which backdrop and spotify-vol
 // call (org.kde.plasmashell, /org/kde/osdService), passed on to the shell's
-// OSD with qs ipc call; and the Bluetooth pairing agent (bluetooth.go).
-// Hyprland's session only: in Plasma, plasmashell owns the name and
-// bluedevil is the agent.
+// OSD with qs ipc call; the Bluetooth pairing agent (bluetooth.go) and the
+// network's secret agent (network.go), which ask in the shell and get its
+// answers on org.shadesmar.Spanreed. Hyprland's session only: in Plasma,
+// plasmashell owns the name, bluedevil and plasma-nm are the agents.
+//
+// spanreed answer: the shell's answer to a network request, read on stdin
+// (JSON: id, ok, values) and passed on to the running spanreed.
 package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -19,9 +24,10 @@ import (
 )
 
 const (
-	busName = "org.kde.plasmashell"
-	osdPath = "/org/kde/osdService"
-	osdName = "org.kde.osdService"
+	busName    = "org.kde.plasmashell"
+	osdPath    = "/org/kde/osdService"
+	osdName    = "org.kde.osdService"
+	answerName = "org.shadesmar.Spanreed"
 )
 
 // dev: in a dev rig (modules/hyprland/dev), which shares the machine's
@@ -83,8 +89,27 @@ const introspection = `
 	</interface>` + introspect.IntrospectDataString + `
 </node>`
 
+// passAnswer passes stdin on to the network agent's Answer.
+func passAnswer() {
+	js, err := io.ReadAll(io.LimitReader(os.Stdin, 1<<16))
+	if err != nil {
+		log.Fatal(err)
+	}
+	conn, err := dbus.ConnectSessionBus()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := conn.Object(answerName, networkPath).Call(networkIface+".Answer", 0, string(js)).Err; err != nil {
+		log.Fatal(err)
+	}
+}
+
 func main() {
 	log.SetFlags(0)
+	if len(os.Args) > 1 && os.Args[1] == "answer" {
+		passAnswer()
+		return
+	}
 	conn, err := dbus.ConnectSessionBus()
 	if err != nil {
 		log.Fatal(err)
@@ -107,6 +132,14 @@ func main() {
 	bluetooth := func(fn string, args ...string) error { return shell("bluetooth", fn, args...) }
 	if err := serveAgent(conn, bluetooth); err != nil {
 		log.Printf("bluetooth: no pairing agent: %v", err)
+	}
+	network := func(fn string, args ...string) error { return shell("network", fn, args...) }
+	if err := serveNetwork(conn, network); err != nil {
+		log.Printf("network: no secret agent: %v", err)
+	}
+	// the shell's answers, once both are there
+	if reply, err := conn.RequestName(answerName, dbus.NameFlagDoNotQueue); err != nil || reply != dbus.RequestNameReplyPrimaryOwner {
+		log.Printf("%s is taken: no answers (%v)", answerName, err)
 	}
 	select {}
 }

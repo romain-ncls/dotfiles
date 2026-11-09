@@ -20,7 +20,6 @@ import (
 const (
 	agentPath   = dbus.ObjectPath("/org/shadesmar/agent")
 	agentIface  = "org.bluez.Agent1"
-	answerName  = "org.shadesmar.Spanreed"
 	answerPath  = dbus.ObjectPath("/org/shadesmar/Bluetooth")
 	answerIface = "org.shadesmar.Bluetooth"
 )
@@ -200,11 +199,6 @@ func serveAgent(session *dbus.Conn, shell func(fn string, args ...string) error)
 	a := newAgent(shell)
 	if err := session.Export(answers{a}, answerPath, answerIface); err != nil {
 		return err
-	}
-	if reply, err := session.RequestName(answerName, dbus.NameFlagDoNotQueue); err != nil {
-		return err
-	} else if reply != dbus.RequestNameReplyPrimaryOwner {
-		return fmt.Errorf("%s is taken", answerName)
 	}
 	if dev() {
 		return session.Export(a, agentPath, agentIface)

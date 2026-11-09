@@ -2,7 +2,7 @@
 pkgname=spanreed
 pkgver=1
 pkgrel=1
-pkgdesc="shadesmar's D-Bus helper: Plasma's OSD service and the Bluetooth pairing agent, passed on to the shell"
+pkgdesc="shadesmar's D-Bus helper: Plasma's OSD service, the Bluetooth pairing agent and the network's secret agent, passed on to the shell"
 arch=(x86_64)
 license=(MIT)
 options=(!debug)

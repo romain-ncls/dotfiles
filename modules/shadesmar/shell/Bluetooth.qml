@@ -8,10 +8,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Bluetooth
-import Quickshell.Hyprland
 import Quickshell.Io
-import Quickshell.Wayland
-import Quickshell.Widgets
 
 BarButton {
     id: bt
@@ -148,9 +145,7 @@ BarButton {
             // a new one replaces the one asked before
             if (bt.request && bt.waits(bt.request))
                 bt.answer(false, "")
-            // the card where the popup opens, centred on the icon
-            card.centre = bt.bar.margins.left + bt.mapToItem(null, bt.width / 2, 0).x
-            bt.bar.open = ""
+            card.place()
             bt.request = {
                 id: id,
                 kind: kind,
@@ -176,205 +171,55 @@ BarButton {
         }
     }
 
-    // The request's card: a window of its own, which takes the keyboard,
-    // above the bar where the popup opens (a pairing the device starts
-    // comes with no popup open).
-    PanelWindow {
+    // the request's card, above the bar (a pairing the device starts comes
+    // with no popup open)
+    BarCard {
         id: card
 
-        property real centre: 0
+        bar: bt.bar
+        from: bt
+        shown: bt.request !== null
+        icon: bt.asker?.icon || "network-bluetooth-symbolic"
+        title: bt.request ? bt.nameOf(bt.request) : ""
+        message: bt.request ? bt.message(bt.request) : ""
+        no: bt.request?.kind === "service" ? "Deny" : "Cancel"
+        yes: !bt.request || !bt.waits(bt.request) ? "" : bt.request.kind === "service" ? "Allow" : "Pair"
+        ready: !bt.typed || entry.text !== ""
+        onAccepted: bt.answer(true, bt.typed ? entry.text : "")
+        onDismissed: bt.answer(false, "")
 
-        screen: bt.bar.screen
-        visible: bt.request !== null
-        anchors {
-            bottom: true
-            right: true
-        }
-        margins {
-            bottom: 6
-            right: Math.max(bt.bar.margins.right, (screen ? screen.width : 0) - card.centre - card.implicitWidth / 2)
-        }
-        exclusiveZone: 0
-        implicitWidth: 360
-        implicitHeight: ask.implicitHeight + 24
-        color: "transparent"
-        WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.namespace: "shadesmar-pairing"
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
-
-        // (once shown, as BarPopup's)
-        HyprlandFocusGrab {
-            windows: [card]
-            active: card.backingWindowVisible
-            onCleared: bt.answer(false, "")
+        // the code, to compare or to type on the device
+        Text {
+            visible: bt.request !== null && bt.request.code !== "" && (bt.request.kind === "confirm" || !bt.waits(bt.request))
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: bt.request ? bt.code(bt.request) : ""
+            textFormat: Text.StyledText
+            color: Theme.text
+            font.family: Theme.font
+            font.pixelSize: 26
+            font.weight: Font.DemiBold
+            font.letterSpacing: 3
         }
 
-        Rectangle {
-            anchors.fill: parent
-            radius: Theme.radius
-            color: Theme.popup
-            border.width: 1
-            border.color: Theme.outline
-        }
+        // the PIN or the code, typed here
+        CardField {
+            id: entry
 
-        Item {
-            anchors.fill: parent
-            focus: !bt.typed
-            Keys.onEscapePressed: bt.answer(false, "")
-        }
-
-        Column {
-            id: ask
-
-            x: 16
-            y: 12
-            width: parent.width - 32
-            spacing: 10
-
-            Item {
-                width: parent.width
-                height: Math.max(glyph.height, texts.implicitHeight)
-
-                IconImage {
-                    id: glyph
-
-                    anchors.verticalCenter: parent.verticalCenter
-                    implicitSize: 22
-                    source: Quickshell.iconPath(bt.asker?.icon || "network-bluetooth-symbolic", "network-bluetooth-symbolic")
-                }
-
-                Column {
-                    id: texts
-
-                    x: 32
-                    width: parent.width - x
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 1
-
-                    Text {
-                        width: parent.width
-                        text: bt.request ? bt.nameOf(bt.request) : ""
-                        elide: Text.ElideRight
-                        color: Theme.text
-                        font.family: Theme.font
-                        font.pixelSize: 13
-                        font.weight: Font.DemiBold
-                    }
-
-                    Text {
-                        width: parent.width
-                        text: bt.request ? bt.message(bt.request) : ""
-                        wrapMode: Text.Wrap
-                        color: Theme.dim
-                        font.family: Theme.font
-                        font.pixelSize: 11
-                    }
-                }
+            visible: bt.typed
+            focus: bt.typed
+            digits: bt.request?.kind === "passkey"
+            maxLength: bt.request?.kind === "passkey" ? 6 : 16
+            hint: bt.request?.kind === "passkey" ? "The code, then Enter" : "The PIN, then Enter"
+            onAccepted: {
+                if (text !== "")
+                    bt.answer(true, text)
             }
 
-            // the code, to compare or to type on the device
-            Text {
-                visible: bt.request !== null && bt.request.code !== "" && (bt.request.kind === "confirm" || !bt.waits(bt.request))
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: bt.request ? bt.code(bt.request) : ""
-                textFormat: Text.StyledText
-                color: Theme.text
-                font.family: Theme.font
-                font.pixelSize: 26
-                font.weight: Font.DemiBold
-                font.letterSpacing: 3
-            }
+            Connections {
+                target: bt
 
-            // the PIN or the code, typed here
-            Rectangle {
-                visible: bt.typed
-                width: parent.width
-                height: 36
-                radius: 6
-                color: Theme.slot
-
-                TextInput {
-                    id: entry
-
-                    x: 10
-                    width: parent.width - 20
-                    anchors.verticalCenter: parent.verticalCenter
-                    focus: bt.typed
-                    maximumLength: bt.request?.kind === "passkey" ? 6 : 16
-                    inputMethodHints: bt.request?.kind === "passkey" ? Qt.ImhDigitsOnly : Qt.ImhNone
-                    validator: RegularExpressionValidator {
-                        regularExpression: bt.request?.kind === "passkey" ? /[0-9]*/ : /.*/
-                    }
-                    color: Theme.text
-                    font.family: Theme.font
-                    font.pixelSize: 13
-                    onAccepted: {
-                        if (text !== "")
-                            bt.answer(true, text)
-                    }
-                    Keys.onEscapePressed: bt.answer(false, "")
-
-                    Connections {
-                        target: bt
-
-                        function onRequestChanged() {
-                            entry.text = ""
-                        }
-                    }
-
-                    Text {
-                        visible: entry.text === ""
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: bt.request?.kind === "passkey" ? "The code, then Enter" : "The PIN, then Enter"
-                        color: Theme.dim
-                        font: entry.font
-                    }
-                }
-            }
-
-            Row {
-                anchors.right: parent.right
-                spacing: 6
-
-                Repeater {
-                    model: !bt.request ? [] : !bt.waits(bt.request) ? ["no"] : ["no", "yes"]
-
-                    Rectangle {
-                        required property string modelData
-                        readonly property bool yes: modelData === "yes"
-
-                        width: Math.max(72, label.implicitWidth + 24)
-                        height: 28
-                        radius: 6
-                        color: yes ? (button.containsMouse ? Qt.lighter(Theme.accent, 1.1) : Theme.accent) : (button.containsMouse ? Qt.lighter(Theme.slot, 1.2) : Theme.slot)
-                        opacity: yes && bt.typed && entry.text === "" ? 0.5 : 1
-
-                        Text {
-                            id: label
-
-                            anchors.centerIn: parent
-                            text: parent.yes ? (bt.request?.kind === "service" ? "Allow" : "Pair") : bt.request?.kind === "service" ? "Deny" : "Cancel"
-                            color: parent.yes ? Theme.accentText : Theme.text
-                            font.family: Theme.font
-                            font.pixelSize: 12
-                            font.weight: parent.yes ? Font.DemiBold : Font.Normal
-                        }
-
-                        MouseArea {
-                            id: button
-
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onClicked: {
-                                if (!parent.yes)
-                                    bt.answer(false, "")
-                                else if (!bt.typed)
-                                    bt.answer(true, "")
-                                else if (entry.text !== "")
-                                    bt.answer(true, entry.text)
-                            }
-                        }
-                    }
+                function onRequestChanged() {
+                    entry.text = ""
                 }
             }
         }
