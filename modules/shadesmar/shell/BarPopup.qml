@@ -31,10 +31,13 @@ PopupWindow {
     implicitHeight: body.implicitHeight + 24
     color: "transparent"
 
-    // the bar too: a click on its items opens another popup, not nothing
+    // the bar too: a click on its items opens another popup, not nothing.
+    // Started once the popup's window is shown: started with `visible`, it
+    // leaves the popup out (Quickshell makes the popup's surface after it),
+    // and a click in the popup closes it.
     HyprlandFocusGrab {
         windows: [popup, popup.bar]
-        active: popup.visible
+        active: popup.backingWindowVisible
         onCleared: popup.close()
     }
 
