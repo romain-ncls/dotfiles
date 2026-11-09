@@ -176,9 +176,9 @@ BarButton {
         }
     }
 
-    // The request's card: a window of its own, which takes the keyboard (a
-    // popup of the bar can't: the keys go to the bar's window), above the
-    // bar where the popup opens.
+    // The request's card: a window of its own, which takes the keyboard,
+    // above the bar where the popup opens (a pairing the device starts
+    // comes with no popup open).
     PanelWindow {
         id: card
 

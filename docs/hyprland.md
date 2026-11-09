@@ -254,8 +254,8 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    the clipboard's history (cliphist, recorded by clipboard-history.service),
    the network (Wi-Fi, the cable, the VPNs through nmcli; nm-applet stays
    for its prompts, its icon hidden), Bluetooth (pairing through spanreed's
-   agent: a card above the bar, a window of its own, as a popup of the bar
-   can't take the keyboard), the sound (devices,
+   agent: a card above the bar, a window of its own, as a pairing the
+   device starts comes with no popup open), the sound (devices,
    volume, the microphone; Meta+~), the battery (power profiles,
    brightness).
 4. **lumar, from scratch.** One palette, templates rendered at apply (Go
