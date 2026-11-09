@@ -163,6 +163,9 @@ rejects (`bezier` or `spring`).
   (nothing at the desk, locked on the charger, suspended on battery).
   `hyprland-lid.service` keeps logind off it, whose default would suspend;
   Plasma still suspends on battery (powerdevil's default).
+- **hypridle stays** (9 Nov 2026), not replaced by the shell's idle
+  monitor: it locks on idle and before sleep from outside shadesmar, so a
+  crash of the shell doesn't stop the locking.
 
 ## Development
 
@@ -317,9 +320,11 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    shadesmar's wallpaper from Backdrop (5 Nov 2026): Silksong is the lock
    screen's only. The bench is the lock screen's, as `lock-screen` runs it, in
    the headless rig (modules/silksong's `tools/lockbench.sh`; `bench.py` stays
-   Plasma's). Left: the lid, suspend and hibernate on the machine.
-6. **Then whatever was missed**: a grid overview, Klipper-like actions,
-   more keyboard-driven binds and terminal apps.
+   Plasma's). Left: the lid, suspend and hibernate on the machine (romain's
+   tests, later).
+6. **Then what's asked for, when it's needed** (9 Nov 2026): no list kept
+   ahead (Klipper-like actions, more keyboard-driven binds and terminal
+   apps were the ideas).
 
 ## Borrowed from Omarchy (github.com/omacom/omarchy, branch `quattro`)
 
