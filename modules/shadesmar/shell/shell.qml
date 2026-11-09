@@ -2,8 +2,8 @@
 // shadesmar (modules/shadesmar; plan: docs/hyprland.md): the bar, at the
 // bottom of the laptop's screen where Plasma's panel is, with the
 // notifications above it; the overview over every screen; the launcher and
-// the OSD on the focused one; the screen recorder. (The pragma: the tray's
-// menus are Qt widgets' menus.)
+// the OSD on the focused one; the screen recorder; screen sharing's picker.
+// (The pragma: the tray's menus are Qt widgets' menus.)
 import QtQuick
 import Quickshell
 
@@ -23,12 +23,17 @@ ShellRoot {
         id: background
     }
     Overview {
+        id: overview
+
         wallpaper: background.source
     }
     Osd {}
     Launcher {}
     Recorder {
         id: recorder
+    }
+    SharePicker {
+        pictures: overview.pictures
     }
     Notifications {
         id: notifications

@@ -62,13 +62,13 @@ if ok and type(colors) == "table" and colors.frame then
     hl.config({ misc = { background_color = "rgb(" .. colors.frame:sub(2) .. ")" } })
 end
 
--- shadesmar's bar, notifications, OSD, launcher and cards (spanreed's requests)
--- are see-through: blurred behind, the bar's popups too, not their
--- transparent margins.
+-- shadesmar's bar, notifications, OSD, launcher, cards (spanreed's
+-- requests) and share picker are see-through: blurred behind, the bar's
+-- popups too, not their transparent margins.
 hl.config({ decoration = { blur = { enabled = true, size = 8, passes = 2, popups = true } } })
 hl.layer_rule({
     name = "shadesmar-blur",
-    match = { namespace = "^shadesmar-(bar|notifications|osd|launcher|card)$" },
+    match = { namespace = "^shadesmar-(bar|notifications|osd|launcher|card|share)$" },
     blur = true,
     blur_popups = true,
     ignore_alpha = 0.2,

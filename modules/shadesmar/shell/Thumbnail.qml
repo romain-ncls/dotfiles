@@ -5,7 +5,8 @@
 // would copy the window at every frame. Hyprland copies a window only
 // while it overlaps its screen: a column beside the screen shows the
 // picture WindowPictures.qml kept, or else its app's icon, until its own
-// comes (the tape scrolls to it).
+// comes (the tape scrolls to it). The share picker's show screens too
+// (source).
 import QtQuick
 import QtQuick.Effects
 import Quickshell
@@ -16,6 +17,8 @@ Item {
     id: thumb
 
     required property var toplevel
+    // what it captures: the window, or a screen
+    property var source: toplevel ? toplevel.wayland : null
     property string appClass: ""
     property bool lit: false
     // the picture kept: a frame when it shows, more on refresh()
@@ -87,7 +90,7 @@ Item {
         // at the window's own size, shown through the mipmapped copy below
         width: Math.max(1, sourceSize.width)
         height: Math.max(1, sourceSize.height)
-        captureSource: thumb.capturing ? thumb.toplevel.wayland : null
+        captureSource: thumb.capturing ? thumb.source : null
         live: false
     }
 

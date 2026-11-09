@@ -8,7 +8,8 @@
 # pkg/ builds spanreed, its Go helper for D-Bus names (Plasma's OSD
 # service) and agents, asking in cards above the bar: BlueZ's for
 # pairings, NetworkManager's for secrets (a Wi-Fi's password, a VPN's
-# one-time code). All in the Hyprland session only.
+# one-time code); and shadesmar-share-picker, screen sharing's picker for
+# Hyprland's portal (SharePicker.qml). All in the Hyprland session only.
 packages:
   - cliphist # the clipboard's history
   - wl-screenrec # the screen recorder's (Recorder.qml), encoding on the GPU
