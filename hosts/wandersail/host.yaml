@@ -10,6 +10,7 @@ modules:
   - hyprland
   - hyprslide
   - shadesmar
+  - lumine-capture
   - nalthis
   - darkly
   - lumar # after nalthis: its hook rewrites the files both sessions read

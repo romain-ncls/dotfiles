@@ -363,13 +363,18 @@ migrations and update channels (lodestar does that), their titlebar plugin.
 - Meta+Return: the terminal, floating. Meta+²: Spotify's scratchpad (the key
   that opens Plasma's media player now). Meta+~: volume (the shell).
 - Meta+Tab, Ctrl+Alt+Tab: shadesmar's overview, Plasma's: each screen's
-  windows as live thumbnails, the tape's off-screen columns included (as
-  their app's icon: Hyprland copies a window only while it overlaps its
+  windows as live thumbnails, the tape's off-screen columns included (with
+  their last picture: Hyprland copies a window only while it overlaps its
   screen); click or Enter, arrows, typing filters. Meta+D: a peek at the
   desktop, each screen on an empty workspace of its own. Meta+= / Meta+- /
   Meta+0 (à), Meta+Ctrl+scroll: KWin's zoom, Hyprland's `cursor.zoom_factor`
   by steps of 1.2.
   Meta+L locks.
+- Screenshots, on Spectacle's keys (LumineCapture): Meta+Shift+S or
+  Meta+Shift+Print its editor over every screen, frozen (drag a region,
+  annotate; Enter or Ctrl+C copies, Ctrl+S saves and copies, Ctrl+P pins
+  it above the windows); Print saves the screen under the pointer,
+  Shift+Print every screen, to `~/Pictures/Screenshots`.
 - Dropped: Meta+< (Focus Discord: Discord is always on the middle screen).
 - **The laptop alone**: its screen shows the grid's four desktops; `comms`
   (Discord, Teams) is a fifth workspace with its own key; Spotify's
@@ -427,7 +432,7 @@ costs.
 | images | Loupe | Gwenview |
 | archives | File Roller, Nautilus's own extract | Ark |
 | terminal | Ghostty | Konsole |
-| screenshots | grim, slurp, shadesmar | Spectacle |
+| screenshots | LumineCapture (`modules/lumine-capture`); Flameshot if it falls short | Spectacle (it captures through KWin) |
 | file chooser | GTK's (xdg-desktop-portal-gtk, `FileChooser` in `hyprland-portals.conf`), for the apps that ask the portal: GTK 4's (by default now), Brave. Not Nautilus's: xdg-desktop-portal-gnome serves only its settings outside GNOME Shell ("Non-compatible display server") | KDE's |
 
 Kate goes (not used). Still Qt: qBittorrent, EasyEffects (Kirigami since
@@ -505,6 +510,22 @@ later (yazi, btop, lazygit…).
       window); comms keeps it; a window taken along keeps it; the peek and
       back give it back. A window of another desktop that takes the focus
       (a notification's) brings its desktop and keeps the focus.
+- [x] Screenshots with annotations (9 Nov 2026): LumineCapture, built from
+      its repo's PKGBUILD at a release tag (`modules/lumine-capture`; a
+      young project, one main author). Its editor freezes every screen,
+      takes the region and its annotations in place, as Spectacle's and
+      Flameshot's do. Its settings are the repo's, its colors lumar's: one
+      config file, so apply-lumar writes both. On Hyprland it would open
+      its editor as fullscreen windows (columns, in the scrolling layout):
+      `overlay = "layer"`, and Hyprland's fade off for that layer
+      (looknfeel.lua); a pinned shot floats on every desktop (windows.lua).
+      Tried headless: the three screens, a region, an arrow, Ctrl+C (the
+      clipboard only), Ctrl+A then Ctrl+S, the pin, the two saves without
+      the editor (the gaps under the shorter screens transparent), its
+      notifications in shadesmar. Left for the machine: the keys themselves
+      (the rig's virtual keyboard doesn't fire binds), and whether the
+      pointer shows in the shots (the rig draws it in software, so it's in
+      its frames).
 
 ## Alternatives considered
 
@@ -518,3 +539,8 @@ later (yazi, btop, lazygit…).
 - Compositors: Umbriel (Noctalia's own, young), Labwc (stacking, the closest
   to KWin, few effects), niri (scrolling, fights maximize and Alt+Tab),
   COSMIC (no plugins on the lock screen, no grid).
+- Screenshot editors (9 Nov 2026): Flameshot 15 (the same frozen overlay,
+  mature; a long record of multi-monitor trouble on wlroots and Hyprland:
+  the fallback), Satty (grim and slurp first, then a window: the screens
+  not frozen, the region fixed before annotating), Swappy (Satty's
+  predecessor), Gradia (polishes a shot in a window: backgrounds, padding).

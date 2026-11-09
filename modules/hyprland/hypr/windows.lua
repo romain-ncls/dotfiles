@@ -34,3 +34,7 @@ hl.window_rule({
 -- Dialogs and picture-in-picture float (Omarchy's default/hypr/apps/).
 hl.window_rule({ name = "pip", match = { title = "^Picture.in.[Pp]icture$" }, float = true, pin = true, keep_aspect_ratio = true })
 hl.window_rule({ name = "dialogs", match = { modal = true }, float = true })
+
+-- A screenshot pinned from LumineCapture's editor (Ctrl+P): above the windows,
+-- on every desktop.
+hl.window_rule({ name = "lumine-pin", match = { class = "^lumine-pin$" }, float = true, pin = true })

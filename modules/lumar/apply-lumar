@@ -5,6 +5,8 @@
 #   ~/.local/share/lumar/palette.json   shadesmar reads it, and follows it live
 #   ~/.local/share/lumar/colors.lua     Hyprland's config requires it
 #   ~/.config/ghostty/themes/lumar      Ghostty's theme (reread on SIGUSR2)
+#   ~/.config/LumineCapture/config.toml its settings (modules/lumine-capture)
+#                                       and lumar's colors, read at each shot
 # and the files both sessions read, in the colors of the session it runs
 # in (lumar's in Hyprland, Nalthis's in Plasma):
 #   ~/.config/kdeglobals and the rest of `nalthis apply`: the Qt apps'
@@ -96,6 +98,39 @@ put "$themes/lumar" "$(printf '%s' "$palette" | jq -r '
 	"selection-background = \(.accent)",
 	"selection-foreground = \(.text)",
 	(.ansi | to_entries[] | "palette = \(.key)=\(.value)")')"
+
+# LumineCapture's config, the screenshots' editor: its settings
+# (modules/lumine-capture/config.toml), then its toolbar and panels as
+# shadesmar's popups (the pane, the accent's light shade for what's lit, the
+# overlay for hovers), the selection framed as the overview frames a window.
+# It takes a single file.
+if command -v lumine-capture >/dev/null; then
+	lumine=${XDG_CONFIG_HOME:-$HOME/.config}/LumineCapture
+	mkdir -p "$lumine"
+	put "$lumine/config.toml" "$(cat "$here/../lumine-capture/config.toml"; printf '%s' "$palette" | jq -r '
+		"",
+		"# lumar'"'"'s colors, written by modules/lumar/apply-lumar",
+		"[theme]",
+		"background = \"\(.pane)f2\"",
+		"foreground = \"\(.text)\"",
+		"muted = \"\(.text2)\"",
+		"hover = \"\(.accentText)\"",
+		"accent = \"\(.accentText)\"",
+		"on_accent = \"\(.frame)\"",
+		"border = \"\(.overlay)\"",
+		"field = \"\(.overlay)\"",
+		"track = \"\(.overlay)\"",
+		"caret = \"\(.text)\"",
+		"text_selection = \"\(.accent)80\"",
+		"panel_radius = 10.0",
+		"",
+		"[toolbar]",
+		"button_hovered = \"\(.overlay)\"",
+		"icon_hovered = \"\(.text)\"",
+		"",
+		"[selection]",
+		"border = \"\(.accentText)\""')"
+fi
 
 # Brave's theme, its Classic layout in the session's colors: the tab strip
 # the frame (as the bar), the active tab and toolbar the pane (as Plasma's
