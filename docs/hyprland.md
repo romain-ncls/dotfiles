@@ -550,7 +550,7 @@ later (yazi, btop, lazygit…).
       (the frame outside the video), Escape in slurp, the shortcuts
       through Hyprland, the dot, the notification and its GIF. On the
       machine: wl-screenrec works.
-- [x] Screen sharing's picker, as Plasma's (9 Nov 2026): Hyprland's portal
+- [x] Screen sharing's picker, after Plasma's (9 Nov 2026): Hyprland's portal
       (xdg-desktop-portal-hyprland) asks its own picker, which lists the
       screens and windows by name. It can run another
       (`custom_picker_binary`, hypr/xdph.conf): shadesmar-share-picker
@@ -558,18 +558,23 @@ later (yazi, btop, lazygit…).
       (SharePicker.qml) and waits on a FIFO for the answer; Hyprland's
       own picker if the shell doesn't answer (`qs ipc call` exits 0 even
       then: it's what it prints that tells). "Screen Sharing Requested":
-      the screens and a region (slurp), then the windows, the most
-      recently used first, as pictures taken four times a second (the
-      scrolling layout's columns beside the screen with their last one,
-      WindowPictures.qml, as in the overview; a window on another desktop
-      is copied all the same); a search, focused, arrows, Enter, Escape;
-      "Allow the application to do this without asking next time",
-      ticked to begin with (the portal's restore token). The portal gives
-      the windows with their Hyprland address, so each finds its
+      the screens as they're arranged, to scale, as pictures taken four
+      times a second: romain shares a screen most of the time, a different
+      one each time. A window or a region (slurp) folded away under them,
+      unfolded by a click, Down or a search: the windows most recently
+      used first (the scrolling layout's columns beside the screen with
+      their last picture, WindowPictures.qml, as in the overview; a
+      window on another desktop is copied all the same). Arrows, Enter,
+      Escape; nothing lit until the keys or the pointer pick. Never
+      remembered (9 Nov 2026, after a first try with Plasma's "Allow the
+      application to do this without asking next time"): no "r" flag, so
+      no restore token, and `allow_token_by_default` off. The portal
+      gives the windows with their Hyprland address, so each finds its
       picture. Tried headless, through the portal itself (its own
       instance on the rig's bus, a small client asking as an app does): a
-      window shared, its stream and token back; and each answer: a
-      screen, a window, the box unticked, a search and Enter, Escape, a
+      window shared, its stream back (and a token, then: its rig wrote it
+      to the user's permission store, a shared file; deleted); and each
+      answer: a screen, a window, a search and Enter, the keys, Escape, a
       region and Escape in slurp. The portal reads its config when it
       starts: `systemctl --user restart xdg-desktop-portal-hyprland` once
       the package is in.
