@@ -5,7 +5,11 @@
 // timeout (5 s when the app leaves it to us; not while the pointer is on
 // them; critical ones stay) they go to the history, the bar's bell
 // (NotificationCenter.qml), still there for their app and their actions,
-// until dismissed. Do not disturb: no popups but critical ones.
+// until dismissed. Do not disturb: no popups but critical ones. A
+// notification about a file (Plasma's x-kde-urls hint: LumineCapture's
+// screenshots) shows it as a picture, with Open and Show in Files, and a
+// click opens it; one in the runtime dir is a temporary copy (a shot only
+// copied): its picture only.
 import QtQuick
 import Quickshell
 import Quickshell.Services.Notifications
@@ -61,6 +65,26 @@ Scope {
         return Quickshell.iconPath(name, "dialog-information")
     }
 
+    // The files it's about, as file:// URLs (x-kde-urls: a list, or one).
+    function files(n) {
+        const urls = n.hints["x-kde-urls"]
+        const list = typeof urls === "string" ? [urls] : urls ? Array.from(urls) : []
+        return list.filter(u => typeof u === "string" && u.startsWith("file://"))
+    }
+    // not a temporary copy in the runtime dir
+    function kept(url) {
+        const runtime = Quickshell.env("XDG_RUNTIME_DIR")
+        return !runtime || !decodeURIComponent(url.slice(7)).startsWith(runtime + "/")
+    }
+    function open(n, url) {
+        Quickshell.execDetached(["xdg-open", url])
+        n.dismiss()
+    }
+    function reveal(n, url) {
+        Quickshell.execDetached(["nautilus", "--select", url])
+        n.dismiss()
+    }
+
     NotificationServer {
         id: server
 
@@ -70,6 +94,7 @@ Scope {
         bodyHyperlinksSupported: true
         imageSupported: true
         persistenceSupported: true
+        extraHints: ["x-kde-urls"]
         onNotification: n => {
             n.tracked = true
             notifications.times = Object.assign({}, notifications.times, { [n.id]: Date.now() })
@@ -118,6 +143,23 @@ Scope {
                     readonly property var defaultAction: n.actions.find(a => a.identifier === "default") ?? null
                     readonly property string picture: notifications.picture(n)
                     readonly property string icon: notifications.icon(n)
+                    readonly property var files: notifications.files(n)
+                    readonly property string file: files.length > 0 ? files[0] : ""
+                    readonly property bool openable: file !== "" && notifications.kept(file)
+                    // its buttons: the file's, then the app's other actions
+                    readonly property var buttons: [...(openable ? [
+                                {
+                                    text: "Open",
+                                    run: () => notifications.open(n, file)
+                                },
+                                {
+                                    text: "Show in Files",
+                                    run: () => notifications.reveal(n, file)
+                                }
+                            ] : []), ...n.actions.filter(a => a.identifier !== "default").map(a => ({
+                                    text: a.text,
+                                    run: () => a.invoke()
+                                }))]
 
                     width: column.width
                     height: content.implicitHeight + 24
@@ -141,6 +183,8 @@ Scope {
                         onClicked: event => {
                             if (event.button === Qt.LeftButton && popup.defaultAction)
                                 popup.defaultAction.invoke()
+                            else if (event.button === Qt.LeftButton && popup.openable)
+                                notifications.open(popup.n, popup.file)
                             else
                                 popup.n.dismiss()
                         }
@@ -240,14 +284,44 @@ Scope {
                                 onLinkActivated: link => Qt.openUrlExternally(link)
                             }
 
-                            // the other actions
+                            // the file, as a picture (a screenshot); outlined, a
+                            // dark shot on the dark popup
+                            Item {
+                                visible: preview.status === Image.Ready
+                                width: parent.width
+                                height: preview.paintedHeight + 6
+
+                                Image {
+                                    id: preview
+
+                                    y: 6
+                                    width: parent.width
+                                    height: implicitWidth > 0 ? Math.min(180, width * implicitHeight / implicitWidth) : 0
+                                    source: popup.file
+                                    sourceSize.width: 2 * width
+                                    asynchronous: true
+                                    fillMode: Image.PreserveAspectFit
+                                    horizontalAlignment: Image.AlignLeft
+                                }
+
+                                Rectangle {
+                                    y: 6
+                                    width: preview.paintedWidth
+                                    height: preview.paintedHeight
+                                    color: "transparent"
+                                    border.width: 1
+                                    border.color: Theme.outline
+                                }
+                            }
+
+                            // the file's buttons and the other actions
                             Row {
-                                visible: popup.n.actions.some(a => a.identifier !== "default")
+                                visible: popup.buttons.length > 0
                                 topPadding: 6
                                 spacing: 6
 
                                 Repeater {
-                                    model: popup.n.actions.filter(a => a.identifier !== "default")
+                                    model: popup.buttons
 
                                     Rectangle {
                                         required property var modelData
@@ -272,7 +346,7 @@ Scope {
 
                                             anchors.fill: parent
                                             hoverEnabled: true
-                                            onClicked: parent.modelData.invoke()
+                                            onClicked: parent.modelData.run()
                                         }
                                     }
                                 }
