@@ -437,6 +437,7 @@ costs.
 | terminal | Ghostty | Konsole |
 | screenshots | LumineCapture (`modules/lumine-capture`); Flameshot if it falls short | Spectacle (it captures through KWin) |
 | recordings | wl-screenrec, driven by shadesmar (Recorder.qml) | Spectacle |
+| screen sharing's picker | shadesmar's (SharePicker.qml), for xdg-desktop-portal-hyprland | KDE's portal dialog |
 | file chooser | GTK's (xdg-desktop-portal-gtk, `FileChooser` in `hyprland-portals.conf`), for the apps that ask the portal: GTK 4's (by default now), Brave. Not Nautilus's: xdg-desktop-portal-gnome serves only its settings outside GNOME Shell ("Non-compatible display server") | KDE's |
 
 Kate goes (not used). Still Qt: qBittorrent, EasyEffects (Kirigami since
@@ -526,15 +527,18 @@ later (yazi, btop, lazygit…).
       Tried headless: the three screens, a region, an arrow, Ctrl+C (the
       clipboard only), Ctrl+A then Ctrl+S, the pin, the two saves without
       the editor (the gaps under the shorter screens transparent), its
-      notifications in shadesmar. Left for the machine: the keys themselves
-      (the rig's virtual keyboard doesn't fire binds), and whether the
-      pointer shows in the shots (the rig draws it in software, so it's in
-      its frames).
+      notifications in shadesmar. On the machine: the keys work, and the
+      pointer isn't in the shots (LumineCapture has no option to put it
+      in; Spectacle had a checkbox: later, maybe upstream). Its magnifier
+      (M) is off: LumineCapture remembers that in its state, not its
+      config. Its notifications use Plasma's x-kde-urls, which shadesmar
+      now knows: the shot as a picture, Open and Show in Files.
 - [x] Recordings, for short clips of the UI (9 Nov 2026): shadesmar runs
       wl-screenrec (Recorder.qml), which encodes on the Arc's GPU, the
       frames never through the CPU (a U-series chip encoding in software
-      could drop the animations' frames), the pointer in. A region is picked with slurp (in
-      lumar's colors, its size shown; its stdin empty, or it waits for
+      could drop the animations' frames), the pointer in. A region is
+      picked with slurp (in lumar's colors, its size shown; its stdin
+      empty, or it waits for
       boxes to choose from) and framed in red just outside while it's
       recorded; a screen is the one under the pointer (`hyprctl
       cursorpos`: the focused one can be another). The bar shows a red
@@ -544,8 +548,31 @@ later (yazi, btop, lazygit…).
       30 fps, 1280 wide at most). Tried headless with wf-recorder in
       wl-screenrec's place (the same arguments): a screen, a region
       (the frame outside the video), Escape in slurp, the shortcuts
-      through Hyprland, the dot, the notification and its GIF. Left for
-      the machine: wl-screenrec itself.
+      through Hyprland, the dot, the notification and its GIF. On the
+      machine: wl-screenrec works.
+- [x] Screen sharing's picker, as Plasma's (9 Nov 2026): Hyprland's portal
+      (xdg-desktop-portal-hyprland) asks its own picker, which lists the
+      screens and windows by name. It can run another
+      (`custom_picker_binary`, hypr/xdph.conf): shadesmar-share-picker
+      (spanreed's package) passes the request to shadesmar
+      (SharePicker.qml) and waits on a FIFO for the answer; Hyprland's
+      own picker if the shell doesn't answer (`qs ipc call` exits 0 even
+      then: it's what it prints that tells). "Screen Sharing Requested":
+      the screens and a region (slurp), then the windows, the most
+      recently used first, as pictures taken four times a second (the
+      scrolling layout's columns beside the screen with their last one,
+      WindowPictures.qml, as in the overview; a window on another desktop
+      is copied all the same); a search, focused, arrows, Enter, Escape;
+      "Allow the application to do this without asking next time",
+      ticked to begin with (the portal's restore token). The portal gives
+      the windows with their Hyprland address, so each finds its
+      picture. Tried headless, through the portal itself (its own
+      instance on the rig's bus, a small client asking as an app does): a
+      window shared, its stream and token back; and each answer: a
+      screen, a window, the box unticked, a search and Enter, Escape, a
+      region and Escape in slurp. The portal reads its config when it
+      starts: `systemctl --user restart xdg-desktop-portal-hyprland` once
+      the package is in.
 
 ## Alternatives considered
 

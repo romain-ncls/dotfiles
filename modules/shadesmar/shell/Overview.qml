@@ -34,7 +34,9 @@ Scope {
     readonly property int duration: 300
     readonly property var curve: [0.23, 1, 0.32, 1, 1, 1]
 
-    // the windows' last pictures, for the columns beside the screens
+    // the windows' last pictures, for the columns beside the screens (and
+    // the share picker's)
+    readonly property alias pictures: pictures
     WindowPictures {
         id: pictures
 

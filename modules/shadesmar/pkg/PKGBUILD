@@ -2,14 +2,14 @@
 pkgname=spanreed
 pkgver=1
 pkgrel=1
-pkgdesc="shadesmar's D-Bus helper: Plasma's OSD service, the Bluetooth pairing agent and the network's secret agent, passed on to the shell"
+pkgdesc="shadesmar's D-Bus helper: Plasma's OSD service, the Bluetooth pairing agent and the network's secret agent, passed on to the shell; and its screen sharing picker for xdg-desktop-portal-hyprland"
 arch=(x86_64)
 license=(MIT)
 options=(!debug)
 depends=(quickshell)
 makedepends=(go)
-source=(spanreed.service)
-sha256sums=(SKIP)
+source=(spanreed.service share-picker)
+sha256sums=(SKIP SKIP)
 
 build() {
 	cd "$startdir/spanreed"
@@ -20,5 +20,6 @@ build() {
 
 package() {
 	install -Dm755 "$srcdir/spanreed" -t "$pkgdir/usr/bin"
+	install -Dm755 share-picker "$pkgdir/usr/bin/shadesmar-share-picker"
 	install -Dm644 spanreed.service -t "$pkgdir/usr/lib/systemd/user"
 }
