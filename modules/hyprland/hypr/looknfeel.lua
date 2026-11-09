@@ -19,3 +19,7 @@ hl.animation({ leaf = "fade", enabled = true, speed = 3, bezier = "easeOutQuint"
 hl.animation({ leaf = "workspaces", enabled = true, speed = 4, bezier = "easeOutQuint", style = "slidefade 10%" })
 hl.animation({ leaf = "zoomFactor", enabled = true, speed = 3, bezier = "easeOutQuint" })
 hl.animation({ leaf = "specialWorkspace", enabled = true, speed = 4, bezier = "easeOutQuint", style = "slidefadevert 20%" })
+
+-- shadesmar's overview moves its thumbnails itself, from the windows'
+-- places: its first frame covers them exactly, which a fade would spoil.
+hl.layer_rule({ name = "shadesmar-overview", match = { namespace = "^shadesmar-overview$" }, no_anim = true })
