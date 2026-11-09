@@ -1,0 +1,25 @@
+#!/bin/sh
+# shadesmar-share-picker: xdg-desktop-portal-hyprland's screen sharing
+# picker (custom_picker_binary, modules/hyprland's hypr/xdph.conf), drawn by
+# shadesmar with the screens' and windows' pictures, as Plasma's
+# (SharePicker.qml). The portal gives it the windows in
+# XDPH_WINDOW_SHARING_LIST and reads the choice on its stdout:
+# [SELECTION]<r: the app may share it again without asking>/screen:<name>,
+# window:<handle> or region:<screen>@<x>,<y>,<w>,<h>; nothing cancels.
+# shadesmar answers into a FIFO. Without shadesmar, Hyprland's own picker.
+set -u
+dir=$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/share-picker.XXXXXX") || exec hyprland-share-picker "$@"
+mkfifo "$dir/answer"
+token=false
+[ "${1:-}" = --allow-token ] && token=true
+# (it says what went wrong, and still exits 0)
+if ! said=$(qs -c shadesmar ipc call share pick "$dir/answer" "$token" "${XDPH_WINDOW_SHARING_LIST:-}" 2>&1) || [ -n "$said" ]; then
+	rm -rf "$dir"
+	exec hyprland-share-picker "$@"
+fi
+# the answer; nothing after ten minutes (shadesmar cancels a request it
+# drops when it reloads)
+answer=$(timeout 600 head -n 1 "$dir/answer")
+rm -rf "$dir"
+[ -n "$answer" ] && printf '[SELECTION]%s\n' "$answer"
+exit 0
