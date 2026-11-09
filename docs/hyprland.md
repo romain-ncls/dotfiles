@@ -468,15 +468,23 @@ later (yazi, btop, lazygit…).
       Hyprland's order, corners and shadow, so the first frame is the
       screen as it was (checked pixel by pixel, headless); the bar's strip
       stays the bar. Hyprland's fade is off for that layer (looknfeel.lua).
-      A pick waits until Hyprland has let the keyboard go: it focuses no
-      window while a layer holds the keyboard. The pictures aren't live
+      A pick goes through Hyprland's dispatcher (a Wayland activation is
+      followed by a refocus of the window under the pointer, which wins
+      when the pointer just moved to click), once Hyprland has let the
+      keyboard go: it focuses no window while a layer holds the keyboard.
+      The pictures aren't live
       (a live ScreencopyView asks for a frame at each repaint, so Hyprland
       copied every window at every frame of the animation: 20-30 fps):
       one frame when it opens, then 20 a second in the grid; drawn
       mipmapped, so text shrunk below half keeps its strokes. The
-      scrolling layout's columns beside the screen get their app's icon:
-      Hyprland copies a window only while it overlaps its monitor
-      (ScreenshareManager::onOutputCommit).
+      scrolling layout's columns beside the screen show their last
+      picture (WindowPictures.qml): Hyprland copies a window only while
+      it overlaps its monitor (ScreenshareManager::onOutputCommit), so
+      the windows on their screens are taken again each time the focus
+      moves, before the tape scrolls one out. Never one beside: its
+      request would wait until it's back, and while one waits Hyprland
+      draws a copy of that screen at every frame (outputNeedsCopyFB).
+      About 16 MB per 1920×1080 window, kept all the time.
 - [x] Brave stays on its Classic layout (no bar above the tabs) in lumar's
       colors: a Chrome theme apply-lumar renders from the palette
       (`~/.local/share/lumar/brave-theme`, which Brave loads at each start:
