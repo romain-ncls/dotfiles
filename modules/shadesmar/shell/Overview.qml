@@ -1,12 +1,12 @@
 // The overview (Plasma's, on Meta+Tab and Ctrl+Alt+Tab): on every screen,
-// the windows of the workspace it shows (the scrolling layout's columns
-// beside the screen, and the scratchpad when it's out, included) as live
-// thumbnails in their order. As Plasma's, they come from their places into
-// the grid, and go back to them when it closes; the one picked goes to
-// where it will be, as the tape scrolls to it. A click or Enter goes to one,
-// the arrows move between them, typing filters them by title or app on
-// every screen (the others fade, the grid closes up); Escape, a click
-// beside them or the key again closes it.
+// the windows of the workspace it shows as thumbnails in their order: the
+// scrolling layout's columns beside the screen with their last picture
+// (WindowPictures.qml), the scratchpad when it's out. As Plasma's, they
+// come from their places into the grid, and go back to them when it
+// closes; the one picked goes to where it will be, as the tape scrolls to
+// it. A click or Enter goes to one, the arrows move between them, typing
+// filters them by title or app on every screen (the others fade, the grid
+// closes up); Escape, a click beside them or the key again closes it.
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
@@ -33,6 +33,13 @@ Scope {
     // Hyprland's curve for windows (looknfeel.lua: easeOutQuint), quicker
     readonly property int duration: 300
     readonly property var curve: [0.23, 1, 0.32, 1, 1, 1]
+
+    // the windows' last pictures, for the columns beside the screens
+    WindowPictures {
+        id: pictures
+
+        paused: overview.up
+    }
 
     // Where the windows are and what each screen shows, from hyprctl at the
     // open (Quickshell's own copies lag: it follows only the focused
@@ -78,11 +85,13 @@ Scope {
         else
             open()
     }
-    // The window picked, focused once the overview has let the keyboard
-    // go: Hyprland focuses no window while a layer holds it, and the
-    // overview lets it go with its next frame. So it asks again until
-    // Hyprland says the window is active (300 ms at most), then goes back
-    // to where the windows will be.
+    // The window picked, focused through Hyprland's dispatcher (a Wayland
+    // activation is followed by a refocus of the window under the pointer,
+    // which the pointer, just moved to click, can win). Once the overview
+    // has let the keyboard go: Hyprland focuses no window while a layer
+    // holds it, and the overview lets it go with its next frame. So it asks
+    // again until Hyprland says the window is active (300 ms at most), then
+    // goes back to where the windows will be.
     property var picked: null
 
     function go(toplevel) {
@@ -170,8 +179,8 @@ Scope {
         onRunningChanged: tries = 0
         onTriggered: {
             const t = overview.picked
-            if (t && t.wayland && !t.activated && ++tries <= 10) {
-                t.wayland.activate()
+            if (t && !t.activated && ++tries <= 10) {
+                Hyprland.dispatch(`hl.dsp.focus({ window = 'address:0x${t.address}' })`)
                 return
             }
             stop()
@@ -490,9 +499,10 @@ Scope {
                             readonly property real hw: client.size[0]
                             readonly property real hh: client.size[1]
                             readonly property real homeRadius: client.fullscreen ? 0 : client.floating || Theme.floating ? 10 : 0
-                            // its picture on the screen first (columns beside it
-                            // have none)
-                            readonly property bool ready: hx >= view.width || hx + hw <= 0 || hy >= view.height || hy + hh <= 0 || thumb.hasContent
+                            // on its screen: its own picture comes, needed first
+                            // (one beside has the kept one: a request for it would wait)
+                            readonly property bool onScreen: hx < view.width && hx + hw > 0 && hy < view.height && hy + hh > 0
+                            readonly property bool ready: !onScreen || thumb.hasContent
 
                             // its place in the grid, kept while the filter hides it
                             property real gx: 0
@@ -566,7 +576,8 @@ Scope {
                                 height: cell.hh + (cell.gh - cell.hh) * cell.p
                                 toplevel: cell.modelData.toplevel
                                 appClass: cell.modelData.cls
-                                capturing: overview.up
+                                capturing: overview.up && cell.onScreen
+                                kept: pictures.of(cell.modelData.toplevel)
                                 radius: cell.homeRadius + (7 - cell.homeRadius) * cell.p
                                 lit: overview.shown && cell.slot >= 0 && ((view.focusedScreen && view.selected === cell.slot) || hover.containsMouse)
                                 framed: cell.p
