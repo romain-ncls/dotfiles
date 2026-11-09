@@ -159,6 +159,12 @@ bind(mod .. " + SHIFT + Print", hl.dsp.exec_cmd("lumine-capture"))
 bind("Print", hl.dsp.exec_cmd("lumine-capture -f -m -t s"))
 bind("SHIFT + Print", hl.dsp.exec_cmd("lumine-capture -f -t s"))
 
+-- Recordings (shadesmar's Recorder.qml), on Spectacle's keys: Meta+Shift+R
+-- a region, Meta+Alt+R the screen under the pointer; the same key again
+-- stops.
+bind(mod .. " + SHIFT + r", hl.dsp.global("shadesmar:record-region"))
+bind(mod .. " + ALT + r", hl.dsp.global("shadesmar:record-screen"))
+
 -- Volume, brightness, media. shadesmar's OSD shows the volume as PipeWire
 -- changes it, and the brightness as told here.
 local function brightness(step)
