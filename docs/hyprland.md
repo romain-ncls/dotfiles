@@ -459,8 +459,17 @@ later (yazi, btop, lazygit…).
 
 - [x] Changing the workspace animation's style from a bind at runtime: works
       (grid.lua does it at each switch).
-- [ ] The overview's animations: the windows going from their place to
-      the grid and back, as Plasma's (it only appears and disappears now).
+- [x] The overview's animations, as Plasma's (9 Nov 2026): the windows go
+      from their places to the grid and back, the one picked to where the
+      tape scrolls it; a filter closes the grid up. The shell only sees
+      the windows, so it does it with their live pictures over a copy of the
+      wallpaper (Overview.qml): they show once they have their pictures (a
+      few frames), at the windows' places as hyprctl gives them, in
+      Hyprland's order, corners and shadow, so the first frame is the
+      screen as it was (checked pixel by pixel, headless); the bar's strip
+      stays the bar. Hyprland's fade is off for that layer (looknfeel.lua).
+      A pick waits until Hyprland has let the keyboard go: it focuses no
+      window while a layer holds the keyboard.
 - [x] Brave stays on its Classic layout (no bar above the tabs) in lumar's
       colors: a Chrome theme apply-lumar renders from the palette
       (`~/.local/share/lumar/brave-theme`, which Brave loads at each start:

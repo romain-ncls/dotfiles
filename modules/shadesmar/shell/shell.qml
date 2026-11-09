@@ -19,8 +19,12 @@ ShellRoot {
         return Quickshell.screens[0]
     }
 
-    Wallpaper {}
-    Overview {}
+    Wallpaper {
+        id: background
+    }
+    Overview {
+        wallpaper: background.source
+    }
     Osd {}
     Launcher {}
     Notifications {
