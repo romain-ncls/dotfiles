@@ -466,8 +466,9 @@ later (yazi, btop, lazygit…).
       match with their own dark themes.
 - [x] Hotplug: what becomes of windows on a screen that goes away (they go
       to the same desktop on the screens left, grid.lua; tried headless).
-- [ ] A drop-down terminal (Ghostty's quick terminal, or a special workspace
-      as Omarchy's Super+\`), on top of the free-floating one.
+- [x] A drop-down terminal (Ghostty's quick terminal, or a special workspace
+      as Omarchy's Super+\`): dropped, not needed (9 Nov 2026); the
+      free-floating one on Meta+Return is enough.
 - [x] Focus after a switch stays on the screen it was on (tried headless,
       grid.lua's functions as the binds and the bar call them): a jump or a
       move in the grid keeps the focus on that screen, on its window there
