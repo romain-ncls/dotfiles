@@ -278,6 +278,77 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 - **Not Vesktop**: it doesn't run OpenASAR, and the official client is what
   mutectl's plugin was written against.
 
+## Brave's new tab (work laptop)
+
+- **An unpacked extension that replaces the new tab** (`chrome_url_overrides`,
+  6 Nov 2026): islands of work links over Backdrop's wallpaper, in the
+  session's colors. As in Chrome, the address bar keeps the focus on an
+  extension's new tab, so typing a URL still works. Not Brave's "homepage"
+  new tab, or the `NewTabPageLocation` policy pointed at a `file://` page:
+  such a page can't read Backdrop's state, nor Brave's favicons. Brave
+  loads it at each start (lodestar's `brave: extensions`), so there's no
+  "Load unpacked" by hand.
+- **Its data comes through symbolic links**, which `link-data` puts in the
+  extension's folder: Brave serves an unpacked extension's files through links
+  wherever they point, so the page reads Backdrop's `state.json` and current
+  picture, lumar's palette and the links without a server. It reads
+  `current`'s `file`, `title`, `place`, `credit` and `infoUrl` from Backdrop's
+  state: a change to those has to follow there.
+- **The links are private**: they name servers, a firewall's address and
+  client tenants, and this repo is public. They live in
+  `~/.config/new-tab/links.js` (kept with the backups), a JS module rather
+  than JSON for comments and trailing commas, imported by the page as is.
+- **Favicons come from Brave's own cache** (`_favicon`): nothing leaves the
+  machine. A site never visited has only Brave's globe; the page shows the
+  link's initial instead.
+- **Favicons sit on the glass as they are**, not on a tile: a square or round
+  icon on a square tile looked like a frame in a frame. The page reads each
+  one's pixels and decides by rule, not by site: one that fills its square
+  gets rounded corners, a dark one (lost on the dark glass) goes on a light
+  tile.
+- **The wallpaper is there from the first frame, in place.** Backdrop's
+  pictures are progressive 4K JPEGs, 160 ms to decode: every new tab opened
+  on the dark background first. The page keeps a copy of the current one,
+  the size of the screen, in localStorage (about 1 MB as a `data:` URL),
+  and `first-paint.js`, a plain script in the head, makes it the background
+  before the first paint. localStorage because it's the only storage a page
+  can read before painting; not a small blurred preview, which was stretched
+  differently from the picture and jumped when the picture replaced it. The
+  page makes the copy rather than Backdrop or a hook: it knows the screen's
+  size, and the copy follows each new picture by itself (the first tab after
+  a change opens on the last picture and fades to the new one).
+- **The page comes in one piece**: the clock, the islands and the caption
+  stay hidden until all are built, icons drawn, then rise 20px into place
+  (half a second; a fade alone felt flat), opaque within 200 ms so the rise
+  shows (a 12px one that ended while they were still faint read as a fade),
+  the clock first and the islands in a wave 35 ms apart, left to right and
+  top to bottom, instead of
+  the clock, the islands and each icon appearing on their own frames. Each
+  moves on its own: an opacity on their parent would cut the islands'
+  `backdrop-filter` off from the wallpaper while it fades. The wallpaper's
+  copy is made a second later, once all that is over: making it holds the
+  page for a moment, which stalled the islands mid-rise. The caption, at
+  the bottom of the page, only fades: rising from below, it pushed past the
+  page's end, and the scrollbar that appeared for a moment moved everything.
+  The wallpaper spans the window under any scrollbar (`100vw`), so one
+  appearing in a short window doesn't resize it.
+- **The tenant search reads the infra repo with gh**, not with the browser's
+  GitHub session: an extension can only use that session on github.com's web
+  pages, and listing files there means scraping them; GitHub's API takes a
+  token, which gh already keeps in the keyring. `fetch-tenants`, hourly from
+  a user timer, lists the folder's tree (one REST call, nothing more while it
+  hasn't changed) and reads the kustomizations 50 per GraphQL query: one query
+  for the whole tree timed out on GitHub's side (502), and one for all 160
+  files took 7 of its 10 seconds. A tenant's URL is its Traefik rule's host
+  and path, as an environment's tenants can be on several hosts. Which repo
+  and folder is private (`~/.config/new-tab/tenants.env`).
+- **No footer**: under an extension's new tab Brave adds a bar of its own
+  with the extension's name and a Customize button. `NewTabPage.FooterVisible`
+  off in Brave's preferences (`json:`) hides it, as its right-click "Hide
+  footer" does. (The `NTPFooterExtensionAttributionEnabled` policy would too;
+  it was set aside because a policy makes Brave say it's managed by an
+  organization, but mutectl's policy already does.)
+
 ## Num Lock (numlock module)
 
 - **Plymouth's LUKS prompt**: since version 22 Plymouth reads keyboards
