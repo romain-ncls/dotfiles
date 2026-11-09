@@ -23,3 +23,7 @@ hl.animation({ leaf = "specialWorkspace", enabled = true, speed = 4, bezier = "e
 -- shadesmar's overview moves its thumbnails itself, from the windows'
 -- places: its first frame covers them exactly, which a fade would spoil.
 hl.layer_rule({ name = "shadesmar-overview", match = { namespace = "^shadesmar-overview$" }, no_anim = true })
+
+-- LumineCapture's editor (modules/lumine-capture): the screens frozen, there
+-- at once.
+hl.layer_rule({ name = "lumine-capture", match = { namespace = "^lumine-capture$" }, no_anim = true })

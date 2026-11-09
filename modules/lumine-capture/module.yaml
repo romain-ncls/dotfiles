@@ -1,0 +1,12 @@
+# LumineCapture: the Hyprland session's screenshots (docs/hyprland.md, Apps
+# and toolkits), with annotations; Flameshot is the fallback if it falls
+# short. Built from its own repo's PKGBUILD at a release tag (a young
+# project, one main author: updates are read before the ref moves). Its keys
+# are modules/hyprland's binds.lua, its overlay's rules looknfeel.lua and
+# windows.lua. config.toml here holds its settings; apply-lumar
+# (modules/lumar) writes them to ~/.config/LumineCapture/config.toml with
+# lumar's colors after them.
+pkg:
+  git: https://github.com/Netflate/LumineCapture.git
+  ref: v0.3.0
+  path: packaging/arch
