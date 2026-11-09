@@ -1,5 +1,7 @@
-// Screen sharing's picker, as Plasma's: "Screen Sharing Requested", the
-// screens and a region, then the windows, as pictures; a click shares. For
+// Screen sharing's picker, after Plasma's: "Screen Sharing Requested", the
+// screens as they're arranged, as pictures; a window or a region below,
+// folded away (they're rarely what's shared); a click shares. Never
+// remembered: the app asks each time (no restore token). For
 // xdg-desktop-portal-hyprland, which runs shadesmar-share-picker
 // (modules/shadesmar/pkg; custom_picker_binary in modules/hyprland's
 // hypr/xdph.conf): it calls `share pick` here with a FIFO, and the answer
@@ -7,9 +9,8 @@
 // (Thumbnail.qml: not live, which would copy at every repaint); the
 // scrolling layout's columns beside the screen show their last one
 // (WindowPictures.qml). The windows most recently used first. A region:
-// slurp. The search, focused, filters both; arrows move, Enter shares,
-// Escape cancels. "Allow the application to do this without asking next
-// time" lets it keep a token for the same choice.
+// slurp. Typing searches the windows (and unfolds them); arrows move,
+// Enter shares, Escape cancels.
 import QtQuick
 import QtQuick.Shapes
 import Quickshell
@@ -27,14 +28,16 @@ Scope {
     property bool shown: false
     // the waiting request's FIFO; "" when none waits
     property string fifo: ""
-    property bool allowRestore: true
     // the windows the portal can share: {handle, appClass, title, toplevel}
     property var windows: []
     property string search: ""
+    // the windows and the region unfolded
+    property bool more: false
+    readonly property bool unfolded: more || search.trim() !== ""
     // the screen it shows on: the focused one when it's asked
     property string screenName: ""
-    // the item the keys are on, in `items`
-    property int current: 0
+    // the item the keys are on, in `items`; -1: none yet
+    property int current: -1
 
     signal tick
 
@@ -65,24 +68,26 @@ Scope {
         return o && o.focusHistoryID !== undefined ? o.focusHistoryID : 1000
     }
 
-    // what it offers, in order: the screens, a region, the windows
-    readonly property var sources: [...screens.filter(s => matches(screenLabel(s), s.name)).map(s => ({
-                    kind: "screen",
-                    screen: s,
-                    label: screenLabel(s)
-                })), ...(matches("region") ? [{
+    // what it offers, in order: the screens; then, unfolded, a region and
+    // the windows
+    readonly property var shownScreens: screens.map(s => ({
+                kind: "screen",
+                screen: s,
+                label: screenLabel(s)
+            }))
+    readonly property var others: !unfolded ? [] : [...(matches("region") ? [{
                         kind: "region",
                         label: "A region…"
-                    }] : [])]
-    readonly property var shared: windows.filter(w => matches(w.title, w.appClass)).sort((a, b) => recency(a) - recency(b)).map(w => ({
-                kind: "window",
-                window: w,
-                label: w.title || w.appClass
-            }))
-    readonly property var items: [...sources, ...shared]
+                    }] : []), ...windows.filter(w => matches(w.title, w.appClass)).sort((a, b) => recency(a) - recency(b)).map(w => ({
+                    kind: "window",
+                    window: w,
+                    label: w.title || w.appClass
+                }))]
+    readonly property var items: [...shownScreens, ...others]
 
-    onSearchChanged: current = 0
-    onItemsChanged: current = Math.max(0, Math.min(current, items.length - 1))
+    // a search goes to what it found first
+    onSearchChanged: current = search.trim() === "" ? -1 : others.length > 0 ? shownScreens.length : -1
+    onItemsChanged: current = Math.min(current, items.length - 1)
 
     // XDPH_WINDOW_SHARING_LIST: handle[HC>]class[HT>]title[HE>]address[HA>]…,
     // the address Hyprland's, in decimal
@@ -103,7 +108,7 @@ Scope {
         return out
     }
 
-    function ask(fifo, token, list) {
+    function ask(fifo, list) {
         // a new request: the one before is cancelled
         if (picker.fifo !== "")
             reply("")
@@ -112,18 +117,19 @@ Scope {
         Hyprland.refreshToplevels()
         Hyprland.refreshMonitors()
         windows = parse(list)
-        allowRestore = token
         search = ""
-        current = 0
+        more = false
+        current = -1
         picker.fifo = fifo
         shown = true
     }
 
-    // "screen:…", "window:…", "region:…"; "" cancels
+    // "screen:…", "window:…", "region:…"; "" cancels. No "r" flag: no token
+    // to share it again without asking.
     function reply(selection) {
         if (fifo === "")
             return
-        const text = selection === "" ? "" : `${allowRestore ? "r" : ""}/${selection}`
+        const text = selection === "" ? "" : `/${selection}`
         Quickshell.execDetached(["timeout", "5", "sh", "-c", 'printf "%s\\n" "$1" > "$2"', "sh", text, fifo])
         fifo = ""
         shown = false
@@ -140,6 +146,45 @@ Scope {
             // out of the way while it's dragged; the request still waits
             shown = false
             region.running = true
+        }
+    }
+
+    // the keys: left and right one by one; up and down by rows among the
+    // windows, and between them and the screens
+    function move(key) {
+        const n = items.length
+        const screensCount = shownScreens.length
+        const columns = 4
+        if (n === 0)
+            return
+        if (current < 0) {
+            current = 0
+            return
+        }
+        switch (key) {
+        case Qt.Key_Right:
+        case Qt.Key_Tab:
+            current = Math.min(n - 1, current + 1)
+            break
+        case Qt.Key_Left:
+        case Qt.Key_Backtab:
+            current = Math.max(0, current - 1)
+            break
+        case Qt.Key_Down:
+            if (current < screensCount) {
+                if (!unfolded)
+                    more = true
+                current = Math.min(items.length - 1, screensCount)
+            } else {
+                current = Math.min(n - 1, current + columns)
+            }
+            break
+        case Qt.Key_Up:
+            if (current >= screensCount + columns)
+                current -= columns
+            else if (current >= screensCount)
+                current = 0
+            break
         }
     }
 
@@ -169,12 +214,13 @@ Scope {
         onTriggered: picker.tick()
     }
 
-    // shadesmar-share-picker's call
+    // shadesmar-share-picker's call (token: whether the portal would allow
+    // one by default; never given)
     IpcHandler {
         target: "share"
 
         function pick(fifo: string, token: bool, windows: string): void {
-            picker.ask(fifo, token, windows)
+            picker.ask(fifo, windows)
         }
     }
 
@@ -204,11 +250,12 @@ Scope {
             id: box
 
             readonly property int columns: 4
-            readonly property real tileWidth: (list.width - (columns - 1) * 12) / columns
+            readonly property real inner: width - 40
+            readonly property real tileWidth: (inner - (columns - 1) * 12) / columns
 
             anchors.centerIn: parent
             width: Math.min(920, parent.width - 96)
-            height: Math.min(header.height + list.contentHeight + footer.height + 48, parent.height - 120)
+            height: Math.min(body.implicitHeight + 32, parent.height - 120)
             radius: Theme.radius + 4
             color: Theme.popup
             border.width: 1
@@ -218,286 +265,341 @@ Scope {
                 anchors.fill: parent
             }
 
-            Item {
-                id: header
+            Column {
+                id: body
 
                 x: 20
                 y: 16
-                width: parent.width - 40
-                height: 40
+                width: box.inner
+                spacing: 16
 
-                IconImage {
-                    id: glyph
-
-                    anchors.verticalCenter: parent.verticalCenter
-                    implicitSize: 26
-                    source: Quickshell.iconPath("video-display", "image-missing")
-                }
-
-                Column {
-                    x: 38
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 1
-
-                    Text {
-                        text: "Screen Sharing Requested"
-                        color: Theme.text
-                        font.family: Theme.font
-                        font.pixelSize: 15
-                        font.weight: Font.DemiBold
-                    }
-
-                    Text {
-                        text: "Choose what the app may see"
-                        color: Theme.dim
-                        font.family: Theme.font
-                        font.pixelSize: 12
-                    }
-                }
-
-                // the search, which has the keys
-                Rectangle {
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 220
-                    height: 32
-                    radius: 8
-                    color: Theme.slot
-
-                    TextInput {
-                        id: input
-
-                        x: 10
-                        width: parent.width - 20
-                        anchors.verticalCenter: parent.verticalCenter
-                        focus: picker.shown
-                        text: picker.search
-                        onTextChanged: picker.search = text
-                        clip: true
-                        color: Theme.text
-                        selectionColor: Theme.accent
-                        font.family: Theme.font
-                        font.pixelSize: 13
-
-                        Text {
-                            visible: input.text === ""
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: "Search…"
-                            color: Theme.dim
-                            font: input.font
-                        }
-
-                        Keys.onPressed: event => {
-                            const n = picker.items.length
-                            switch (event.key) {
-                            case Qt.Key_Escape:
-                                picker.reply("")
-                                break
-                            case Qt.Key_Return:
-                            case Qt.Key_Enter:
-                                picker.share(picker.items[picker.current])
-                                break
-                            case Qt.Key_Right:
-                            case Qt.Key_Tab:
-                                picker.current = Math.min(n - 1, picker.current + 1)
-                                break
-                            case Qt.Key_Left:
-                            case Qt.Key_Backtab:
-                                picker.current = Math.max(0, picker.current - 1)
-                                break
-                            case Qt.Key_Down:
-                                picker.current = Math.min(n - 1, picker.current + box.columns)
-                                break
-                            case Qt.Key_Up:
-                                picker.current = Math.max(0, picker.current - box.columns)
-                                break
-                            default:
-                                return
-                            }
-                            event.accepted = true
-                        }
-                    }
-                }
-            }
-
-            Flickable {
-                id: list
-
-                x: 20
-                y: header.y + header.height + 16
-                width: parent.width - 40
-                height: parent.height - y - footer.height - 16
-                contentHeight: content.implicitHeight
-                clip: true
-                boundsBehavior: Flickable.StopAtBounds
-
-                Column {
-                    id: content
-
+                // the title, and the search, which has the keys
+                Item {
                     width: parent.width
-                    spacing: 12
+                    height: 40
 
-                    Flow {
-                        width: parent.width
-                        spacing: 12
-
-                        Repeater {
-                            model: picker.sources
-
-                            Tile {
-                                required property int index
-
-                                host: picker
-                                width: box.tileWidth
-                                place: index
-                            }
-                        }
+                    IconImage {
+                        anchors.verticalCenter: parent.verticalCenter
+                        implicitSize: 26
+                        source: Quickshell.iconPath("video-display", "image-missing")
                     }
 
-                    // as Plasma's: a line, "Windows", a line
-                    Item {
-                        visible: picker.sources.length > 0 && picker.shared.length > 0
-                        width: parent.width
-                        height: 20
-
-                        Rectangle {
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: (parent.width - section.width) / 2 - 12
-                            height: 1
-                            color: Theme.outline
-                        }
+                    Column {
+                        x: 38
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 1
 
                         Text {
-                            id: section
-
-                            anchors.centerIn: parent
-                            text: "Windows"
-                            color: Theme.dim
+                            text: "Screen Sharing Requested"
+                            color: Theme.text
                             font.family: Theme.font
-                            font.pixelSize: 12
+                            font.pixelSize: 15
                             font.weight: Font.DemiBold
                         }
 
-                        Rectangle {
-                            anchors.right: parent.right
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: (parent.width - section.width) / 2 - 12
-                            height: 1
-                            color: Theme.outline
+                        Text {
+                            text: "Choose what the app may see"
+                            color: Theme.dim
+                            font.family: Theme.font
+                            font.pixelSize: 12
                         }
                     }
 
-                    Flow {
-                        width: parent.width
-                        spacing: 12
+                    Rectangle {
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 220
+                        height: 32
+                        radius: 8
+                        color: Theme.slot
 
-                        Repeater {
-                            model: picker.shared
+                        TextInput {
+                            id: input
 
-                            Tile {
-                                required property int index
+                            x: 10
+                            width: parent.width - 20
+                            anchors.verticalCenter: parent.verticalCenter
+                            focus: picker.shown
+                            text: picker.search
+                            onTextChanged: picker.search = text
+                            clip: true
+                            color: Theme.text
+                            selectionColor: Theme.accent
+                            font.family: Theme.font
+                            font.pixelSize: 13
 
-                                host: picker
-                                width: box.tileWidth
-                                place: picker.sources.length + index
+                            Text {
+                                visible: input.text === ""
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "Search windows…"
+                                color: Theme.dim
+                                font: input.font
+                            }
+
+                            Keys.onPressed: event => {
+                                switch (event.key) {
+                                case Qt.Key_Escape:
+                                    picker.reply("")
+                                    break
+                                case Qt.Key_Return:
+                                case Qt.Key_Enter:
+                                    picker.share(picker.items[picker.current])
+                                    break
+                                case Qt.Key_Right:
+                                case Qt.Key_Left:
+                                case Qt.Key_Up:
+                                case Qt.Key_Down:
+                                case Qt.Key_Tab:
+                                case Qt.Key_Backtab:
+                                    picker.move(event.key)
+                                    break
+                                default:
+                                    return
+                                }
+                                event.accepted = true
+                            }
+                        }
+                    }
+                }
+
+                // The screens where they are, to scale, a gap between them;
+                // each one's name under it.
+                Item {
+                    id: map
+
+                    readonly property real gap: 14
+                    readonly property real originX: Math.min(...picker.screens.map(s => s.x))
+                    readonly property real originY: Math.min(...picker.screens.map(s => s.y))
+                    readonly property real spanX: Math.max(...picker.screens.map(s => s.x + s.width)) - originX
+                    readonly property real spanY: Math.max(...picker.screens.map(s => s.y + s.height)) - originY
+                    readonly property real zoom: Math.min(width / Math.max(1, spanX), 250 / Math.max(1, spanY))
+
+                    width: parent.width
+                    height: spanY * zoom + 26
+
+                    Repeater {
+                        model: picker.shownScreens
+
+                        Item {
+                            id: place
+
+                            required property var modelData
+                            required property int index
+                            readonly property var s: modelData.screen
+                            readonly property bool lit: picker.current === index
+
+                            // centred as a whole
+                            x: (map.width - map.spanX * map.zoom) / 2 + (s.x - map.originX) * map.zoom + map.gap / 2
+                            y: (s.y - map.originY) * map.zoom + map.gap / 2
+                            width: s.width * map.zoom - map.gap
+                            height: s.height * map.zoom - map.gap + 26
+
+                            // in its place, its own proportions kept
+                            Thumbnail {
+                                id: shot
+
+                                readonly property real aspect: place.s.width / Math.max(1, place.s.height)
+
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                width: Math.min(parent.width, (parent.height - 26) * aspect)
+                                height: width / aspect
+                                toplevel: null
+                                source: place.s
+                                appClass: "video-display"
+                                lit: place.lit
+                                radius: 6
+                                capturing: picker.shown
+
+                                Connections {
+                                    target: picker
+
+                                    function onTick() {
+                                        shot.refresh()
+                                    }
+                                }
+                            }
+
+                            // its edges, a dark screen on the dark card
+                            Rectangle {
+                                x: shot.x
+                                width: shot.width
+                                height: shot.height
+                                radius: shot.radius
+                                color: "transparent"
+                                border.width: 1
+                                border.color: Theme.alpha(Theme.text, 0.16)
+                            }
+
+                            Row {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                y: shot.height + 8
+                                spacing: 6
+
+                                IconImage {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    implicitSize: 16
+                                    source: Quickshell.iconPath("video-display", "image-missing")
+                                }
+
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: Math.min(implicitWidth, place.width - 22)
+                                    text: place.modelData.label
+                                    elide: Text.ElideRight
+                                    color: place.lit ? Theme.text : Theme.dim
+                                    font.family: Theme.font
+                                    font.pixelSize: 12
+                                }
+                            }
+
+                            MouseArea {
+                                id: area
+
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onEntered: picker.current = place.index
+                                onClicked: picker.share(place.modelData)
+                            }
+                        }
+                    }
+                }
+
+                // the rest, folded: a line that unfolds it
+                Item {
+                    width: parent.width
+                    height: 28
+
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.leftMargin: -8
+                        anchors.rightMargin: -8
+                        radius: 6
+                        color: fold.containsMouse ? Theme.slot : "transparent"
+                    }
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "›"
+                        rotation: picker.unfolded ? 90 : 0
+                        color: Theme.dim
+                        font.family: Theme.font
+                        font.pixelSize: 18
+
+                        Behavior on rotation {
+                            NumberAnimation {
+                                duration: 120
                             }
                         }
                     }
 
                     Text {
-                        visible: picker.items.length === 0
-                        width: parent.width
-                        height: 60
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        text: "Nothing matches"
-                        color: Theme.dim
+                        x: 20
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "A window or a region"
+                        color: Theme.text
                         font.family: Theme.font
                         font.pixelSize: 13
                     }
-                }
-            }
-
-            Item {
-                id: footer
-
-                x: 20
-                y: parent.height - height - 14
-                width: parent.width - 40
-                height: 30
-
-                // Plasma's checkbox
-                Row {
-                    id: check
-
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 8
-
-                    Rectangle {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 16
-                        height: 16
-                        radius: 4
-                        color: picker.allowRestore ? Theme.accent : "transparent"
-                        border.width: picker.allowRestore ? 0 : 1
-                        border.color: Theme.dim
-
-                        Text {
-                            visible: picker.allowRestore
-                            anchors.centerIn: parent
-                            text: "✓"
-                            color: Theme.accentText
-                            font.pixelSize: 11
-                            font.weight: Font.Bold
-                        }
-                    }
 
                     Text {
+                        anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Allow the application to do this without asking next time"
-                        color: Theme.text
-                        font.family: Theme.font
-                        font.pixelSize: 12
-                    }
-                }
-
-                MouseArea {
-                    anchors.fill: check
-                    onClicked: picker.allowRestore = !picker.allowRestore
-                }
-
-                Rectangle {
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: Math.max(72, cancel.implicitWidth + 24)
-                    height: 28
-                    radius: 6
-                    color: cancelArea.containsMouse ? Qt.lighter(Theme.slot, 1.2) : Theme.slot
-
-                    Text {
-                        id: cancel
-
-                        anchors.centerIn: parent
-                        text: "Cancel"
-                        color: Theme.text
+                        text: picker.windows.length === 1 ? "1 window" : `${picker.windows.length} windows`
+                        color: Theme.dim
                         font.family: Theme.font
                         font.pixelSize: 12
                     }
 
                     MouseArea {
-                        id: cancelArea
+                        id: fold
 
                         anchors.fill: parent
                         hoverEnabled: true
-                        onClicked: picker.reply("")
+                        onClicked: picker.more = !picker.unfolded
+                    }
+                }
+
+                Flickable {
+                    id: list
+
+                    visible: picker.unfolded
+                    width: parent.width
+                    // what's left of the screen's height
+                    height: Math.min(contentHeight, window.height - 120 - 32 - 16 * 4 - 40 - map.height - 28 - footer.height)
+                    contentHeight: grid.implicitHeight
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+
+                    Flow {
+                        id: grid
+
+                        width: parent.width
+                        spacing: 12
+
+                        Repeater {
+                            model: picker.others
+
+                            Tile {
+                                required property int index
+
+                                host: picker
+                                width: box.tileWidth
+                                place: picker.shownScreens.length + index
+                            }
+                        }
+
+                        Text {
+                            visible: picker.others.length === 0
+                            width: grid.width
+                            height: 40
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            text: "No window matches"
+                            color: Theme.dim
+                            font.family: Theme.font
+                            font.pixelSize: 13
+                        }
+                    }
+                }
+
+                Item {
+                    id: footer
+
+                    width: parent.width
+                    height: 28
+
+                    Rectangle {
+                        anchors.right: parent.right
+                        width: Math.max(72, cancel.implicitWidth + 24)
+                        height: 28
+                        radius: 6
+                        color: cancelArea.containsMouse ? Qt.lighter(Theme.slot, 1.2) : Theme.slot
+
+                        Text {
+                            id: cancel
+
+                            anchors.centerIn: parent
+                            text: "Cancel"
+                            color: Theme.text
+                            font.family: Theme.font
+                            font.pixelSize: 12
+                        }
+
+                        MouseArea {
+                            id: cancelArea
+
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            onClicked: picker.reply("")
+                        }
                     }
                 }
             }
         }
     }
 
-    // A screen, the region or a window: its picture in a box, its icon and
-    // name under it. The keys' one lit; a click shares it.
+    // The region or a window: its picture in a box, its icon and name under
+    // it. The keys' one lit; a click shares it.
     component Tile: Item {
         id: tile
 
@@ -506,19 +608,14 @@ Scope {
         // its index in `items`
         property int place: 0
         readonly property bool lit: tile.host.current === place
-        readonly property var screen: modelData.kind === "screen" ? modelData.screen : null
         readonly property var toplevel: modelData.kind === "window" ? modelData.window.toplevel : null
         readonly property string appClass: modelData.kind === "window" ? modelData.window.appClass : ""
         readonly property string icon: {
-            if (modelData.kind === "screen")
-                return "video-display"
             const entry = DesktopEntries.heuristicLookup(appClass)
             return entry ? entry.icon : appClass
         }
         // its width over its height
         readonly property real aspect: {
-            if (screen)
-                return screen.width / Math.max(1, screen.height)
             const o = toplevel ? toplevel.lastIpcObject : null
             return o && o.size && o.size[1] > 0 ? o.size[0] / o.size[1] : 16 / 10
         }
@@ -531,21 +628,20 @@ Scope {
             width: parent.width
             height: Math.round(width * 0.625)
             radius: 8
-            color: area.containsMouse || tile.lit ? Theme.slot : Theme.alpha(Theme.slot, 0.45)
+            color: tile.lit ? Theme.slot : Theme.alpha(Theme.slot, 0.45)
 
             Thumbnail {
                 id: thumb
 
-                visible: tile.modelData.kind !== "region"
+                visible: tile.modelData.kind === "window"
                 anchors.centerIn: parent
                 width: Math.min(parent.width - 20, (parent.height - 20) * tile.aspect)
                 height: width / tile.aspect
                 toplevel: tile.toplevel
-                source: tile.screen ?? (tile.toplevel ? tile.toplevel.wayland : null)
-                appClass: tile.appClass || tile.icon
+                appClass: tile.appClass
                 lit: tile.lit
                 radius: 5
-                capturing: tile.host.shown && (tile.screen !== null || (tile.toplevel !== null && tile.host.pictures.onScreen(tile.toplevel)))
+                capturing: tile.host.shown && tile.toplevel !== null && tile.host.pictures.onScreen(tile.toplevel)
                 kept: tile.toplevel ? tile.host.pictures.of(tile.toplevel) : null
 
                 Connections {
@@ -589,7 +685,7 @@ Scope {
             spacing: 6
 
             IconImage {
-                visible: tile.modelData.kind !== "region"
+                visible: tile.modelData.kind === "window"
                 anchors.verticalCenter: parent.verticalCenter
                 implicitSize: 16
                 source: Quickshell.iconPath(tile.icon, "application-x-executable")
