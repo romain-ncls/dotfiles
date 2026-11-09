@@ -1,5 +1,6 @@
 // A popup of the bar, above the bar item it opens from. One at a time: the
-// bar's `open` names it. A click elsewhere, or Escape, closes it.
+// bar's `open` names it. It has the keyboard (its filter, a password) while
+// open; a click elsewhere, or Escape, closes it.
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
@@ -31,35 +32,42 @@ PopupWindow {
     implicitHeight: body.implicitHeight + 24
     color: "transparent"
 
-    // the bar too: a click on its items opens another popup, not nothing.
-    // Started once the popup's window is shown: started with `visible`, it
-    // leaves the popup out (Quickshell makes the popup's surface after it),
-    // and a click in the popup closes it.
+    // Clicks elsewhere close it, but not on the bar: a click on its items
+    // opens another popup, not nothing. Started once the popup's window is
+    // shown: started with `visible`, it leaves the popup out (Quickshell
+    // makes the popup's surface after it), and a click in the popup closes
+    // it. The popup alone first: Hyprland gives the keyboard to the grab's
+    // window under the pointer, else its first, and the pointer is on the
+    // bar; the bar joins once the popup has it.
     HyprlandFocusGrab {
-        windows: [popup, popup.bar]
+        id: grab
+
+        windows: grab.active ? [popup, popup.bar] : [popup]
         active: popup.backingWindowVisible
         onCleared: popup.close()
     }
 
-    Rectangle {
+    // Escape, from its fields too
+    FocusScope {
         anchors.fill: parent
-        radius: Theme.radius
-        color: Theme.popup
-        border.width: 1
-        border.color: Theme.outline
-
-        Column {
-            id: body
-
-            x: 12
-            y: 12
-            width: parent.width - 24
-            spacing: 6
-        }
-    }
-
-    Item {
         focus: true
         Keys.onEscapePressed: popup.close()
+
+        Rectangle {
+            anchors.fill: parent
+            radius: Theme.radius
+            color: Theme.popup
+            border.width: 1
+            border.color: Theme.outline
+
+            Column {
+                id: body
+
+                x: 12
+                y: 12
+                width: parent.width - 24
+                spacing: 6
+            }
+        }
     }
 }
