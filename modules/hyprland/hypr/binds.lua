@@ -149,12 +149,15 @@ for _, keys in ipairs({ mod .. " + space", "ALT + space", "ALT + F2" }) do
     bind(keys, hl.dsp.global("shadesmar:launcher")) -- Launcher.qml
 end
 
--- Screenshots, as Spectacle's: Print the screens, to a file and the
--- clipboard; Meta+Shift+S (or Meta+Shift+Print) a region, to the clipboard.
-local shots = "mkdir -p ~/Pictures/Screenshots && f=~/Pictures/Screenshots/$(date +%Y-%m-%d_%H-%M-%S).png"
-bind("Print", hl.dsp.exec_cmd(shots .. " && grim \"$f\" && wl-copy < \"$f\""))
-bind(mod .. " + SHIFT + s", hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | wl-copy"))
-bind(mod .. " + SHIFT + Print", hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | wl-copy"))
+-- Screenshots (LumineCapture, modules/lumine-capture), on Spectacle's keys:
+-- Meta+Shift+S (or Meta+Shift+Print) its editor over every screen, frozen:
+-- drag a region, annotate; Enter or Ctrl+C copies, Ctrl+S saves (and
+-- copies too). Print saves the screen under the pointer, Shift+Print every
+-- screen, to ~/Pictures/Screenshots.
+bind(mod .. " + SHIFT + s", hl.dsp.exec_cmd("lumine-capture"))
+bind(mod .. " + SHIFT + Print", hl.dsp.exec_cmd("lumine-capture"))
+bind("Print", hl.dsp.exec_cmd("lumine-capture -f -m -t s"))
+bind("SHIFT + Print", hl.dsp.exec_cmd("lumine-capture -f -t s"))
 
 -- Volume, brightness, media. shadesmar's OSD shows the volume as PipeWire
 -- changes it, and the brightness as told here.

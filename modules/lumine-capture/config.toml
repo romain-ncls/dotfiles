@@ -1,0 +1,19 @@
+# LumineCapture's settings in the Hyprland session (modules/lumine-capture).
+# apply-lumar (modules/lumar) writes them to
+# ~/.config/LumineCapture/config.toml, lumar's colors after them. What isn't
+# set here keeps LumineCapture's default (lumine-capture
+# --print-default-config).
+
+[general]
+# Enter and a double click copy; Ctrl+S saves, and copies too. The keys
+# that save without the editor (binds.lua) say -t s.
+to = "c"
+# Above everything, not a fullscreen window: in the scrolling layout a window
+# would open as a new column.
+overlay = "layer"
+
+[save]
+# ~/Pictures/Screenshots/2026-11-09_14-03-27.png, as before
+directory = "Screenshots"
+month_format = ""
+filename_format = "%Y-%m-%d_%H-%M-%S"
