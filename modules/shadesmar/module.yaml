@@ -2,14 +2,16 @@
 # docs/hyprland.md). shell/ is linked to ~/.config/quickshell/shadesmar and
 # edited in place: Quickshell reloads it on save. The bar and its popups
 # (clipboard, notifications, network, Bluetooth, sound, battery), the
-# overview, the launcher, notifications and the OSD (the lock screen is
-# modules/silksong's; hypridle locks on idle and before sleep).
+# overview, the launcher, notifications, the OSD and the screen recorder
+# (the lock screen is modules/silksong's; hypridle locks on idle and
+# before sleep).
 # pkg/ builds spanreed, its Go helper for D-Bus names (Plasma's OSD
 # service) and agents, asking in cards above the bar: BlueZ's for
 # pairings, NetworkManager's for secrets (a Wi-Fi's password, a VPN's
 # one-time code). All in the Hyprland session only.
 packages:
   - cliphist # the clipboard's history
+  - wl-screenrec # the screen recorder's (Recorder.qml), encoding on the GPU
 
 files:
   ~/.config/quickshell/shadesmar:

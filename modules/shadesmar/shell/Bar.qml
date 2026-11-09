@@ -1,8 +1,9 @@
-// The bar: the desktops on the left; the tray, the clipboard, the
-// notifications, the network, Bluetooth, the sound, the battery and the
-// clock on the right. Their popups open above them, one at a time (`open`;
-// qs -c shadesmar ipc call bar open <name>). Docked across the screen in
-// lumar's flush layout, floating with gaps and corners in the other.
+// The bar: the desktops on the left; a recording's dot, the tray, the
+// clipboard, the notifications, the network, Bluetooth, the sound, the
+// battery and the clock on the right. Their popups open above them, one at
+// a time (`open`; qs -c shadesmar ipc call bar open <name>). Docked across
+// the screen in lumar's flush layout, floating with gaps and corners in the
+// other.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -13,6 +14,7 @@ PanelWindow {
     id: bar
 
     required property var notifications
+    required property var recorder
     property string open: ""
     readonly property int gap: Theme.floating ? 8 : 0
 
@@ -68,6 +70,10 @@ PanelWindow {
 
         Item {
             Layout.fillWidth: true
+        }
+
+        Recording {
+            recorder: bar.recorder
         }
 
         Tray {

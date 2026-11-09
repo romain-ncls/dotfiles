@@ -375,6 +375,9 @@ migrations and update channels (lodestar does that), their titlebar plugin.
   annotate; Enter or Ctrl+C copies, Ctrl+S saves and copies, Ctrl+P pins
   it above the windows); Print saves the screen under the pointer,
   Shift+Print every screen, to `~/Pictures/Screenshots`.
+- Recordings, on Spectacle's keys (shadesmar): Meta+Shift+R a region,
+  Meta+Alt+R the screen under the pointer; the same key again, or a click
+  on the bar's red dot, stops.
 - Dropped: Meta+< (Focus Discord: Discord is always on the middle screen).
 - **The laptop alone**: its screen shows the grid's four desktops; `comms`
   (Discord, Teams) is a fifth workspace with its own key; Spotify's
@@ -433,6 +436,7 @@ costs.
 | archives | File Roller, Nautilus's own extract | Ark |
 | terminal | Ghostty | Konsole |
 | screenshots | LumineCapture (`modules/lumine-capture`); Flameshot if it falls short | Spectacle (it captures through KWin) |
+| recordings | wl-screenrec, driven by shadesmar (Recorder.qml) | Spectacle |
 | file chooser | GTK's (xdg-desktop-portal-gtk, `FileChooser` in `hyprland-portals.conf`), for the apps that ask the portal: GTK 4's (by default now), Brave. Not Nautilus's: xdg-desktop-portal-gnome serves only its settings outside GNOME Shell ("Non-compatible display server") | KDE's |
 
 Kate goes (not used). Still Qt: qBittorrent, EasyEffects (Kirigami since
@@ -526,6 +530,22 @@ later (yazi, btop, lazygit…).
       (the rig's virtual keyboard doesn't fire binds), and whether the
       pointer shows in the shots (the rig draws it in software, so it's in
       its frames).
+- [x] Recordings, for short clips of the UI (9 Nov 2026): shadesmar runs
+      wl-screenrec (Recorder.qml), which encodes on the Arc's GPU, the
+      frames never through the CPU (a U-series chip encoding in software
+      could drop the animations' frames), the pointer in. A region is picked with slurp (in
+      lumar's colors, its size shown; its stdin empty, or it waits for
+      boxes to choose from) and framed in red just outside while it's
+      recorded; a screen is the one under the pointer (`hyprctl
+      cursorpos`: the focused one can be another). The bar shows a red
+      dot and the time. Saved to `~/Videos/Recordings/<date>.mp4` (H.264:
+      GitHub, Slack and Linear play it); its notification opens it,
+      shows it in Nautilus or makes a GIF of it (ffmpeg: its own palette,
+      30 fps, 1280 wide at most). Tried headless with wf-recorder in
+      wl-screenrec's place (the same arguments): a screen, a region
+      (the frame outside the video), Escape in slurp, the shortcuts
+      through Hyprland, the dot, the notification and its GIF. Left for
+      the machine: wl-screenrec itself.
 
 ## Alternatives considered
 
@@ -544,3 +564,10 @@ later (yazi, btop, lazygit…).
   the fallback), Satty (grim and slurp first, then a window: the screens
   not frozen, the region fixed before annotating), Swappy (Satty's
   predecessor), Gradia (polishes a shot in a window: backgrounds, padding).
+- Screen recorders (9 Nov 2026): wf-recorder (the same command line, in
+  Arch's repos; it encodes on the CPU unless told otherwise),
+  gpu-screen-recorder (as light, made for games and instant replays; on
+  Wayland it captures through a privileged helper or the portal's
+  picker), Kooha (a window; the portal's picker at each recording), OBS
+  (much more than clips of a few seconds). LumineCapture's own recording
+  is only on its roadmap.
