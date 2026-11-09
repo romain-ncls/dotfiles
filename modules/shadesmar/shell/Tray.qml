@@ -12,8 +12,7 @@ Row {
     spacing: 10
 
     Repeater {
-        // nm-applet stays for its prompts; Network.qml is its menu
-        model: SystemTray.items.values.filter(item => item.id !== "nm-applet")
+        model: SystemTray.items.values
 
         IconImage {
             id: icon
