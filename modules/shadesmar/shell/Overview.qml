@@ -30,8 +30,8 @@ Scope {
     readonly property bool settled: shown && progress === 1
     property string filter: ""
 
-    // as Hyprland moves the windows (looknfeel.lua: 400 ms, easeOutQuint)
-    readonly property int duration: 400
+    // Hyprland's curve for windows (looknfeel.lua: easeOutQuint), quicker
+    readonly property int duration: 300
     readonly property var curve: [0.23, 1, 0.32, 1, 1, 1]
 
     // Where the windows are and what each screen shows, from hyprctl at the
@@ -65,10 +65,12 @@ Scope {
             return
         shown = false
         forth.stop()
-        if (revealed)
+        if (revealed) {
+            refreshAll()
             back.start()
-        else
+        } else {
             down()
+        }
     }
     function toggle() {
         if (shown)
@@ -120,8 +122,12 @@ Scope {
             snapshot()
             ready.start()
         } else if (!shown) {
+            refreshAll()
             back.start()
         }
+    }
+    function refreshAll() {
+        views.instances.forEach(v => v.refresh())
     }
     function parse(text) {
         try {
@@ -283,6 +289,23 @@ Scope {
             }
             property int selected: 0
 
+            // the pictures again (not live: see Thumbnail.qml)
+            function refresh() {
+                for (let i = 0; i < cells.count; i++) {
+                    const c = cells.itemAt(i)
+                    if (c)
+                        c.refresh()
+                }
+            }
+
+            // in the grid, the pictures follow the windows, 20 times a second
+            Timer {
+                interval: 50
+                repeat: true
+                running: overview.settled
+                onTriggered: view.refresh()
+            }
+
             function ready() {
                 if (paper.status === Image.Loading)
                     return false
@@ -331,10 +354,10 @@ Scope {
                     const x = area.x + ((cols - inRow) / 2 + col) * (cw + gap)
                     const y = area.y + row * (ch + gap)
                     return {
-                        x: x + (cw - s[0] * scale) / 2,
-                        y: y + (ch - titleHeight - s[1] * scale) / 2,
-                        w: s[0] * scale,
-                        h: s[1] * scale
+                        x: Math.round(x + (cw - s[0] * scale) / 2),
+                        y: Math.round(y + (ch - titleHeight - s[1] * scale) / 2),
+                        w: Math.round(s[0] * scale),
+                        h: Math.round(s[1] * scale)
                     }
                 })
             }
@@ -477,6 +500,9 @@ Scope {
                             property real gw: hw
                             property real gh: hh
                             readonly property var target: slot >= 0 ? view.targets[slot] ?? null : null
+                            function refresh() {
+                                thumb.refresh()
+                            }
                             function place() {
                                 if (!target)
                                     return
@@ -540,7 +566,7 @@ Scope {
                                 height: cell.hh + (cell.gh - cell.hh) * cell.p
                                 toplevel: cell.modelData.toplevel
                                 appClass: cell.modelData.cls
-                                live: overview.up
+                                capturing: overview.up
                                 radius: cell.homeRadius + (7 - cell.homeRadius) * cell.p
                                 lit: overview.shown && cell.slot >= 0 && ((view.focusedScreen && view.selected === cell.slot) || hover.containsMouse)
                                 framed: cell.p

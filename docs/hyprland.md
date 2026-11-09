@@ -469,7 +469,14 @@ later (yazi, btop, lazygit…).
       screen as it was (checked pixel by pixel, headless); the bar's strip
       stays the bar. Hyprland's fade is off for that layer (looknfeel.lua).
       A pick waits until Hyprland has let the keyboard go: it focuses no
-      window while a layer holds the keyboard.
+      window while a layer holds the keyboard. The pictures aren't live
+      (a live ScreencopyView asks for a frame at each repaint, so Hyprland
+      copied every window at every frame of the animation: 20-30 fps):
+      one frame when it opens, then 20 a second in the grid; drawn
+      mipmapped, so text shrunk below half keeps its strokes. The
+      scrolling layout's columns beside the screen get their app's icon:
+      Hyprland copies a window only while it overlaps its monitor
+      (ScreenshareManager::onOutputCommit).
 - [x] Brave stays on its Classic layout (no bar above the tabs) in lumar's
       colors: a Chrome theme apply-lumar renders from the palette
       (`~/.local/share/lumar/brave-theme`, which Brave loads at each start:
