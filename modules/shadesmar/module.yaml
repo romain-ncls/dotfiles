@@ -3,10 +3,11 @@
 # edited in place: Quickshell reloads it on save. The bar and its popups
 # (clipboard, notifications, network, Bluetooth, sound, battery), the
 # overview, the launcher, notifications and the OSD (the lock screen is
-# modules/silksong's); the stand-ins left (hypridle, nm-applet for its
-# prompts) go as it grows. pkg/ builds spanreed, its Go helper for D-Bus
-# names (Plasma's OSD service) and the Bluetooth pairing agent (BlueZ's,
-# asking through the bar's Bluetooth). All in the Hyprland session only.
+# modules/silksong's); hypridle, the stand-in left, goes as it grows.
+# pkg/ builds spanreed, its Go helper for D-Bus names (Plasma's OSD
+# service) and agents, asking in cards above the bar: BlueZ's for
+# pairings, NetworkManager's for secrets (a Wi-Fi's password, a VPN's
+# one-time code). All in the Hyprland session only.
 packages:
   - cliphist # the clipboard's history
 

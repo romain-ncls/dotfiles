@@ -121,11 +121,15 @@ rejects (`bezier` or `spring`).
   as they are), `org.freedesktop.ScreenSaver` inhibits (browsers and video
   players; Omarchy's open bug #6475 is not owning it), and logind's `Lock`
   and `PrepareForSleep` (`loginctl lock-session` from mutectl's Lock AFK, lock
-  before suspend and hibernate within a delay inhibitor), and BlueZ's pairing
+  before suspend and hibernate within a delay inhibitor), BlueZ's pairing
   agent (`org.bluez.Agent1` on the system bus, the default one: the code to
-  compare or to type, a PIN, a yes or no), whose answers come back on the
-  session bus (`org.shadesmar.Spanreed`, from `busctl`); it forwards to the
-  shell with `qs ipc call`.
+  compare or to type, a PIN, a yes or no) and NetworkManager's secret agent
+  (`org.freedesktop.NetworkManager.SecretAgent`: below, Secrets). It
+  forwards to the shell with `qs ipc call` (one JSON object for a network's
+  request: an argument in brackets would be split), and the shell's answers
+  come back on the session bus (`org.shadesmar.Spanreed`: `busctl` for
+  Bluetooth, `spanreed answer` for a network, its secrets on stdin rather
+  than in a command line any process can read).
 - **Shortcuts are declared once.** lodestar turns every `shortcuts:` entry
   with `run:` into a Hyprland bind (a generated Lua file the config requires),
   translating KDE's key names: `Meta` → `SUPER`, `Launch (5)` → `XF86Launch5`,
@@ -252,10 +256,11 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    (PipeWire's volume and mute, the brightness from its binds, spanreed's
    calls), the overview (Meta+Tab), and the bar's popups, as Plasma's tray:
    the clipboard's history (cliphist, recorded by clipboard-history.service),
-   the network (Wi-Fi, the cable, the VPNs through nmcli; nm-applet stays
-   for its prompts, its icon hidden), Bluetooth (pairing through spanreed's
-   agent: a card above the bar, a window of its own, as a pairing the
-   device starts comes with no popup open), the sound (devices,
+   the network (Wi-Fi, the cable, the VPNs through nmcli; their secrets
+   through spanreed's agent, in place of nm-applet), Bluetooth (pairing
+   through spanreed's agent); both agents ask in a card above the bar, a
+   window of its own, as a request can come with no popup open (BarCard.qml),
+   the sound (devices,
    volume, the microphone; Meta+~), the battery (power profiles,
    brightness).
 4. **lumar, from scratch.** One palette, templates rendered at apply (Go
@@ -385,12 +390,19 @@ also serves it as the freedesktop Secret Service (libsecret).
   already use the Secret Service, the same in both sessions; Discord,
   Obsidian, GitKraken and Bitwarden keep nothing there. Check at the first
   login that each stays logged in.
-- **Networks: nm-applet in Hyprland** (a stand-in until shadesmar). Most
-  Wi-Fi passwords are Plasma's network applet's (agent-owned, in the
-  wallet), and both work VPNs ask a challenge (an OTP) at each connection:
-  Hyprland needs an agent that prompts anyway. nm-applet asks each Wi-Fi
-  password once (they're in Bitwarden) and keeps it in the Secret Service;
-  Plasma keeps its own copy.
+- **Networks: spanreed's secret agent in Hyprland** (nm-applet's until
+  then). Most Wi-Fi passwords are Plasma's network applet's (agent-owned, in
+  the wallet's folder of its own), and the work VPNs (OpenVPN) ask a
+  challenge (an OTP) at each connection: Hyprland needs an agent that
+  prompts anyway. spanreed keeps what NetworkManager leaves to the agent in
+  the Secret Service, in nm-applet's items (libnma's schema), so what
+  nm-applet kept (the VPNs' passwords) is still found; it asks each Wi-Fi
+  password once (they're in Bitwarden), Plasma keeps its own copy. A VPN's
+  secrets are its plugin's: its auth dialog, in external UI mode as GNOME
+  Shell runs it, says which to ask (the password when none is kept, the
+  OTP with the server's message) and finds the kept ones itself; a plugin
+  without that mode (openconnect's) gets no answer. nm-connection-editor
+  stays for editing connections.
 
 ## Apps and toolkits: GTK first
 
