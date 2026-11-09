@@ -36,3 +36,11 @@ user-services:
 files:
   ~/.config/hypr:
     link: hypr
+
+brave:
+  flags:
+    # Brave keeps the key to its cookies and saved logins in KWallet in
+    # Plasma. In Hyprland it would look in the Secret Service instead, find
+    # another key and log out of everything (docs/hyprland.md, Secrets): the
+    # same store in both sessions.
+    - --password-store=kwallet6
