@@ -145,6 +145,8 @@ bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 -- (single instance) and quits, and the window, the running one's, would tile.
 bind(mod .. " + Return", hl.dsp.exec_cmd("ghostty --gtk-single-instance=false", { float = true }))
 bind("CTRL + ALT + t", hl.dsp.exec_cmd("ghostty"))
+-- the files, a new window each time (Dolphin's Meta+E)
+bind(mod .. " + e", hl.dsp.exec_cmd("nautilus --new-window"))
 for _, keys in ipairs({ mod .. " + space", "ALT + space", "ALT + F2" }) do
     bind(keys, hl.dsp.global("shadesmar:launcher")) -- Launcher.qml
 end
