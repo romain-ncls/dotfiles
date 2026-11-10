@@ -360,8 +360,9 @@ migrations and update channels (lodestar does that), their titlebar plugin.
   Meta+Down a hidden special workspace (Hyprland has no minimize),
   Meta+Shift+Left/Right and Meta+Shift+Q/D to the other screen, Ctrl+Alt+Esc
   kill.
-- Meta+Return: the terminal, floating. Meta+²: Spotify's scratchpad (the key
-  that opens Plasma's media player now). Meta+~: volume (the shell).
+- Meta+Return: the terminal, floating. Meta+E: the files (Nautilus, a new
+  window, as Dolphin's). Meta+²: Spotify's scratchpad (the key that opens
+  Plasma's media player now). Meta+~: volume (the shell).
 - Meta+Tab, Ctrl+Alt+Tab: shadesmar's overview, Plasma's: each screen's
   windows as live thumbnails, the tape's off-screen columns included (with
   their last picture: Hyprland copies a window only while it overlaps its
@@ -430,7 +431,7 @@ costs.
 
 | For | In Hyprland | Instead of |
 |---|---|---|
-| files | Nautilus | Dolphin |
+| files | Nautilus (Meta+E). Its sidebar's bookmarks (`modules/hyprland/home/.config/gtk-3.0/bookmarks.tmpl`): Dolphin's folders, ~/git and ~/dotfiles, under the places it always shows (Home, Recent, Starred, Network, Trash; no setting hides them); GTK's file dialogs show them too. Nautilus rewrites the file when a bookmark is added or removed there: `lodestar drift` shows it, to bring back here | Dolphin |
 | documents (PDFs, reading only) | Papers | Okular |
 | images | Loupe | Gwenview |
 | archives | File Roller, Nautilus's own extract | Ark |
