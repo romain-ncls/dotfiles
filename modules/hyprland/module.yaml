@@ -37,6 +37,12 @@ files:
   ~/.config/hypr:
     link: hypr
 
+# GTK's file chooser settings, for Nautilus and GTK's dialogs: folders first
+hooks:
+  - run: gtk-settings
+    as: user
+    when: always # cheap
+
 brave:
   flags:
     # Brave keeps the key to its cookies and saved logins in KWallet in

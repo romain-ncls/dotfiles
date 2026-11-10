@@ -1,0 +1,15 @@
+#!/bin/sh
+# GTK's own settings: its file chooser's, which Nautilus and GTK's file
+# dialogs read (GTK 4's and GTK 3's): folders before files. dconf keys,
+# which lodestar has no resource for: set on every apply (the same value
+# changes nothing), so a change made in Nautilus's preferences goes back to
+# this one at the next apply.
+set -eu
+# none during the install: the first apply in the session sets them
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+	echo "gtk-settings: no session bus; the next apply sets them"
+	exit 0
+fi
+for schema in org.gtk.gtk4.Settings.FileChooser org.gtk.Settings.FileChooser; do
+	gsettings set "$schema" sort-directories-first true
+done
