@@ -1,7 +1,8 @@
 # hyprslide: a Hyprland plugin of ours (pkg/hyprslide.cpp), for the grid's
 # switches to slide the way the desktop lies, diagonals included, as KDE's
-# do, without the scrolling layout's columns beside the screen
-# (docs/hyprland.md). modules/hyprland's hyprland.lua loads it. Hyprland
+# do, without the scrolling layout's columns beside the screen, and with a
+# window moved along kept in sight (docs/hyprland.md).
+# modules/hyprland's hyprland.lua loads it. Hyprland
 # only loads a plugin built for its exact version: a new Hyprland rebuilds
 # it (lodestar upgrade does it right after); until then, or without it, the
 # grid fades and slides Hyprland's way.

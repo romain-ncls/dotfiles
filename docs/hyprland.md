@@ -79,13 +79,24 @@ rejects (`bezier` or `spring`).
   (`hl.dsp.event`, `custom>>grid d`): Hyprland reports a workspace change
   only for the focused screen.
 - **The slides are a plugin of ours, hyprslide** (`modules/hyprslide`, C++,
-  two hooks). Hyprland slides sideways or up and down only, the direction
+  three hooks). Hyprland slides sideways or up and down only, the direction
   from the ids' order, and draws during a slide the columns the scrolling
   layout keeps beside the screen, which then cross it. hyprslide sets the
   workspace's offset on both axes, the way the grid says the desktop lies
   (`hl.plugin.hyprslide.towards(dx, dy)` around `set_workspace`), and leaves
-  out the tiled windows whose middle is off the screen while their workspace
-  slides: KDE's slide, diagonals included. Plugins must match the exact
+  out the tiled windows whose place is off the screen while their workspace
+  slides: KDE's slide, diagonals included. A window moved along
+  (Meta+Ctrl+Shift+arrows, `hl.plugin.hyprslide.carry(window)` before it
+  moves) stays in sight while the desktops slide under it, as KWin's: on
+  the screen, a window is its position plus its workspace's offset, so its
+  position goes from where it was less a screen to its place there, on the
+  slide's own curve, and it goes straight from one to the other. Hyprland
+  would fade it out of the desktop it leaves, push a floating one over the
+  edge back (its floating offset), and skip drawing it while its position
+  is a screen away: hyprslide stops all three for it. Hyprland moves a
+  window first, then switches, so it otherwise rides in with the new
+  desktop; no plugin found does KWin's (2026-11 survey: Hyprgrid,
+  hyprland-virtual-desktops, hyprtasking, hyprmosaic). Plugins must match the exact
   Hyprland build, so lodestar rebuilds it with each new Hyprland
   (`pkg: built-against: [hyprland]`); Hyprland refuses one built for
   another, and the grid then falls back to short slides that fade (10 %,
@@ -629,14 +640,15 @@ later (yazi, btop, lazygit…).
       as the Plasma plugin does. A right click on the wallpaper opens
       Backdrop's menu (BackdropMenu.qml), Hyprland's desktop having none of
       its own: the picture's title and place (not the picture: it's right
-      behind), where it's from, its credit, its score ("62% to your taste"), when the next comes; Like
-      (a heart in the accent once liked), Dislike and Next, which keep the
-      menu open to go through several (L, D, N or Right; Escape); its page,
-      the image, the liked ones' folder. The daemon down: "Backdrop isn't
-      running" and a button that starts it. In lumar's glass, blurred
-      behind (lumar.lua's rule). It closes when the desktop is covered
-      (another workspace, Meta+D's peek ending, a window opening), and
-      sits on whole pixels (the pointer's are fractions). Tried headless with a second daemon on a
+      behind), where it's from, its credit, its score ("62% to your
+      taste"), when the next comes; Like (a heart in the accent once
+      liked), Dislike and Next, which keep the menu open to go through
+      several (L, D, N or Right; Escape); its page, the image, the liked
+      ones' folder. The daemon down: "Backdrop isn't running" and a button
+      that starts it. In lumar's glass, blurred behind (lumar.lua's rule).
+      It closes when the desktop is covered (another workspace, Meta+D's
+      peek ending, a window opening), and sits on whole pixels (the
+      pointer's are fractions). Tried headless with a second daemon on a
       copy of the state: like, dislike, next, the keys, the cross-fade,
       the turn at the screen's edges, Escape and a click outside, the
       daemon down. Backdrop's state.json keeps absolute paths: a copy run
@@ -644,6 +656,17 @@ later (yazi, btop, lazygit…).
       daemon deleted the real pool's files (prefetched, not yet shown; 5 of
       10 fetched again, Bing's archive mirror being down). A copy's paths
       are rewritten first now.
+- [x] A window moved along stays in sight (10 Nov 2026): Meta+Ctrl+Shift+
+      arrows moved the window first, so it faded out, then rode in with
+      the next desktop. hyprslide 2 takes it along (the hyprslide passage
+      above). Tried headless, slides slowed to 4 s and caught frame by
+      frame: a tiled window to an empty desktop and onto one with a window
+      (it goes to its column while that desktop's window slides in under
+      it), up and down, a second move while the first still slides, a
+      floating window (visible from the first frame on), and its own
+      animations back to Hyprland's after. The first build aborted the
+      rig's Hyprland: a callback locked a window's animation through a
+      weak pointer, which asserts for what a window owns.
 
 ## Alternatives considered
 
