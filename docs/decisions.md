@@ -277,6 +277,11 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   minutes. Its self-update is removed too, or it would put DrDc back.
 - **Not Vesktop**: it doesn't run OpenASAR, and the official client is what
   mutectl's plugin was written against.
+- **Discord's playback gets at least 1024 samples (21 ms)**
+  (`pipewire-pulse.conf.d/50-discord-latency.conf`). In a call it asks for
+  7.5 ms, which drops the whole PipeWire graph to 5.3 ms cycles; Spotify
+  fills its stream from a thread without realtime priority, misses those
+  deadlines under load (a Go build, Brave) and stutters.
 
 ## Brave's new tab (work laptop)
 
