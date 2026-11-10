@@ -144,10 +144,11 @@ rejects (`bezier` or `spring`).
   for now get `ConditionEnvironment=XDG_CURRENT_DESKTOP=KDE` (backdrop, and
   logi-smartshift until it reads Hyprland's events). That target doesn't
   pull in `xdg-desktop-autostart.target`: a drop-in adds it, or the XDG
-  autostart entries wouldn't start (`pam_kwallet_init`, the KDE Connect
-  daemon, Bitwarden, Packet, limine-snapper-notify, xdg-user-dirs); those
-  marked `OnlyShowIn=KDE` (plasmashell, powerdevil, KDE's polkit agent…)
-  stay out by themselves. Plasma's startup also reads `environment.d`
+  autostart entries wouldn't start (the KDE Connect daemon, Bitwarden,
+  Packet, limine-snapper-notify, xdg-user-dirs); those marked
+  `OnlyShowIn=KDE` (plasmashell, powerdevil, KDE's polkit agent…) stay out
+  by themselves, and `pam_kwallet_init`'s is `X-systemd-skip` (below,
+  Secrets). Plasma's startup also reads `environment.d`
   (gpg-ssh's `SSH_AUTH_SOCK`: git's signing, ssh-add on ScrollLock), and
   Hyprland's doesn't: `session.lua` runs systemd's generator and sets what it
   gives.
@@ -394,7 +395,16 @@ also serves it as the freedesktop Secret Service (libsecret).
 
 - **Keep it, invisible**, in both sessions: Hyprland starts
   `pam_kwallet_init` so the PAM unlock reaches it, and libsecret apps get
-  `ksecretd`. Nothing to migrate, nothing to see.
+  `ksecretd`. Nothing to migrate, nothing to see. At login, PAM starts a
+  `ksecretd` with the password, waiting for the session's environment on a
+  socket, which `pam_kwallet_init` sends. Plasma runs it as a unit
+  (`plasma-kwallet-pam.service`), and its XDG autostart entry is
+  `X-systemd-skip`; its socket's path (`PAM_KWALLET5_LOGIN`) is in
+  Hyprland's environment, not systemd's. So Hyprland has its own unit
+  (`hyprland-kwallet-pam.service`, the path written in), run before
+  `graphical-session.target`. Without it, Brave was the first to ask: it
+  started another `ksecretd`, a locked one, which asked for the password
+  every morning.
 - **Chromium and Electron apps choose their store by desktop** (KWallet in
   Plasma, libsecret elsewhere): the same app would look for its key in
   another place in Hyprland, fail to decrypt its data and log out, and again
