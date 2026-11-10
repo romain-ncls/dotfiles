@@ -141,8 +141,9 @@ rejects (`bezier` or `spring`).
   safe mode) from the Plasma login screen's session list. Hyprland 0.57
   starts `hyprland-session.target` itself, bound to `graphical-session.target`,
   so our user units start in both sessions; those that only work in Plasma
-  for now get `ConditionEnvironment=XDG_CURRENT_DESKTOP=KDE` (backdrop, and
-  logi-smartshift until it reads Hyprland's events). That target doesn't
+  for now get `ConditionEnvironment=XDG_CURRENT_DESKTOP=KDE` (logi-smartshift
+  until it reads Hyprland's events; backdrop's daemon runs in both since
+  10 Nov 2026). That target doesn't
   pull in `xdg-desktop-autostart.target`: a drop-in adds it, or the XDG
   autostart entries wouldn't start (the KDE Connect daemon, Bitwarden,
   Packet, limine-snapper-notify, xdg-user-dirs); those marked
@@ -301,8 +302,9 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    behind, a 10 % outline in the text's color (the page's 92 % of the
    frame, dropped). Noto Sans; Ghostty in Fira Code, no title bar, the
    page's terminal colors on the pane (about Konsole's Nalthis background)
-   and the second text color. The wallpaper: shadesmar's, the newest of the
-   ones liked in Backdrop (~/Pictures/Backdrop). The GNOME apps are in,
+   and the second text color. The wallpaper: shadesmar's, Backdrop's current
+   picture (the newest liked one, ~/Pictures/Backdrop, until its daemon ran
+   in Hyprland: below, Open). The GNOME apps are in,
    Hyprland's defaults through hyprland-mimeapps.list; Brave's theme too
    (docs/manual-steps.md); the file chooser is GTK's (Nautilus's needs
    GNOME Shell). Done.
@@ -620,6 +622,28 @@ later (yazi, btop, lazygit…).
       pause under the pointer, a reload and a restart (the buttons back
       on a kept one), a replacement, transient, critical, Do not disturb,
       the bell's folds, marks and Clear, a click focusing the app.
+- [x] Backdrop in Hyprland (10 Nov 2026): its daemon only fills
+      ~/.local/share/backdrop (its one Plasma call, the OSD's showText, is
+      spanreed's here), so backdrop.service runs in both sessions now.
+      Wallpaper.qml shows its current picture, cross-faded into the next,
+      as the Plasma plugin does. A right click on the wallpaper opens
+      Backdrop's menu (BackdropMenu.qml), Hyprland's desktop having none of
+      its own: the picture's title and place (not the picture: it's right
+      behind), where it's from, its credit, its score ("62% to your taste"), when the next comes; Like
+      (a heart in the accent once liked), Dislike and Next, which keep the
+      menu open to go through several (L, D, N or Right; Escape); its page,
+      the image, the liked ones' folder. The daemon down: "Backdrop isn't
+      running" and a button that starts it. In lumar's glass, blurred
+      behind (lumar.lua's rule). It closes when the desktop is covered
+      (another workspace, Meta+D's peek ending, a window opening), and
+      sits on whole pixels (the pointer's are fractions). Tried headless with a second daemon on a
+      copy of the state: like, dislike, next, the keys, the cross-fade,
+      the turn at the screen's edges, Escape and a click outside, the
+      daemon down. Backdrop's state.json keeps absolute paths: a copy run
+      with another XDG_DATA_HOME still points at the real pool, and its
+      daemon deleted the real pool's files (prefetched, not yet shown; 5 of
+      10 fetched again, Bing's archive mirror being down). A copy's paths
+      are rewritten first now.
 
 ## Alternatives considered
 
