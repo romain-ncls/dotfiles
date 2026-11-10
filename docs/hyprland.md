@@ -431,7 +431,7 @@ costs.
 
 | For | In Hyprland | Instead of |
 |---|---|---|
-| files | Nautilus (Meta+E). Its sidebar's bookmarks (`modules/hyprland/home/.config/gtk-3.0/bookmarks.tmpl`): Dolphin's folders, ~/git and ~/dotfiles, under the places it always shows (Home, Recent, Starred, Network, Trash; no setting hides them); GTK's file dialogs show them too. Nautilus rewrites the file when a bookmark is added or removed there: `lodestar drift` shows it, to bring back here | Dolphin |
+| files | Nautilus (Meta+E), folders before files (GTK's file chooser setting, which its dialogs share: dconf keys, set by `modules/hyprland/gtk-settings` on every apply). Its sidebar's bookmarks (`modules/hyprland/home/.config/gtk-3.0/bookmarks.tmpl`): Dolphin's folders, ~/git and ~/dotfiles, under the places it always shows (Home, Recent, Starred, Network, Trash; no setting hides them); GTK's file dialogs show them too. Nautilus rewrites the file when a bookmark is added or removed there: `lodestar drift` shows it, to bring back here | Dolphin |
 | documents (PDFs, reading only) | Papers | Okular |
 | images | Loupe | Gwenview |
 | archives | File Roller, Nautilus's own extract | Ark |
