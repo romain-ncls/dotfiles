@@ -32,6 +32,7 @@ packages:
 user-services:
   - hypridle.service
   - hyprland-lid.service
+  - hyprland-kwallet-pam.service
 
 files:
   ~/.config/hypr:

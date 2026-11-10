@@ -1,0 +1,27 @@
+# The wallet unlocked by the login's password, as Plasma's
+# plasma-kwallet-pam.service does. At login, Plasma Login's PAM
+# (pam_kwallet5) starts ksecretd with the password, and ksecretd waits for
+# the session's environment on a socket; pam_kwallet_init sends it. Its XDG
+# autostart entry is X-systemd-skip (Plasma starts it as that unit), and the
+# socket's path (PAM_KWALLET5_LOGIN) is in Hyprland's environment, not
+# systemd's: given here. Before the session's services and apps: the first
+# to ask for a secret would otherwise start another ksecretd, a locked one,
+# which asks for the password.
+[Unit]
+Description=Wallet unlocked by the login's password
+PartOf=graphical-session.target
+Before=graphical-session.target
+ConditionEnvironment=XDG_CURRENT_DESKTOP=Hyprland
+# no socket: a login without the password (autologin)
+ConditionPathExists=%t/kwallet5.socket
+
+[Service]
+Type=oneshot
+Environment=PAM_KWALLET5_LOGIN=%t/kwallet5.socket
+# "-": the socket stays after its one use, nobody listening; started again
+# in the session (lodestar's apply), it's refused
+ExecStart=-/usr/lib/pam_kwallet_init
+TimeoutStartSec=10
+
+[Install]
+WantedBy=hyprland-session.target
