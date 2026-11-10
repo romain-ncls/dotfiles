@@ -4,6 +4,10 @@ packages:
   - spotify
   - vlc
   - easyeffects
+  # EasyEffects' plugins (optional deps on Arch; without them a preset's
+  # effects pass the sound through untouched)
+  - lsp-plugins-lv2 # expander, equalizer, compressor, limiter
+  - deepfilternet-ladspa # DeepFilterNet noise removal
   - crosspipe
 
 user-services:
