@@ -2,8 +2,8 @@
 Description=Backdrop wallpapers
 PartOf=graphical-session.target
 After=graphical-session.target
-# Plasma only for now: it sets Plasma's wallpaper (docs/hyprland.md)
-ConditionEnvironment=XDG_CURRENT_DESKTOP=KDE
+# In both sessions: it only fills ~/.local/share/backdrop, which Plasma's
+# wallpaper plugin and shadesmar's Wallpaper.qml both show.
 
 [Service]
 ExecStart=/usr/bin/backdrop daemon
