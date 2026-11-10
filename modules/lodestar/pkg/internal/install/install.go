@@ -411,9 +411,21 @@ func (in *installer) apply() error {
 func (in *installer) lodestarApply() error {
 	user := in.c.User.Name
 	return in.chroot("unshare", "--pid", "--fork", "--mount-proc",
+		"sh", "-c", stopGPG, "sh", user,
 		"/usr/local/bin/lodestar", "apply", "--system", "--yes",
 		"--repo", "/home/"+user+"/dotfiles", "--host", in.Host)
 }
+
+// stopGPG runs the apply (the arguments after the user's name), then stops
+// the user's gpg daemons, however the apply ended. yay's key imports start
+// them inside the apply's PID namespace, and the kernel kills what is left
+// there when it ends: a killed keyboxd leaves its pubring.db.lock behind,
+// naming a process of the host "archiso" that gpg cannot check, so every
+// key import on the installed system waits on it, then fails.
+const stopGPG = `user=$1; shift
+"$@"; status=$?
+runuser -u "$user" -- env HOME="/home/$user" gpgconf --kill all
+exit $status`
 
 // limine installs the boot loader to the ESP, builds the kernel entries,
 // then applies again: lodestar merges the repo's part of limine.conf.
