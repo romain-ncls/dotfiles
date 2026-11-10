@@ -1,6 +1,7 @@
 // A row of a popup's list: an icon, a title and a line under it, a word on
 // the right; the title lit when it's the active one. A click does it; with
-// `removable`, a cross on hover removes it.
+// `removable`, a cross on hover removes it; `marked`, a dot before the word
+// (new).
 import QtQuick
 import Quickshell
 import Quickshell.Widgets
@@ -16,6 +17,7 @@ Rectangle {
     property string trailing: ""
     property bool active: false
     property bool dim: false
+    property bool marked: false
     property bool removable: false
 
     signal clicked
@@ -86,6 +88,17 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         width: Math.max(word.implicitWidth, row.removable ? 16 : 0)
         height: 20
+
+        Rectangle {
+            visible: row.marked && word.visible
+            anchors.right: word.left
+            anchors.rightMargin: 6
+            anchors.verticalCenter: parent.verticalCenter
+            width: 6
+            height: 6
+            radius: 3
+            color: Theme.accent
+        }
 
         Text {
             id: word

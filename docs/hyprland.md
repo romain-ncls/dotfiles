@@ -256,7 +256,8 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    clipboard history (Alt+Tab with previews: dropped, below). Done: the
    launcher (apps by name, the most launched first, or a command; Hyprland
    starts them, so a restart of the shell leaves them be), notifications
-   (popups, actions, a history in the bar, Do not disturb), the OSD
+   (popups stacked by app, actions, a history in the bar that keeps what
+   the apps withdraw, Do not disturb; below, Open), the OSD
    (PipeWire's volume and mute, the brightness from its binds, spanreed's
    calls), the overview (Meta+Tab), and the bar's popups, as Plasma's tray:
    the clipboard's history (cliphist, recorded by clipboard-history.service),
@@ -345,6 +346,11 @@ its own shell id and state folder. Fine, but link the same path everywhere.
   `xwayland.force_zero_scaling`, Wayland env for Qt, GTK and Electron.
 - Theme pipeline: a semantic palette, templates with color mixing, a
   hand-written file always beats a template, visible apps retinted first.
+- Notifications (4.5, `docs/notifications.md`): a copy of each, kept when
+  the app withdraws it, written to a file (100, 24 h, no images, nothing
+  `transient`); popups stacked by sender, identical repeats collapsed; the
+  click's fallback to the app's window. Not their replay of the history
+  as cards on a key: shadesmar keeps Plasma's list under the bell.
 
 Left out: per-monitor workspaces (the opposite of ours), universal
 Super+C/V, their GTK/Qt theming (Adwaita and `QT_QPA_PLATFORMTHEME=gtk3`),
@@ -589,6 +595,31 @@ later (yazi, btop, lazygit…).
       region and Escape in slurp. The portal reads its config when it
       starts: `systemctl --user restart xdg-desktop-portal-hyprland` once
       the package is in.
+- [x] Notifications that stay (10 Nov 2026): they vanished from the
+      bell's history, and its count could say 2 over an empty list. An
+      app may withdraw its notification (CloseNotification: Discord does
+      as its next message comes, Teams in a browser as its popup goes),
+      and the history was only what the apps still kept; the count was a
+      counter of its own. Plasma and GNOME do the same (the spec: "no
+      longer relevant"; KDE: "a Discord bug"); Omarchy 4.5 keeps what was
+      seen. Done as Omarchy, Notifications.qml: each one copied when it
+      comes; a withdrawal takes the app's buttons, not the copy, and a
+      click on it shows the app's window (or starts the app). The count
+      is the list's, since the bell was last opened; opening it takes the
+      popups there (critical ones stay on screen). Kept across restarts
+      and logins (the shell's state folder): 100, a day, no pictures,
+      nothing marked transient (the spec's hint); Do not disturb too. By
+      app: the popups stack (NotificationStack.qml, the newest in front,
+      the pointer unfolds them), the bell's list folds an app's others
+      under its newest, with a Clear each; the same one again counts
+      ("×2"). New words from the app (replaces_id: Spotify's next song)
+      show it again. App-given timeouts are milliseconds as Quickshell
+      gives them (were taken for seconds: a 5 s one lasted 83 min). Tried
+      headless (a virtual pointer for hover and clicks: the rig has no
+      pointer of its own): a burst stacked and unfolded, a withdrawal, the
+      pause under the pointer, a reload and a restart (the buttons back
+      on a kept one), a replacement, transient, critical, Do not disturb,
+      the bell's folds, marks and Clear, a click focusing the app.
 
 ## Alternatives considered
 

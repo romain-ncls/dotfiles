@@ -1,7 +1,10 @@
-// The bell: the notifications whose popup has gone (Notifications.qml), the
-// count of those unread. Its popup: Do not disturb; the history, the newest
-// first (a click runs one's default action, or opens the file it's about;
-// the cross dismisses it), and Clear.
+// The bell: the notifications (Notifications.qml), the count of those that
+// left the screen since it was last opened. Its popup: Do not disturb; all
+// of them by app, the app with the newest first, those new since the last
+// look marked; opening it takes the popups there (a critical one stays on
+// screen too). An app's newest shows, the others unfold under
+// it; Clear for an app's, or for all. A click runs one's default action,
+// opens the file it's about, or shows its app; the cross dismisses it.
 import QtQuick
 import Quickshell
 
@@ -16,9 +19,13 @@ BarButton {
 
     // for the "5 min" of each, refreshed while it's open
     property real now: Date.now()
+    // the look before this one: what came since is marked
+    property real lastSeen: 0
+    // the apps unfolded, while it's open
+    property var unfolded: ({})
 
-    function ago(n) {
-        const s = (now - (notifications.times[n.id] ?? now)) / 1000
+    function ago(e) {
+        const s = (now - e.time) / 1000
         return s < 60 ? "now" : s < 3600 ? `${Math.floor(s / 60)} min` : s < 86400 ? `${Math.floor(s / 3600)} h` : `${Math.floor(s / 86400)} d`
     }
 
@@ -38,8 +45,12 @@ BarButton {
         name: "notifications"
         popupWidth: 400
         onShownChanged: {
-            if (shown)
-                center.notifications.unread = 0
+            if (shown) {
+                center.lastSeen = center.notifications.seenAt
+                center.notifications.seen()
+            } else {
+                center.unfolded = ({})
+            }
         }
 
         PopupHeader {
@@ -51,12 +62,12 @@ BarButton {
 
         PopupHeader {
             title: "Notifications"
-            action: center.notifications.history.length > 0 ? "Clear" : ""
+            action: center.notifications.entries.length > 0 ? "Clear" : ""
             onActed: center.notifications.clear()
         }
 
         Text {
-            visible: center.notifications.history.length === 0
+            visible: center.notifications.entries.length === 0
             x: 4
             height: 30
             verticalAlignment: Text.AlignVCenter
@@ -66,31 +77,106 @@ BarButton {
             font.pixelSize: 12
         }
 
-        // at most 10: Clear for the rest
-        Repeater {
-            model: center.notifications.history.slice(0, 10)
+        // up to 100: it scrolls past the height of half a screen
+        Flickable {
+            visible: center.notifications.entries.length > 0
+            width: parent.width
+            height: Math.min(contentHeight, 520)
+            contentHeight: list.implicitHeight
+            interactive: contentHeight > height
+            boundsBehavior: Flickable.StopAtBounds
+            clip: true
 
-            ListRow {
-                required property var modelData
-                readonly property var defaultAction: modelData.actions.find(a => a.identifier === "default") ?? null
-                readonly property string file: center.notifications.files(modelData).find(u => center.notifications.kept(u)) ?? ""
+            Column {
+                id: list
 
-                iconSource: center.notifications.picture(modelData) || center.notifications.icon(modelData)
-                title: modelData.summary
-                subtitle: [modelData.appName, modelData.body].filter(s => s !== "").join(" · ")
-                subtitleLines: 2
-                trailing: center.ago(modelData)
-                removable: true
-                onClicked: {
-                    if (defaultAction) {
-                        popup.close()
-                        defaultAction.invoke()
-                    } else if (file !== "") {
-                        popup.close()
-                        center.notifications.open(modelData, file)
+                width: parent.width
+                spacing: 2
+
+                Repeater {
+                    model: center.notifications.groups
+
+                    Column {
+                        id: group
+
+                        required property var modelData
+                        // the newest first
+                        readonly property var items: center.notifications.listedBy[modelData.key] ?? []
+                        readonly property bool open: center.unfolded[modelData.key] === true
+
+                        width: list.width
+
+                        Repeater {
+                            model: group.open ? group.items : group.items.slice(0, 1)
+
+                            ListRow {
+                                required property var modelData
+                                readonly property var e: modelData
+
+                                // its picture while the app keeps it (Discord's
+                                // avatar), else the app's icon
+                                iconSource: center.notifications.live[e.key] && e.picture ? e.picture : e.icon
+                                title: e.summary + (e.count > 1 ? `  ×${e.count}` : "")
+                                subtitle: [e.app, e.body].filter(s => s !== "").join(" · ")
+                                subtitleLines: 2
+                                trailing: center.ago(e)
+                                marked: e.time > center.lastSeen
+                                removable: true
+                                onClicked: {
+                                    popup.close()
+                                    center.notifications.activate(e)
+                                }
+                                onRemoved: center.notifications.dismiss(e)
+                            }
+                        }
+
+                        // the app's others: unfold them, fold them; clear them
+                        Item {
+                            visible: group.items.length > 1
+                            width: parent.width
+                            height: 22
+
+                            Text {
+                                x: 40
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: group.items.length < 2 ? "" : group.open ? "Show less" : `${group.items.length - 1} more from ${group.items[0].app}`
+                                color: fold.containsMouse ? Theme.text : Theme.dim
+                                font.family: Theme.font
+                                font.pixelSize: 11
+
+                                MouseArea {
+                                    id: fold
+
+                                    anchors.fill: parent
+                                    anchors.margins: -4
+                                    hoverEnabled: true
+                                    onClicked: center.unfolded = Object.assign({}, center.unfolded, {
+                                        [group.modelData.key]: !group.open
+                                    })
+                                }
+                            }
+
+                            Text {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "Clear"
+                                color: clearing.containsMouse ? Theme.text : Theme.dim
+                                font.family: Theme.font
+                                font.pixelSize: 11
+
+                                MouseArea {
+                                    id: clearing
+
+                                    anchors.fill: parent
+                                    anchors.margins: -4
+                                    hoverEnabled: true
+                                    onClicked: center.notifications.clearGroup(group.modelData.key)
+                                }
+                            }
+                        }
                     }
                 }
-                onRemoved: modelData.dismiss()
             }
         }
     }
