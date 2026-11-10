@@ -215,6 +215,10 @@ function G.move(dir)
 end
 
 -- Takes the active window to the next desktop, on its screen, and follows.
+-- With hyprslide the window stays in sight, going to its place there while
+-- the desktops slide under it, as in KDE; without, it leaves and comes back
+-- with the desktop. (carry: since hyprslide 2, and Hyprland's Lua window
+-- type, which it reads, may change: a failure only loses the effect.)
 function G.send(dir)
     local w = hl.get_active_window()
     local d = neighbour(current(), dir)
@@ -224,6 +228,10 @@ function G.send(dir)
     local s = slot(w.monitor)
     if not s then
         return
+    end
+    local slide = hyprslide()
+    if slide and slide.carry then
+        pcall(slide.carry, w)
     end
     hl.dispatch(hl.dsp.window.move({ workspace = tostring(s.base + d), follow = false }))
     G.go(d)
