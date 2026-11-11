@@ -3,5 +3,6 @@ packages:
   - bitwarden-cli # secrets for lodestar's templates
   - jq # Claude Code status line
   - github-cli
+  - android-tools # adb and fastboot, for the phone server (~/git/homelab)
   - claude-code
   - visual-studio-code-bin # settings and extensions still on Settings Sync (docs/decisions.md)
