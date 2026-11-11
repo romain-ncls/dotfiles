@@ -3,6 +3,7 @@
 # Claude Code through, against a remote Ollama server.
 packages:
   - ollama
+  - wl-clipboard # wl-paste: pasting a screenshot into Claude Code
 
 # MCP servers (user scope) live in ~/.claude.json, which Claude Code rewrites
 # all the time: merge only our keys. No unless-running: a session is nearly
