@@ -118,10 +118,38 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 - On a network whose internal names need its own DNS (the work LAN, a captive
   portal), add that connection's DNS by hand: `nmcli connection modify <con>
   ipv4.ignore-auto-dns no`.
-- **The company VPNs use their own DNS, in plain text** (`modules/work/vpn-dns`):
-  their servers' names only exist there, and the server doesn't speak TLS. The
-  hook turns DNS-over-TLS off for those connections and makes their DNS first for
-  every name while connected (`~.`, priority -50), as NixOS did.
+- **The company VPNs use their own DNS, in plain text** (their connections in
+  `modules/work`): their servers' names only exist there, and the server doesn't
+  speak TLS. DNS-over-TLS is off on those connections, and their DNS comes first
+  for every name while connected (`~.`, priority -50), as NixOS did.
+- **The "Home" WireGuard VPN (laptop) keeps Cloudflare.** It only routes the
+  home network, which has no names of its own, so the connection leaves out the
+  Freebox's DNS (212.27.38.253, the box itself, plain text) that its config names.
+
+## VPNs
+
+- **Declared, their secrets in Bitwarden.** The connections are NetworkManager
+  keyfiles from templates: Agora and Agora SG IHM in `modules/work`, Home in
+  the laptop's host folder. Each reads one Bitwarden item ("Agora VPN", "Agora
+  SG IHM VPN", "WireGuard Home"): the password (WireGuard's private key), the
+  user name, the OpenVPN private key in a hidden field `key`, and the server's
+  address in a field (`remote`, or `address` for Home, without the port), kept
+  out of the public repo too.
+  The certificates are public and sit in the repo. Bitwarden's form shows a
+  field on one line: a key retyped there loses its line breaks, so replace it
+  from the file (`bw edit`). Item names must not contain one another: `bw get
+  item` searches, and refuses a name that matches two items.
+- **Passwords in the file, not the wallet** (`password-flags=0`): NetworkManager
+  connects with no agent asking, in Plasma and Hyprland alike, and a reinstall
+  needs nothing typed.
+- **Home routes the home's public address through the tunnel too.** The
+  homelab's private sites (`arr.romainncls.dev`) resolve to that address and
+  only answer local clients; the phone, routing everything through the
+  Freebox's VPN, reaches them that way. That address is also the tunnel's
+  endpoint, so as `wg-quick` does: the tunnel's routes live in their own table
+  (51820), which a rule consults first for every packet except WireGuard's own,
+  marked 51820 (`wireguard.fwmark`). Only home goes through it; the rest of the
+  internet doesn't.
 
 ## Hardware (home PC)
 

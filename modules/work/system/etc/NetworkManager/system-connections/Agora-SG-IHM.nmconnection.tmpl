@@ -1,0 +1,41 @@
+# The company VPN to SG IHM (OpenVPN), from
+# Agora_SG_IHM_VPN_Server_soeman_romain_nicolas.ovpn. Its user name,
+# password, server (field remote) and private key (field key) are in the
+# Bitwarden item "Agora SG IHM VPN"; its certificates are in the repo, in
+# openvpn/agora-sg-ihm/ (the client's expires on 2027-12-07). Routes and DNS
+# as Agora's.
+[connection]
+id=Agora SG IHM
+uuid=ca1bca7d-0a60-4367-8e54-15d509772479
+type=vpn
+autoconnect=false
+dns-over-tls=0
+
+[vpn]
+ca=/etc/NetworkManager/openvpn/agora-sg-ihm/ca.pem
+cert=/etc/NetworkManager/openvpn/agora-sg-ihm/cert.pem
+challenge-response-flags=2
+connection-type=password-tls
+dev=tun
+key=/etc/NetworkManager/openvpn/agora-sg-ihm/key.pem
+password-flags=0
+remote={{ bitwarden "Agora SG IHM VPN" "remote" }}
+remote-cert-tls=server
+username={{ bitwarden "Agora SG IHM VPN" "username" }}
+verify-x509-name=subject:C=FR, ST=Nothing, L=knowhere, O=Agora Calyce, OU=AGC Test VPN, CN=AGC Test VPN
+service-type=org.freedesktop.NetworkManager.openvpn
+
+[vpn-secrets]
+password={{ bitwarden "Agora SG IHM VPN" "password" }}
+
+[ipv4]
+dns-priority=-50
+dns-search=~.;
+method=auto
+never-default=true
+
+[ipv6]
+addr-gen-mode=default
+method=auto
+
+[proxy]

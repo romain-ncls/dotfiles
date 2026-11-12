@@ -1,12 +1,20 @@
 # Work apps and network access.
 packages:
-  - networkmanager-openvpn # the company VPN
+  - networkmanager-openvpn # the company VPNs
   - gitkraken
   - jetbrains-toolbox # GoLand, WebStorm, PyCharm, DataGrip install through it
   - obsidian
 
-hooks:
-  # The VPN's own DNS, without DNS-over-TLS, for every name while it's
-  # connected; on every apply, since the VPN is imported by hand.
-  - run: vpn-dns
-    when: always
+# The company VPNs, Agora and Agora SG IHM. NetworkManager skips a connection
+# file others can read; the private keys are only root's.
+files:
+  /etc/NetworkManager/system-connections/Agora.nmconnection:
+    mode: 0600
+    then: nmcli connection reload
+  /etc/NetworkManager/system-connections/Agora-SG-IHM.nmconnection:
+    mode: 0600
+    then: nmcli connection reload
+  /etc/NetworkManager/openvpn/agora/key.pem:
+    mode: 0600
+  /etc/NetworkManager/openvpn/agora-sg-ihm/key.pem:
+    mode: 0600

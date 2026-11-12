@@ -159,11 +159,6 @@ new Secure Boot keys, a db/dbx update (fwupd), a BIOS update or reset. Re-bind:
   reads (`tenants.env`) are in `~/.config/new-tab`, from the backup; the
   search needs gh logged in (`gh auth login`).
 - JetBrains Toolbox: install GoLand, WebStorm, PyCharm and DataGrip.
-- NetworkManager: import the company's OpenVPN profiles and the Wi-Fi
-  networks (their passwords are in Bitwarden). The profiles: `nmcli
-  connection import type openvpn file <file>`, then name the connection
-  "Agora" or "Agora SG IHM" (the names `modules/work/vpn-dns` looks for)
-  and give it the user name (Agora: `romain.nicolas`, Agora SG IHM:
-  `soeman.romain.nicolas`), the password kept by the wallet and only the
-  VPN's own routes: `nmcli connection modify <name> +vpn.data
-  "username=<user>, password-flags=1" ipv4.never-default yes`.
+- NetworkManager: join the Wi-Fi networks (their passwords are in
+  Bitwarden). The VPNs need nothing: lodestar writes them from Bitwarden
+  (docs/decisions.md, VPNs).

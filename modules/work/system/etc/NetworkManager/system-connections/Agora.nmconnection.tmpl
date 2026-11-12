@@ -1,0 +1,39 @@
+# The company VPN (OpenVPN), from ReflexTraining_OpenVPN_Server.ovpn. Its
+# user name, password, server (field remote) and private key (field key, for
+# openvpn/agora/key.pem) are in the Bitwarden item "Agora VPN"; its
+# certificates are in the repo, next to the key.
+# Only the routes the server pushes, but every name asked of its DNS while
+# connected, in plain text (docs/decisions.md, DNS).
+[connection]
+id=Agora
+uuid=404f97ab-24ff-4cca-b387-0c3e4526f567
+type=vpn
+dns-over-tls=0
+
+[vpn]
+ca=/etc/NetworkManager/openvpn/agora/ca.pem
+cert=/etc/NetworkManager/openvpn/agora/cert.pem
+challenge-response-flags=2
+connection-type=password-tls
+dev=tun
+key=/etc/NetworkManager/openvpn/agora/key.pem
+password-flags=0
+remote={{ bitwarden "Agora VPN" "remote" }}
+username={{ bitwarden "Agora VPN" "username" }}
+service-type=org.freedesktop.NetworkManager.openvpn
+
+[vpn-secrets]
+password={{ bitwarden "Agora VPN" "password" }}
+
+[ipv4]
+dns-priority=-50
+dns-search=~.;
+method=auto
+never-default=true
+
+[ipv6]
+addr-gen-mode=stable-privacy
+method=auto
+never-default=true
+
+[proxy]

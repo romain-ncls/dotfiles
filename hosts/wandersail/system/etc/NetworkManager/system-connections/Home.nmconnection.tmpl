@@ -1,0 +1,39 @@
+# The WireGuard VPN to home (the Freebox's server), from the Freebox's
+# config_wireguard_wandersail.conf. Its private key (password) and the home's
+# public address (field address) are in the Bitwarden item "WireGuard Home".
+# Connected by hand.
+# Only home goes through it: the VPN's subnet, the home LAN, and the home's
+# public address, so the home's services see a local client
+# (arr.romainncls.dev only answers those). The tunnel's own packets to that
+# address carry the mark 51820 and skip the tunnel's table, as with wg-quick
+# (docs/decisions.md, VPNs). The home LAN is 192.168.1.0/24 like the
+# office's: while it's connected at the office, the office LAN is out of reach.
+# The Freebox's DNS is left out (docs/decisions.md, DNS).
+[connection]
+id=Home
+uuid=4e9403bd-750c-4c32-bdce-d8619a43c277
+type=wireguard
+autoconnect=false
+interface-name=wg-home
+
+[wireguard]
+fwmark=51820
+mtu=1360
+private-key={{ bitwarden "WireGuard Home" "password" }}
+
+[wireguard-peer.SL+RFDIcdJM9AOfsjDXwKSucAYXIJ2uPNfwE8Phs0ng=]
+endpoint={{ bitwarden "WireGuard Home" "address" }}:59023
+allowed-ips=192.168.27.64/27;192.168.1.0/24;{{ bitwarden "WireGuard Home" "address" }}/32;
+
+[ipv4]
+address1=192.168.27.66/32
+method=manual
+never-default=true
+route-table=51820
+routing-rule1=priority 31000 not from 0.0.0.0/0 fwmark 0xca6c table 51820
+
+[ipv6]
+addr-gen-mode=default
+method=disabled
+
+[proxy]

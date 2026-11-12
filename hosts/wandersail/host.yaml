@@ -70,6 +70,13 @@ install:
 boot:
   limine: limine.conf
 
+files:
+  # The "Home" WireGuard VPN; its private key is the password of the
+  # Bitwarden item "WireGuard Home". NetworkManager skips a file others can read.
+  /etc/NetworkManager/system-connections/Home.nmconnection:
+    mode: 0600
+    then: nmcli connection reload
+
 packages:
   - qt6-webengine # the HTML wallpaper plugin
   - spectacle
