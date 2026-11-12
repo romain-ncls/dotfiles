@@ -287,14 +287,14 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    (popups stacked by app, actions, a history in the bar that keeps what
    the apps withdraw, Do not disturb; below, Open), the OSD
    (PipeWire's volume and mute, the brightness from its binds, spanreed's
-   calls), the overview (Meta+Tab), and the bar's popups, as Plasma's tray:
-   the clipboard's history (cliphist, recorded by clipboard-history.service),
-   the network (Wi-Fi, the cable, the VPNs through nmcli; their secrets
-   through spanreed's agent, in place of nm-applet), Bluetooth (pairing
-   through spanreed's agent); both agents ask in a card above the bar, a
-   window of its own, as a request can come with no popup open (BarCard.qml),
-   the sound (devices,
-   volume, the microphone; Meta+~), the battery (power profiles,
+   calls), the overview (Meta+Tab), the grid view (Meta+W), and the bar's
+   popups, as Plasma's tray: the clipboard's history (cliphist, recorded
+   by clipboard-history.service), the network (Wi-Fi, the cable, the VPNs
+   through nmcli; their secrets through spanreed's agent, in place of
+   nm-applet), Bluetooth (pairing through spanreed's agent); both agents
+   ask in a card above the bar, a window of its own, as a request can
+   come with no popup open (BarCard.qml), the sound (devices, volume, the
+   microphone; Meta+~), the battery (power profiles,
    brightness).
 4. **lumar, from scratch.** One palette, templates rendered at apply (Go
    templates, as now): Hyprland, shadesmar, Ghostty, libadwaita and adw-gtk3
@@ -403,7 +403,11 @@ migrations and update channels (lodestar does that), their titlebar plugin.
 - Meta+Tab, Ctrl+Alt+Tab: shadesmar's overview, Plasma's: each screen's
   windows as live thumbnails, the tape's off-screen columns included (with
   their last picture: Hyprland copies a window only while it overlaps its
-  screen); click or Enter, arrows, typing filters. Meta+D: a peek at the
+  screen); click or Enter, arrows, typing filters. Meta+W, or four fingers
+  pinched together (spread: back): shadesmar's grid view, Plasma's Grid
+  (Meta+G there, lumar's here): each grid screen's four desktops, zoomed
+  out of the plane hyprslide slides; click a desktop or a window, drag a
+  window to another desktop, arrows and Enter. Meta+D: a peek at the
   desktop, each screen on an empty workspace of its own. Meta+= / Meta+- /
   Meta+0 (à), Meta+Ctrl+scroll: KWin's zoom, Hyprland's `cursor.zoom_factor`
   by steps of 1.2.
@@ -696,6 +700,31 @@ later (yazi, btop, lazygit…).
       one too short (back), one at the grid's edge (nothing moves), after
       a config reload, the peek's fade untouched. A test window that never
       showed had only part of its first picture, its app's doing.
+- [x] The grid view, Plasma's Grid (12 Nov 2026): DesktopGrid.qml, on
+      Meta+W and four fingers pinched together. Each grid screen's four
+      desktops are laid as hyprslide's plane, which zooms out to fit (the
+      shown desktop's scale and place go straight from the screen to its
+      cell). Each desktop is the screen's rectangle: the wallpaper, then
+      its windows at their places as hyprctl gives them, tiled under
+      floating, the tape's columns beside it left out (their middle off
+      it, as in a slide). The pictures are the overview's kept ones
+      (WindowPictures.qml), the shown desktop's taken again 20 times a
+      second. Hyprland copies only windows on their screen, so another
+      desktop shows its windows as they were when last seen, or their
+      app's icon. A pick switches at once under the view (`G.go(d, true)`:
+      the workspaces' animation off for that switch), then the view zooms
+      into it; a window picked is focused once grid.lua says it switched
+      (`grid d`), as the overview does it. A dropped window moves with
+      `follow = false`. The bar's strip stays the bar, a peek or comms on
+      the laptop alone opens nothing, and Hyprland's layer fade is off
+      for it (looknfeel.lua), or the windows showed through as it opened.
+      Hyprland names a pinch by its zoom: fingers together is `zoomout`.
+      Tried headless with a virtual pointer and keyboard (wtype) and fake
+      pinches: the zoom both ways, arrows, hover, a click on a desktop, on
+      a window, on the right screen, a drag onto another desktop, the
+      laptop alone under the bar. Seen there: Quickshell clients can die
+      when an output goes ("global wl_output is unavailable"), the rig's
+      config reload disabling one.
 
 ## Alternatives considered
 

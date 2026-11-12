@@ -163,8 +163,9 @@ end
 
 local switching = false
 
-local function animate(how)
-    hl.animation({ leaf = "workspaces", enabled = true, speed = 4, bezier = "easeOutQuint", style = how })
+-- instant: no slide (the grid view zooms into the desktop instead)
+local function animate(how, instant)
+    hl.animation({ leaf = "workspaces", enabled = not instant, speed = 4, bezier = "easeOutQuint", style = how })
 end
 
 -- Meta+D, Plasma's Peek at Desktop: each screen on an empty workspace of
@@ -198,8 +199,8 @@ local function unpeek(keep_grid)
     switching = false
 end
 
--- Shows desktop d on every grid screen.
-function G.go(d)
+-- Shows desktop d on every grid screen (instant: at once, see animate).
+function G.go(d, instant)
     if peeking then
         unpeek(true)
     end
@@ -214,7 +215,7 @@ function G.go(d)
     elseif slide then
         declare(slide)
     end
-    animate(from == d and "fade" or slide and "slide" or style(from, d))
+    animate(from == d and "fade" or slide and "slide" or style(from, d), instant)
     shown = d
     switching = true
     for _, s in ipairs(grid()) do

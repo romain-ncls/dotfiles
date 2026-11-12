@@ -106,12 +106,14 @@ bind(mod .. " + CTRL + SHIFT + Page_Up", function()
 end)
 
 -- Meta+D: a peek at the desktop (grid.lua). Meta+Tab, Ctrl+Alt+Tab: the
--- overview (shadesmar's Overview.qml).
+-- overview (shadesmar's Overview.qml). Meta+W: the grid view, Plasma's
+-- (DesktopGrid.qml; its key there is Meta+G, lumar's here).
 bind(mod .. " + d", function() G.peek() end)
 -- Meta+G: lumar's other layout, flush or floating (lumar.lua).
 bind(mod .. " + g", function() require("lumar").toggle() end)
 bind(mod .. " + Tab", hl.dsp.global("shadesmar:overview"))
 bind("CTRL + ALT + Tab", hl.dsp.global("shadesmar:overview"))
+bind(mod .. " + w", hl.dsp.global("shadesmar:grid"))
 
 -- Zoom, as KWin's: Meta+Ctrl+scroll, or Meta+= in, Meta+- out, by steps
 -- of 1.2, Meta+0 (à on AZERTY, with or without Shift) back; the screen
