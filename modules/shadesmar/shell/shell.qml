@@ -1,9 +1,9 @@
 //@ pragma UseQApplication
 // shadesmar (modules/shadesmar; plan: docs/hyprland.md): the bar, at the
 // bottom of the laptop's screen where Plasma's panel is, with the
-// notifications above it; the overview over every screen; the launcher and
-// the OSD on the focused one; the screen recorder; screen sharing's picker;
-// Backdrop's menu on the wallpaper.
+// notifications above it; the overview and the grid view over every screen;
+// the launcher and the OSD on the focused one; the screen recorder; screen
+// sharing's picker; Backdrop's menu on the wallpaper.
 // (The pragma: the tray's menus are Qt widgets' menus.)
 import QtQuick
 import Quickshell
@@ -32,6 +32,11 @@ ShellRoot {
         id: overview
 
         wallpaper: background.source
+    }
+    DesktopGrid {
+        wallpaper: background.source
+        pictures: overview.pictures
+        overview: overview
     }
     Osd {}
     Launcher {}

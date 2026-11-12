@@ -23,6 +23,8 @@ hl.animation({ leaf = "specialWorkspace", enabled = true, speed = 4, bezier = "e
 -- shadesmar's overview moves its thumbnails itself, from the windows'
 -- places: its first frame covers them exactly, which a fade would spoil.
 hl.layer_rule({ name = "shadesmar-overview", match = { namespace = "^shadesmar-overview$" }, no_anim = true })
+-- The grid view (DesktopGrid.qml) zooms out of the screen: the same.
+hl.layer_rule({ name = "shadesmar-grid", match = { namespace = "^shadesmar-grid$" }, no_anim = true })
 
 -- LumineCapture's editor (modules/lumine-capture): the screens frozen, there
 -- at once.
