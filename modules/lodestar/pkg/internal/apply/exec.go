@@ -366,11 +366,18 @@ func (e *env) link(a *plan.Action) error {
 }
 
 // keepOriginal copies a file no package owns before lodestar first replaces it.
+// The plan asks without knowing whether the file exists when it sits in a
+// folder only root can read (NetworkManager's connections): with no file,
+// there is nothing to keep, and nothing to put back later.
 func (e *env) keepOriginal(a *plan.Action) error {
 	if !a.Original {
 		return nil
 	}
 	src := e.root + a.Path
+	if _, err := os.Lstat(src); errors.Is(err, fs.ErrNotExist) {
+		a.Original = false
+		return nil
+	}
 	dst := e.root + filepath.Join(state.OriginalsDir, a.Path)
 	if _, err := os.Lstat(dst); err == nil {
 		return nil // kept on an earlier run
