@@ -3,9 +3,9 @@
 -- in /usr/share/hypr/stubs, not from the hyprlang examples found online.
 -- HYPR_DEV is set by dev/nested.sh and dev/headless.sh.
 
--- hyprslide (modules/hyprslide): the grid's slides, diagonals included.
--- Missing, or built for another Hyprland (which won't load it), it's
--- silently not there and the grid fades instead.
+-- hyprslide (modules/hyprslide): the grid's slides and swipes, diagonals
+-- included. Missing, or built for another Hyprland (which won't load it),
+-- it's silently not there and the grid fades instead.
 pcall(hl.plugin.load, "/usr/lib/hyprslide/hyprslide.so")
 
 require("looknfeel")
