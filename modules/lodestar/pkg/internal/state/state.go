@@ -56,6 +56,10 @@ type File struct {
 	Hash string `json:"hash,omitempty"` // of the content lodestar wrote
 	Link string `json:"link,omitempty"` // or the link's target
 	From string `json:"from"`
+	// Skeleton: for a template with Bitwarden secrets, the hash of its
+	// skeleton (render.Skeleton) when lodestar wrote it. While it stays the
+	// same, so does the file: the vault isn't unlocked to compare.
+	Skeleton string `json:"skeleton,omitempty"`
 	// Original: lodestar replaced a file no package owns, and kept it in
 	// OriginalsDir to put it back when the repo drops the file.
 	Original bool `json:"original,omitempty"`

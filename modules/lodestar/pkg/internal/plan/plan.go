@@ -312,7 +312,7 @@ func (p *Plan) file(in Input, r *render.Renderer, f *config.File) error {
 	}
 	// upToDate records a file that already matches, if the state doesn't yet.
 	upToDate := func() error {
-		if rec := st.Files[path]; rec.Hash != a.Record.Hash || rec.Link != a.Record.Link || rec.From != a.Record.From {
+		if rec := st.Files[path]; rec.Hash != a.Record.Hash || rec.Link != a.Record.Link || rec.From != a.Record.From || rec.Skeleton != a.Record.Skeleton {
 			a.Op, a.Why = OpAdopt, "already matches"
 			p.add(a)
 		}
@@ -330,6 +330,10 @@ func (p *Plan) file(in Input, r *render.Renderer, f *config.File) error {
 	// records this very content, otherwise let the root process write it.
 	cantSee := func() error {
 		if rec := st.Files[path]; rec.Hash == a.Record.Hash && rec.Link == a.Record.Link {
+			if rec.Skeleton != a.Record.Skeleton { // recorded before skeletons
+				a.Op, a.Why = OpAdopt, "already matches"
+				p.add(a)
+			}
 			return nil
 		}
 		a.Why = "can't read it without root"
@@ -362,25 +366,50 @@ func (p *Plan) file(in Input, r *render.Renderer, f *config.File) error {
 	}
 
 	var content []byte
+	var skeleton string // a secret template's skeleton hash
 	if f.Generated != nil {
 		content = f.Generated
 	} else if f.Template {
-		content, a.Secret, err = r.Render(f.Source)
-		if errors.Is(err, render.ErrLocked) {
-			// Not comparable now; keep it declared so it isn't removed.
-			p.Desired[path] = st.Files[path]
-			p.note("%s: uses a Bitwarden secret and the vault is locked: not compared", f.Target)
-			return nil
-		}
+		skel, usesSecret, err := r.Skeleton(f.Source)
 		if err != nil {
 			return fmt.Errorf("%s (%s): %w", f.Target, f.From, err)
+		}
+		known := false
+		if usesSecret {
+			skeleton = state.Hash(skel)
+			// Nothing changed since lodestar wrote it, neither the skeleton
+			// nor the file as far as lodestar can see: the content is what
+			// it wrote, and the vault stays locked. Unless it's open: then a
+			// value changed in Bitwarden shows too.
+			if rec := st.Files[path]; rec.Skeleton == skeleton && rec.Hash != "" && rec.From == f.From && !r.SecretsAtHand() {
+				live, err := os.ReadFile(phys)
+				switch {
+				case hidden || errors.Is(err, fs.ErrPermission):
+					p.Desired[path] = rec
+					return nil
+				case err == nil && state.Hash(live) == rec.Hash:
+					content, a.Secret, known = live, true, true
+				}
+			}
+		}
+		if !known {
+			content, a.Secret, err = r.Render(f.Source)
+			if errors.Is(err, render.ErrLocked) {
+				// Not comparable now; keep it declared so it isn't removed.
+				p.Desired[path] = st.Files[path]
+				p.note("%s: uses a Bitwarden secret and the vault is locked: not compared", f.Target)
+				return nil
+			}
+			if err != nil {
+				return fmt.Errorf("%s (%s): %w", f.Target, f.From, err)
+			}
 		}
 	} else if content, err = os.ReadFile(f.Source); err != nil {
 		return err
 	}
 	a.Op, a.Content, a.Mode, a.Check = OpWrite, content, f.Mode(), f.Opts.Check
 	hash := state.Hash(content)
-	a.Record = state.File{Hash: hash, From: f.From}
+	a.Record = state.File{Hash: hash, From: f.From, Skeleton: skeleton}
 	p.Desired[path] = a.Record
 
 	switch {

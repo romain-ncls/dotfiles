@@ -61,6 +61,32 @@ func New(c *config.Config, home, root string, facts Facts, secrets Secrets) *Ren
 // Render runs the template at path. secret is true when it used a Bitwarden
 // secret, so the result must never be shown.
 func (r *Renderer) Render(path string) (out []byte, secret bool, err error) {
+	return r.run(path, func(item, field string) (string, error) {
+		if r.secrets == nil {
+			return "", ErrLocked
+		}
+		return r.secrets.Secret(item, field)
+	})
+}
+
+// Skeleton runs the template at path with each Bitwarden secret replaced by
+// its item and field, without reading the vault. secret is true when the
+// template uses one. The skeleton changes when anything the template uses
+// changes, except the secrets' values.
+func (r *Renderer) Skeleton(path string) (out []byte, secret bool, err error) {
+	return r.run(path, func(item, field string) (string, error) {
+		return fmt.Sprintf("{{bitwarden %q %q}}", item, field), nil
+	})
+}
+
+// SecretsAtHand tells whether secrets can be read without asking for the
+// master password (the vault is already unlocked).
+func (r *Renderer) SecretsAtHand() bool {
+	s, ok := r.secrets.(interface{ Unlocked() bool })
+	return ok && s.Unlocked()
+}
+
+func (r *Renderer) run(path string, bitwarden func(item, field string) (string, error)) (out []byte, secret bool, err error) {
 	text, err := os.ReadFile(path)
 	if err != nil {
 		return nil, false, err
@@ -82,10 +108,7 @@ func (r *Renderer) Render(path string) (out []byte, secret bool, err error) {
 		"trim": strings.TrimSpace,
 		"bitwarden": func(item, field string) (string, error) {
 			secret = true
-			if r.secrets == nil {
-				return "", ErrLocked
-			}
-			return r.secrets.Secret(item, field)
+			return bitwarden(item, field)
 		},
 	}
 	t, err := template.New(filepath.Base(path)).Funcs(funcs).Option("missingkey=error").Parse(string(text))

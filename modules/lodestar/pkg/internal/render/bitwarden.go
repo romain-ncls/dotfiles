@@ -64,6 +64,11 @@ func (b *Bitwarden) Secret(item, field string) (string, error) {
 	return "", fmt.Errorf("bitwarden: %q has no field %q", item, field)
 }
 
+// Unlocked tells whether a session is open: secrets come without asking.
+func (b *Bitwarden) Unlocked() bool {
+	return b.session != "" || os.Getenv("BW_SESSION") != ""
+}
+
 func (b *Bitwarden) item(name string) (*bwItem, error) {
 	if it, ok := b.items[name]; ok {
 		return it, nil

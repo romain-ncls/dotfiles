@@ -511,6 +511,14 @@ values:
   time, lodestar runs `bw unlock`. lodestar keeps the session for that
   operation only. The repository never contains secrets. This rule is also
   true for encrypted secrets.
+- **lodestar unlocks the vault only for a change.** First, lodestar runs a
+  template with secrets and puts the name of each secret in place of its
+  value (the skeleton). lodestar does not ask for the password when these two
+  conditions are true: the hash of the skeleton is the same as at the last
+  write, and the file has the content that lodestar wrote (or only root can
+  read the file). lodestar sees a value that changed in Bitwarden only when
+  the vault is open. To apply this value, set `BW_SESSION` before you run
+  lodestar.
 
 ## 6. Commands
 

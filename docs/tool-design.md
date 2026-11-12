@@ -443,6 +443,12 @@ Files ending in `.tmpl` are Go templates. They can use:
 - `bitwarden "item" "field"`. lodestar runs `bw unlock` the first time a template
   needs a secret, and keeps the session only for that run. The repo never holds
   secrets, encrypted or not.
+- **The vault is only unlocked for a change.** A template with secrets is first
+  run with each secret replaced by its name (its skeleton). When the skeleton's
+  hash is the one recorded at the last write, and the file still has the
+  content lodestar wrote (or sits where only root can read it), nothing
+  changed and no password is asked. A value changed in Bitwarden only shows
+  when the vault is open anyway: run with `BW_SESSION` set to push it.
 
 ## 6. Commands
 

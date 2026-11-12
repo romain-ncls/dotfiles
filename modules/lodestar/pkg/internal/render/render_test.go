@@ -60,3 +60,30 @@ func TestRender(t *testing.T) {
 		t.Error("Parse should reject a syntax error")
 	}
 }
+
+// failingSecrets fails the test if a secret is read.
+type failingSecrets struct{ t *testing.T }
+
+func (f failingSecrets) Secret(item, field string) (string, error) {
+	f.t.Errorf("Skeleton read the secret %s/%s", item, field)
+	return "", nil
+}
+
+func TestSkeleton(t *testing.T) {
+	dir := t.TempDir()
+	c := &config.Config{Host: "box", User: config.User{Name: "romain"}, Vars: map[string]string{"email": "me@x"}}
+	r := New(c, dir, "", nil, failingSecrets{t})
+	p := filepath.Join(dir, "t.tmpl")
+	os.WriteFile(p, []byte(`{{ .vars.email }} {{ trim (bitwarden "wifi" "password") }}`), 0o644)
+	out, secret, err := r.Skeleton(p)
+	if want := `me@x {{bitwarden "wifi" "password"}}`; err != nil || string(out) != want || !secret {
+		t.Errorf("Skeleton = %q (secret %v, %v), want %q (secret)", out, secret, err, want)
+	}
+	if r.SecretsAtHand() {
+		t.Error("secrets without Unlocked are not at hand")
+	}
+	os.WriteFile(p, []byte(`{{ .vars.email }}`), 0o644)
+	if _, secret, _ := r.Skeleton(p); secret {
+		t.Error("a template without bitwarden is not secret")
+	}
+}
