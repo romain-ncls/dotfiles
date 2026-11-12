@@ -1,7 +1,7 @@
 # Command-line tools and editors: identical on every machine.
 packages:
-  - bitwarden-cli # secrets for lodestar's templates
-  - jq # Claude Code status line
+  - bitwarden-cli # secrets for lodestar's templates, and homelab's secrets.env
+  - jq # Claude Code status line, homelab's scripts
   - github-cli
   - android-tools # adb and fastboot, for the phone server (~/git/homelab)
   - claude-code
