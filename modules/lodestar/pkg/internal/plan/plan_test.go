@@ -215,3 +215,41 @@ func TestPlanRefusals(t *testing.T) {
 		}
 	}
 }
+
+// A file in a folder only root can read (NetworkManager's connections) still
+// gets its then: command.
+func TestPlanHiddenFileThen(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root reads every folder")
+	}
+	c, root, m := setup(t, map[string]string{
+		"hosts/box/host.yaml": host,
+		"modules/base/module.yaml": `
+files:
+  /etc/private/conn:
+    mode: 0600
+    then: reload-it
+`,
+		"modules/base/system/etc/private/conn": "x\n",
+	})
+	dir := filepath.Join(root, "etc/private")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	os.Chmod(dir, 0)
+	t.Cleanup(func() { os.Chmod(dir, 0o755) })
+
+	var got []string
+	for _, s := range summary(compute(t, c, root, m, nil, nil)) {
+		if strings.Contains(s, "/etc/private") {
+			got = append(got, s)
+		}
+	}
+	want := []string{
+		"write /etc/private/conn can't read it without root",
+		"run reload-it then: /etc/private/conn",
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("plan:\n  %s\nwant:\n  %s", strings.Join(got, "\n  "), strings.Join(want, "\n  "))
+	}
+}

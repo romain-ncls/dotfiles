@@ -319,6 +319,13 @@ func (p *Plan) file(in Input, r *render.Renderer, f *config.File) error {
 		return nil
 	}
 
+	// then runs the file's then: command after it is written.
+	then := func() {
+		if f.Opts.Then != "" {
+			p.add(&Action{Op: OpRun, Phase: phase, Command: f.Opts.Then, Why: "then: " + f.Target})
+		}
+	}
+
 	// cantSee handles a file lodestar can't read: trust the state file if it
 	// records this very content, otherwise let the root process write it.
 	cantSee := func() error {
@@ -328,6 +335,7 @@ func (p *Plan) file(in Input, r *render.Renderer, f *config.File) error {
 		a.Why = "can't read it without root"
 		a.Original = p.mayNeedOriginal(in, f, path)
 		p.add(a)
+		then()
 		return nil
 	}
 
@@ -412,9 +420,7 @@ func (p *Plan) file(in Input, r *render.Renderer, f *config.File) error {
 		a.Original = p.mayNeedOriginal(in, f, path)
 	}
 	p.add(a)
-	if f.Opts.Then != "" {
-		p.add(&Action{Op: OpRun, Phase: phase, Command: f.Opts.Then, Why: "then: " + f.Target})
-	}
+	then()
 	return nil
 }
 
