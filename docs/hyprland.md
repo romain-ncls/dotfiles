@@ -78,14 +78,28 @@ rejects (`bezier` or `spring`).
   moves. The bar learns the desktop shown from the grid's own event
   (`hl.dsp.event`, `custom>>grid d`): Hyprland reports a workspace change
   only for the focused screen.
-- **The slides are a plugin of ours, hyprslide** (`modules/hyprslide`, C++,
-  three hooks). Hyprland slides sideways or up and down only, the direction
-  from the ids' order, and draws during a slide the columns the scrolling
-  layout keeps beside the screen, which then cross it. hyprslide sets the
-  workspace's offset on both axes, the way the grid says the desktop lies
-  (`hl.plugin.hyprslide.towards(dx, dy)` around `set_workspace`), and leaves
-  out the tiled windows whose place is off the screen while their workspace
-  slides: KDE's slide, diagonals included. A window moved along
+- **The slides and swipes are a plugin of ours, hyprslide**
+  (`modules/hyprslide`, C++, three hooks and the touchpad's swipe events).
+  Hyprland slides two workspaces sideways or up and down only, the
+  direction from the ids' order, and draws during a slide the columns the
+  scrolling layout keeps beside the screen, which then cross it. grid.lua
+  tells hyprslide where the desktops lie (`hl.plugin.hyprslide.grid`, each
+  grid screen's, row by row, at each switch), and it slides them as one
+  plane, as KDE's: every desktop's offset on both axes, from where the plane
+  lies to where it lies with the next desktop on the screen. So a diagonal
+  move shows the desktops between in the corners, and a switch made while
+  one slides goes on from where the plane is. It leaves out the tiled
+  windows whose place is off the screen while their workspace slides. Four
+  fingers on the touchpad drag the plane, on the side screens at once
+  (Hyprland's gesture events, cancelled for it): along one axis, or both
+  when the swipe is clearly diagonal (past 25° from either). Let go, it
+  goes to the next desktop on each axis that went far or fast enough
+  (Hyprland's `gestures.workspace_swipe_*` settings), by asking grid.lua (a
+  plugin event, `hl.on("hyprslide.swipe")`, so the grid's bookkeeping
+  stays in one place); the plane goes on from where the fingers left it.
+  Otherwise it goes back. Hyprland gives a plugin event only to the Lua
+  state that was there when it was added, and a reload makes a new one:
+  hyprslide adds it again after each reload. A window moved along
   (Meta+Ctrl+Shift+arrows, `hl.plugin.hyprslide.carry(window)` before it
   moves) stays in sight while the desktops slide under it, as KWin's: on
   the screen, a window is its position plus its workspace's offset, so its
@@ -100,10 +114,12 @@ rejects (`bezier` or `spring`).
   Hyprland build, so lodestar rebuilds it with each new Hyprland
   (`pkg: built-against: [hyprland]`); Hyprland refuses one built for
   another, and the grid then falls back to short slides that fade (10 %,
-  so the columns barely show) and a fade for a diagonal. Third-party
-  plugins stay out: they lag behind Hyprland (hyprtasking doesn't compile on
-  0.57 yet, hyprexpo is gone). An overview of the grid, if wanted, comes
-  later in the shell.
+  so the columns barely show) and a fade for a diagonal (and no swipes).
+  Third-party plugins stay out: they lag behind Hyprland (hyprtasking
+  compiles on 0.57 only since 9 Nov 2026, hyprexpo is gone). hyprmosaic
+  (MIT) was the model for the swipe. The overview of the grid is the
+  shell's: drawing live desktops scaled down takes Hyprland's render
+  internals, which is what breaks those plugins at each release.
 - **Our own shell in Quickshell, not Noctalia or another ready-made shell.**
   Noctalia 5 is native C++ with no QML, so the Silksong scene can't run in it;
   Dux Shell (ex-DankMaterialShell) and Caelestia are large, weekly-moving
@@ -372,7 +388,8 @@ migrations and update channels (lodestar does that), their titlebar plugin.
 ## Binds, close to KDE's at first
 
 - Desktops: Meta+A/Z/Q/S and Ctrl+F1..F4 jump (as now), Meta+Ctrl+arrows
-  move in the grid (KDE's default). The side screens only.
+  move in the grid (KDE's default), four fingers on the touchpad drag it
+  (hyprslide). The side screens only.
 - Windows: Alt+Tab along the tape (wrapping: Hyprland's cycle, the view
   scrolling to the window; a switcher with previews, as Plasma's, was tried
   and dropped on 2026-11-04: romain prefers the plain scroll), Meta+Up full
@@ -667,6 +684,18 @@ later (yazi, btop, lazygit…).
       animations back to Hyprland's after. The first build aborted the
       rig's Hyprland: a callback locked a window's animation through a
       weak pointer, which asserts for what a window owns.
+- [x] The desktops as one plane, swipes (12 Nov 2026): a diagonal move
+      slid the two desktops alone, the corners empty (the wallpaper),
+      where KDE's grid shows the desktops between pass by. hyprslide 3
+      knows the grid and slides it whole, and four fingers drag it (the
+      hyprslide passage above). Tried headless with swipes fed to
+      Hyprland's input manager by a rig-only plugin (as libinput's
+      would be), slides slowed to 4 s: diagonal moves both ways on both
+      side screens, a move made mid-slide (no jump), a window taken along,
+      swipes sideways, diagonal and slightly crooked (held to its axis),
+      one too short (back), one at the grid's edge (nothing moves), after
+      a config reload, the peek's fade untouched. A test window that never
+      showed had only part of its first picture, its app's doing.
 
 ## Alternatives considered
 
