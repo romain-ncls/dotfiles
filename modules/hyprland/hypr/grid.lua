@@ -126,12 +126,14 @@ local function announce(d)
 end
 
 -- How a switch from desktop a to b moves. With hyprslide (modules/hyprslide)
--- a whole screen's slide the way b lies, diagonals included, and without
--- the columns the scrolling layout keeps beside the screen. Without it
--- (missing, or built for another Hyprland): Hyprland slides sideways or up
--- and down, the direction from the ids' order, so a straight move slides the
--- way it goes and a diagonal one only fades; short slides that fade, as a
--- whole screen's would carry those columns across it.
+-- the desktops slide as one plane, a whole screen the way b lies,
+-- diagonals included (the desktops between pass by), without the columns
+-- the scrolling layout keeps beside the screen; four fingers on the
+-- touchpad drag it. Without it (missing, or built for another Hyprland):
+-- Hyprland slides sideways or up and down, the direction from the ids'
+-- order, so a straight move slides the way it goes and a diagonal one only
+-- fades; short slides that fade, as a whole screen's would carry those
+-- columns across it.
 local travel = "10%"
 local function style(a, b)
     local ra, ca = place(a)
@@ -144,6 +146,19 @@ end
 
 local function hyprslide()
     return hl.plugin.hyprslide
+end
+
+-- Tells hyprslide where the desktops lie: each grid screen's, row by row.
+local function declare(slide)
+    local list = {}
+    for _, s in ipairs(grid()) do
+        local desktops = {}
+        for d = 1, 4 do
+            desktops[d] = tostring(s.base + d)
+        end
+        list[s.monitor.name] = desktops
+    end
+    slide.grid({ columns = 2, fingers = 4, screens = list })
 end
 
 local switching = false
@@ -189,10 +204,15 @@ function G.go(d)
         unpeek(true)
     end
     local from, slide = current(), hyprslide()
-    if slide and from ~= d then
+    -- hyprslide 2 (a session started before 3 was built) is told the
+    -- direction around the switch instead
+    local towards = slide and not slide.grid
+    if towards and from ~= d then
         local ra, ca = place(from)
         local rb, cb = place(d)
         slide.towards(cb - ca, rb - ra)
+    elseif slide then
+        declare(slide)
     end
     animate(from == d and "fade" or slide and "slide" or style(from, d))
     shown = d
@@ -201,10 +221,18 @@ function G.go(d)
         s.monitor:set_workspace(tostring(s.base + d))
     end
     switching = false
-    if slide then
+    if towards then
         slide.towards(0, 0)
     end
     announce(d)
+end
+
+-- A swipe that lands goes there (hyprslide: four fingers). The plugin
+-- loads after the config's first run, which runs again then.
+if hyprslide() and hyprslide().grid then
+    hl.on("hyprslide.swipe", function(d)
+        G.go(d)
+    end)
 end
 
 function G.move(dir)
