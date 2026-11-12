@@ -22,6 +22,17 @@ hl.config({
 -- Three fingers sideways scroll the tape.
 hl.gesture({ fingers = 3, direction = "horizontal", action = "scroll_move" })
 
+-- Four fingers: sideways or up and down, they drag the grid's desktops
+-- (hyprslide, grid.lua); pinched together, the grid view (shadesmar's
+-- DesktopGrid.qml), spread, back. Hyprland names a pinch by its zoom:
+-- together is zoomout.
+hl.gesture({ fingers = 4, direction = "zoomout", action = function()
+    hl.dispatch(hl.dsp.global("shadesmar:grid-in"))
+end })
+hl.gesture({ fingers = 4, direction = "zoomin", action = function()
+    hl.dispatch(hl.dsp.global("shadesmar:grid-out"))
+end })
+
 for name, speed in pairs({
     ["logitech-m720-triathlon"] = 0.4,
     ["logitech-mx-anywhere-3s"] = 0.4,
