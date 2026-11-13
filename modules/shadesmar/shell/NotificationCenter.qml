@@ -1,10 +1,11 @@
 // The bell: the notifications (Notifications.qml), the count of those that
-// left the screen since it was last opened. Its popup: Do not disturb; all
-// of them by app, the app with the newest first, those new since the last
-// look marked; opening it takes the popups there (a critical one stays on
-// screen too). An app's newest shows, the others unfold under
-// it; Clear for an app's, or for all. A click runs one's default action,
-// opens the file it's about, or shows its app; the cross dismisses it.
+// left the screen since it was last opened. Its popup: its switch (popups,
+// or Do not disturb); all of them by app, the app with the newest first,
+// those new since the last look marked; opening it takes the popups there
+// (a critical one stays on screen too). An app's newest shows, the others
+// unfold under it; Clear for an app's, or for all. A click runs one's
+// default action, opens the file it's about, or shows its app; the cross
+// dismisses it.
 import QtQuick
 import Quickshell
 
@@ -53,16 +54,22 @@ BarButton {
             }
         }
 
-        PopupHeader {
-            title: "Do not disturb"
+        // the switch: popups on, or Do not disturb
+        PopupHero {
+            readonly property int fresh: center.notifications.entries.filter(e => e.time > center.lastSeen).length
+
+            icon: center.icon
+            title: "Notifications"
+            caption: center.notifications.dnd ? "Do not disturb" : fresh > 0 ? `${fresh} new` : "Nothing new"
             toggle: true
-            checked: center.notifications.dnd
+            checked: !center.notifications.dnd
             onToggled: center.notifications.dnd = !center.notifications.dnd
         }
 
-        PopupHeader {
-            title: "Notifications"
-            action: center.notifications.entries.length > 0 ? "Clear" : ""
+        SectionLabel {
+            visible: center.notifications.entries.length > 0
+            text: "Recent"
+            action: "Clear"
             onActed: center.notifications.clear()
         }
 
@@ -71,7 +78,7 @@ BarButton {
             x: 4
             height: 30
             verticalAlignment: Text.AlignVCenter
-            text: "None"
+            text: "No notifications"
             color: Theme.dim
             font.family: Theme.font
             font.pixelSize: 12

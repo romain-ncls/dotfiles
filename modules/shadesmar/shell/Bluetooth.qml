@@ -237,11 +237,20 @@ BarButton {
                 bt.adapter.discovering = false
         }
 
-        PopupHeader {
+        PopupHero {
+            readonly property var connected: bt.paired.filter(d => d.connected)
+
+            icon: bt.icon
             title: "Bluetooth"
-            toggle: true
+            caption: !bt.adapter || !bt.adapter.enabled ? "Off" : connected.length === 1 ? `${connected[0].name} connected` : connected.length > 1 ? `${connected.length} devices connected` : "On"
+            toggle: bt.adapter !== null
             checked: bt.adapter ? bt.adapter.enabled : false
             onToggled: bt.adapter.enabled = !bt.adapter.enabled
+        }
+
+        SectionLabel {
+            visible: bt.adapter !== null && bt.adapter.enabled && bt.paired.length > 0
+            text: "Paired devices"
         }
 
         Repeater {
@@ -254,28 +263,50 @@ BarButton {
                 title: modelData.name
                 active: modelData.connected
                 subtitle: bt.state(modelData)
+                removable: !modelData.connected
+                removeLabel: "Forget"
                 onClicked: {
                     if (modelData.connected)
                         modelData.disconnect()
                     else
                         modelData.connect()
                 }
+                onRemoved: modelData.forget()
             }
         }
 
-        PopupHeader {
+        SectionLabel {
             visible: bt.adapter !== null && bt.adapter.enabled
-            title: "Other devices"
+            text: "Other devices"
             action: bt.adapter && bt.adapter.discovering ? "Stop" : "Scan"
             onActed: bt.adapter.discovering = !bt.adapter.discovering
         }
 
-        Repeater {
+        Text {
+            visible: bt.adapter !== null && bt.adapter.enabled && (!bt.adapter.discovering || bt.found.length === 0)
+            x: 4
+            height: 26
+            verticalAlignment: Text.AlignVCenter
+            text: bt.adapter && bt.adapter.discovering ? "Looking for devices…" : "Scan to find a device to pair"
+            color: Theme.dim
+            font.family: Theme.font
+            font.pixelSize: 12
+        }
+
+        // found ones scroll past a few
+        ListView {
+            visible: bt.adapter !== null && bt.adapter.enabled && bt.adapter.discovering && bt.found.length > 0
+            width: parent.width
+            height: Math.min(contentHeight, 260)
+            clip: true
+            interactive: contentHeight > height
+            boundsBehavior: Flickable.StopAtBounds
             model: bt.adapter && bt.adapter.enabled && bt.adapter.discovering ? bt.found : []
 
-            ListRow {
+            delegate: ListRow {
                 required property var modelData
 
+                width: ListView.view.width
                 icon: modelData.icon || "network-bluetooth-symbolic"
                 title: modelData.deviceName
                 subtitle: modelData.pairing ? "Pairing…" : "Click to pair"

@@ -1,7 +1,8 @@
-// A row of a popup's list: an icon, a title and a line under it, a word on
-// the right; the title lit when it's the active one. A click does it; with
-// `removable`, a cross on hover removes it; `marked`, a dot before the word
-// (new).
+// A row of a popup's list: an icon (or a picture, `thumbnail`), a title and
+// a line under it, a word on the right; the title lit when it's the active
+// one, the row when it's the one the keys are on (`selected`). A click does
+// it; with `removable`, a cross on hover removes it; `marked`, a dot before
+// the word (new).
 import QtQuick
 import Quickshell
 import Quickshell.Widgets
@@ -11,14 +12,22 @@ Rectangle {
 
     property string icon: ""
     property string iconSource: ""
+    property string thumbnail: ""
+    // a line icon of ours (icons/), in the text's color
+    property string lineIcon: ""
     property string title: ""
     property string subtitle: ""
     property int subtitleLines: 1
     property string trailing: ""
+    // a small icon on the right, after the word (a lock)
+    property string trailingIcon: ""
     property bool active: false
+    property bool selected: false
     property bool dim: false
     property bool marked: false
     property bool removable: false
+    // what the cross says instead (Forget)
+    property string removeLabel: ""
 
     signal clicked
     signal removed
@@ -26,24 +35,60 @@ Rectangle {
     readonly property string source: iconSource !== "" ? iconSource : icon !== "" ? Quickshell.iconPath(icon, "image-missing") : ""
 
     width: parent ? parent.width : 320
-    height: Math.max(36, texts.implicitHeight + 14)
+    height: Math.max(thumbnail !== "" ? 56 : 36, texts.implicitHeight + 14)
     radius: 8
-    color: area.containsMouse ? Theme.slot : "transparent"
+    color: area.containsMouse || selected ? Theme.slot : "transparent"
 
     IconImage {
         id: glyph
 
-        visible: row.source !== ""
+        visible: row.thumbnail === "" && row.lineIcon === "" && row.source !== ""
         x: 8
         anchors.verticalCenter: parent.verticalCenter
         implicitSize: 22
-        source: row.source
+        source: row.thumbnail === "" ? row.source : ""
+    }
+
+    Glyph {
+        id: line
+
+        visible: row.thumbnail === "" && row.lineIcon !== ""
+        x: 10
+        anchors.verticalCenter: parent.verticalCenter
+        size: 18
+        source: row.lineIcon
+        color: row.active ? Theme.accent : Theme.text
+    }
+
+    // a picture: in a 72 × 44 box, its whole
+    Rectangle {
+        id: picture
+
+        visible: row.thumbnail !== ""
+        x: 6
+        anchors.verticalCenter: parent.verticalCenter
+        width: 72
+        height: 44
+        radius: 4
+        color: Theme.slot
+        border.width: 1
+        border.color: Theme.outline
+
+        Image {
+            anchors.fill: parent
+            anchors.margins: 1
+            source: row.thumbnail
+            fillMode: Image.PreserveAspectFit
+            asynchronous: true
+            sourceSize.width: 144
+            sourceSize.height: 88
+        }
     }
 
     Column {
         id: texts
 
-        x: glyph.visible ? 40 : 10
+        x: picture.visible ? 88 : glyph.visible || line.visible ? 40 : 10
         anchors.verticalCenter: parent.verticalCenter
         width: row.width - x - right.width - 18
         spacing: 1
@@ -86,7 +131,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.rightMargin: 8
         anchors.verticalCenter: parent.verticalCenter
-        width: Math.max(word.implicitWidth, row.removable ? 16 : 0)
+        width: Math.max(word.implicitWidth + (side.visible ? side.width + (word.implicitWidth > 0 ? 6 : 0) : 0), row.removable ? removal.implicitWidth : 0)
         height: 20
 
         Rectangle {
@@ -100,10 +145,22 @@ Rectangle {
             color: Theme.accent
         }
 
+        Glyph {
+            id: side
+
+            visible: row.trailingIcon !== "" && word.visible
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            size: 14
+            source: row.trailingIcon
+            color: Theme.dim
+        }
+
         Text {
             id: word
 
-            anchors.right: parent.right
+            anchors.right: side.visible ? side.left : parent.right
+            anchors.rightMargin: side.visible && text !== "" ? 6 : 0
             anchors.verticalCenter: parent.verticalCenter
             visible: !(row.removable && (area.containsMouse || cross.containsMouse))
             text: row.trailing
@@ -113,12 +170,15 @@ Rectangle {
         }
 
         Text {
+            id: removal
+
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             visible: row.removable && (area.containsMouse || cross.containsMouse)
-            text: "✕"
-            color: cross.containsMouse ? Theme.text : Theme.dim
-            font.pixelSize: 12
+            text: row.removeLabel !== "" ? row.removeLabel : "✕"
+            color: cross.containsMouse ? (row.removeLabel !== "" ? Theme.warn : Theme.text) : Theme.dim
+            font.pixelSize: row.removeLabel !== "" ? 11 : 12
+            font.family: Theme.font
 
             MouseArea {
                 id: cross
