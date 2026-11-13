@@ -27,16 +27,47 @@ bind(mod .. " + twosuperior", function() G.spotify() end)
 -- Meta+~ (Meta+Shift+²): the sound's popup, as Plasma's audio applet (Volume.qml).
 bind(mod .. " + SHIFT + twosuperior", hl.dsp.global("shadesmar:volume"))
 
--- Windows. Alt+Tab goes through the workspace's windows, the terminal
--- floating over them included.
-bind("ALT + Tab", function()
-    hl.dispatch(hl.dsp.window.cycle_next({}))
+-- Windows. Alt+Tab goes through the desktop's windows from left to right,
+-- then round to the first again (Alt+Shift+Tab: the other way), in the
+-- order they stand, not in the order of use: the docked ones along the
+-- tape (those of one column top to bottom), then the floating ones. (A
+-- floating window's place on the screen changes as the tape scrolls: among
+-- the docked ones, it would come round twice or not at all.)
+local function cycle(step)
+    local w = hl.get_active_window()
+    local ws = w and w.workspace or hl.get_active_workspace()
+    if not ws then
+        return
+    end
+    local list = {}
+    for _, o in ipairs(hl.get_windows({ workspace = ws })) do
+        if not o.hidden then
+            local at = o.at
+            list[#list + 1] = { window = o, key = { o.floating and 1 or 0, at.x, at.y, o.stable_id } }
+        end
+    end
+    if #list == 0 then
+        return
+    end
+    table.sort(list, function(a, b)
+        for i = 1, 4 do
+            if a.key[i] ~= b.key[i] then
+                return a.key[i] < b.key[i]
+            end
+        end
+        return false
+    end)
+    local n = step > 0 and 1 or #list
+    for i, o in ipairs(list) do
+        if w and o.window.address == w.address then
+            n = (i - 1 + step) % #list + 1
+        end
+    end
+    hl.dispatch(hl.dsp.focus({ window = list[n].window }))
     hl.dispatch(hl.dsp.window.bring_to_top())
-end)
-bind("ALT + SHIFT + Tab", function()
-    hl.dispatch(hl.dsp.window.cycle_next({ next = false }))
-    hl.dispatch(hl.dsp.window.bring_to_top())
-end)
+end
+bind("ALT + Tab", function() cycle(1) end)
+bind("ALT + SHIFT + Tab", function() cycle(-1) end)
 
 -- Alt+² and Alt+Shift+² (Plasma's Alt+` and Alt+~): the current app's
 -- windows on the screens. (hl.get_windows' class is the exact class.)
@@ -64,36 +95,151 @@ end
 bind("ALT + twosuperior", function() same_app(1) end)
 bind("ALT + SHIFT + twosuperior", function() same_app(-1) end)
 
--- Meta+Up: as wide as the screen (a floating window: maximized); Meta+Left
--- and Right: half of it, on that side (Plasma's quick tile); Meta+Down hides
--- the window (Hyprland has no minimizing), Meta+Shift+Down shows them.
+-- A window is docked (a column of the tape) or floating. Meta+Up docks a
+-- floating one, its column as wide as the screen, and floats a docked one,
+-- in the middle of the screen. Meta+Left and Right: half the screen, on
+-- that side (Plasma's quick tile): a floating window snaps there; a docked
+-- one stays docked, its column half as wide, the tape scrolled to put it
+-- on that half. Not a desktop's only column, always as wide as the screen
+-- (scrolling.fullscreen_on_one_column), nor the first one to the right: the
+-- tape doesn't scroll before its start.
+local function layout(msg)
+    hl.dispatch(hl.dsp.layout(msg))
+end
+
+-- The screen's area the bar leaves.
+local function area(m)
+    local r = m.reserved
+    return {
+        x = m.x + r.left,
+        y = m.y + r.top,
+        width = m.width / m.scale - r.left - r.right,
+        height = m.height / m.scale - r.top - r.bottom,
+    }
+end
+
+-- A docked window's column (index from 0), and how many the tape has.
+local function column(w)
+    local l = not w.floating and w.layout
+    return l and l.column
+end
+local function columns(ws)
+    local n = 0
+    for _, o in ipairs(hl.get_windows({ workspace = ws, floating = false })) do
+        local c = column(o)
+        if c then
+            n = math.max(n, c.index + 1)
+        end
+    end
+    return n
+end
+
+-- Hyprland has no message to put a column against a side of the screen.
+-- `fit active` puts it, as wide as the screen, right over it, which gives
+-- where both sides are; then it halves, and the tape moves by what's left.
+-- Moving the tape focuses the column in the middle of the screen (against
+-- the right side, the one before), which the tape fits in; the window takes
+-- the focus back and the tape fits it in: from the left, so against the
+-- right side.
+local function dock_half(w, side)
+    local col = column(w)
+    if not col or columns(w.workspace) < 2 or (side == "right" and col.index == 0) then
+        return
+    end
+    layout("fit active")
+    local left, right = w.at.x, w.at.x + w.size.x
+    layout("colresize 0.5")
+    local delta = side == "left" and left - w.at.x or right - w.at.x - w.size.x
+    if delta ~= 0 then
+        layout(string.format("move %+d", delta))
+        hl.dispatch(hl.dsp.focus({ window = w }))
+    end
+end
+
+local function unmaximize()
+    hl.dispatch(hl.dsp.window.fullscreen({ mode = "fullscreen", action = "unset" }))
+    hl.dispatch(hl.dsp.window.fullscreen({ mode = "maximized", action = "unset" }))
+end
+
 local function half(side)
     local w = hl.get_active_window()
     if not w then
         return
     end
     if not w.floating then
-        hl.dispatch(hl.dsp.layout("colresize 0.5"))
+        dock_half(w, side)
         return
     end
-    local m, gap = w.monitor, 8
-    local width, height = math.floor(m.width / 2) - gap * 3 / 2, m.height - gap * 2
-    local x = m.x + (side == "left" and gap or math.floor(m.width / 2) + gap / 2)
+    unmaximize()
+    local a, gap = area(w.monitor), 8
+    local width, height = math.floor(a.width / 2) - gap * 3 / 2, a.height - gap * 2
+    local x = a.x + (side == "left" and gap or math.floor(a.width / 2) + gap / 2)
     hl.dispatch(hl.dsp.window.resize({ x = width, y = height, relative = false }))
-    hl.dispatch(hl.dsp.window.move({ x = x, y = m.y + gap, relative = false }))
+    hl.dispatch(hl.dsp.window.move({ x = x, y = a.y + gap, relative = false }))
 end
-bind(mod .. " + up", function()
+
+local function dock_or_float()
     local w = hl.get_active_window()
-    if w and w.floating then
-        hl.dispatch(hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }))
-    else
-        hl.dispatch(hl.dsp.layout("colresize 1.0"))
+    if not w then
+        return
     end
-end)
+    if not w.floating then
+        hl.dispatch(hl.dsp.window.float({ action = "enable" }))
+        hl.dispatch(hl.dsp.window.center())
+        return
+    end
+    unmaximize()
+    hl.dispatch(hl.dsp.window.float({ action = "disable" }))
+    layout("fit active")
+end
+
+bind(mod .. " + up", dock_or_float)
 bind(mod .. " + left", function() half("left") end)
 bind(mod .. " + right", function() half("right") end)
-bind(mod .. " + down", hl.dsp.window.move({ workspace = "special:hidden", follow = false }))
-bind(mod .. " + SHIFT + down", hl.dsp.workspace.toggle_special("hidden"))
+
+-- Meta+Shift+Left and Right: the window one place along the tape (its
+-- column swapped with the next one), and from either end onto the screen on
+-- that side, at the end it comes in by: a window alone on its desktop goes
+-- at once, as with Plasma's Window to Next Screen. A floating one goes at
+-- once.
+local function beside(m, side)
+    local a = area(m)
+    for _, o in ipairs(hl.get_monitors()) do
+        local b = area(o)
+        if (side == "left" and o.x + o.width / o.scale == m.x)
+            or (side == "right" and o.x == m.x + m.width / m.scale) then
+            if b.y < a.y + a.height and a.y < b.y + b.height then
+                return o
+            end
+        end
+    end
+end
+
+local function along(side)
+    local w = hl.get_active_window()
+    if not w then
+        return
+    end
+    local col = column(w)
+    if col and (side == "left" and col.index > 0 or side == "right" and col.index + 1 < columns(w.workspace)) then
+        layout("swapcol " .. side:sub(1, 1))
+        return
+    end
+    local m = beside(w.monitor, side)
+    if not m then
+        return
+    end
+    hl.dispatch(hl.dsp.window.move({ monitor = m.name }))
+    col = column(w)
+    if col then
+        local steps = side == "right" and col.index or columns(w.workspace) - 1 - col.index
+        for _ = 1, steps do
+            layout("swapcol " .. (side == "right" and "l" or "r"))
+        end
+    end
+end
+bind(mod .. " + SHIFT + left", function() along("left") end)
+bind(mod .. " + SHIFT + right", function() along("right") end)
 
 -- On every desktop (Plasma's Meta+Ctrl+Shift+PgUp): only a floating window
 -- can be, so it floats first.
@@ -129,11 +275,10 @@ bind(mod .. " + CTRL + mouse_down", function() zoom(1 / 1.2) end)
 bind(mod .. " + agrave", function() zoom(nil) end)
 bind(mod .. " + SHIFT + agrave", function() zoom(nil) end)
 
--- To the other screens.
+-- To the other screens straight away (Meta+Shift+arrows: along the tape
+-- first, above).
 bind(mod .. " + SHIFT + d", hl.dsp.window.move({ monitor = "+1" }))
-bind(mod .. " + SHIFT + right", hl.dsp.window.move({ monitor = "+1" }))
 bind(mod .. " + SHIFT + q", hl.dsp.window.move({ monitor = "-1" }))
-bind(mod .. " + SHIFT + left", hl.dsp.window.move({ monitor = "-1" }))
 
 bind("ALT + F4", hl.dsp.window.close())
 bind("CTRL + ALT + Escape", hl.dsp.exec_cmd("hyprctl kill")) -- click the window to kill

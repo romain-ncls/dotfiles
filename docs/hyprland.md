@@ -46,8 +46,8 @@ rejects (`bezier` or `spring`).
   wiki: configuring/layouts/scrolling-layout). Columns are full width by
   default (`scrolling.column_width = 1.0`): one window per screen, like a
   maximized one, the others beside it. Alt+Tab becomes moving along the
-  tape (`hl.dsp.layout("focus r")`, wrapping); the shell's switcher with
-  previews comes later. The terminal from Meta+Return opens floating
+  tape, wrapping (binds.lua: the windows in the order they stand, not of
+  use). The terminal from Meta+Return opens floating
   (`exec_cmd(cmd, { float = true, … })`: the rule comes with that launch,
   not with the app); tiled, it takes half width (`scrolling_width = 0.5`):
   two side by side fill a screen; `colresize +conf` cycles
@@ -390,13 +390,19 @@ migrations and update channels (lodestar does that), their titlebar plugin.
 - Desktops: Meta+A/Z/Q/S and Ctrl+F1..F4 jump (as now), Meta+Ctrl+arrows
   move in the grid (KDE's default), four fingers on the touchpad drag it
   (hyprslide). The side screens only.
-- Windows: Alt+Tab along the tape (wrapping: Hyprland's cycle, the view
+- Windows: Alt+Tab along the tape, left to right and round again (the
+  docked windows in the tape's order, then the floating ones; the view
   scrolling to the window; a switcher with previews, as Plasma's, was tried
-  and dropped on 2026-11-04: romain prefers the plain scroll), Meta+Up full
-  width (or maximized), Meta+Left/Right half width (KDE's quick tile),
-  Meta+Down a hidden special workspace (Hyprland has no minimize),
-  Meta+Shift+Left/Right and Meta+Shift+Q/D to the other screen, Ctrl+Alt+Esc
-  kill.
+  and dropped on 2026-11-04: romain prefers the plain scroll). Meta+Up docks
+  a floating window, full width, and floats a docked one (KDE's maximize
+  and restore); Meta+Left/Right: half the screen on that side (KDE's quick
+  tile), a docked window staying docked, the tape scrolled to put it there.
+  Meta+Shift+Left/Right move the window along the tape, and past its end
+  onto the next screen; Meta+Shift+Q/D straight to the other screen.
+  Meta+Down, KDE's minimize, is unbound since 2026-11-13: Hyprland has no
+  minimize, and a window hidden in a special workspace left no trace to find
+  it by (a minimize would need the bar to list hidden windows).
+  Ctrl+Alt+Esc kill.
 - Meta+Return: the terminal, floating. Meta+E: the files (Nautilus, a new
   window, as Dolphin's). Meta+²: Spotify's scratchpad (the key that opens
   Plasma's media player now). Meta+~: volume (the shell).
