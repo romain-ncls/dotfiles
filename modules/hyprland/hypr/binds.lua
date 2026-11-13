@@ -197,11 +197,10 @@ bind(mod .. " + up", dock_or_float)
 bind(mod .. " + left", function() half("left") end)
 bind(mod .. " + right", function() half("right") end)
 
--- Meta+Shift+Left and Right: the window one place along the tape (its
--- column swapped with the next one), and from either end onto the screen on
--- that side, at the end it comes in by: a window alone on its desktop goes
--- at once, as with Plasma's Window to Next Screen. A floating one goes at
--- once.
+-- Meta+Shift+Q and D (left and right on AZERTY's home row): the window one
+-- place along the tape (its column swapped with the next one), and from
+-- either end onto the screen on that side, at the end it comes in by. A
+-- floating window, or one alone on its desktop, goes at once.
 local function beside(m, side)
     local a = area(m)
     for _, o in ipairs(hl.get_monitors()) do
@@ -238,8 +237,8 @@ local function along(side)
         end
     end
 end
-bind(mod .. " + SHIFT + left", function() along("left") end)
-bind(mod .. " + SHIFT + right", function() along("right") end)
+bind(mod .. " + SHIFT + q", function() along("left") end)
+bind(mod .. " + SHIFT + d", function() along("right") end)
 
 -- On every desktop (Plasma's Meta+Ctrl+Shift+PgUp): only a floating window
 -- can be, so it floats first.
@@ -275,10 +274,10 @@ bind(mod .. " + CTRL + mouse_down", function() zoom(1 / 1.2) end)
 bind(mod .. " + agrave", function() zoom(nil) end)
 bind(mod .. " + SHIFT + agrave", function() zoom(nil) end)
 
--- To the other screens straight away (Meta+Shift+arrows: along the tape
--- first, above).
-bind(mod .. " + SHIFT + d", hl.dsp.window.move({ monitor = "+1" }))
-bind(mod .. " + SHIFT + q", hl.dsp.window.move({ monitor = "-1" }))
+-- To the other screens straight away, Plasma's Meta+Shift+arrows (Meta+Shift+Q
+-- and D: along the tape first, above).
+bind(mod .. " + SHIFT + right", hl.dsp.window.move({ monitor = "+1" }))
+bind(mod .. " + SHIFT + left", hl.dsp.window.move({ monitor = "-1" }))
 
 bind("ALT + F4", hl.dsp.window.close())
 bind("CTRL + ALT + Escape", hl.dsp.exec_cmd("hyprctl kill")) -- click the window to kill
