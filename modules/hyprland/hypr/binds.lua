@@ -3,6 +3,7 @@
 -- from lodestar later; Plasma's actions are here, done Hyprland's way.
 
 local G = require("grid")
+local look = require("looknfeel")
 
 local mod = "SUPER"
 
@@ -201,6 +202,11 @@ bind(mod .. " + right", function() half("right") end)
 -- place along the tape (its column swapped with the next one), and from
 -- either end onto the screen on that side, at the end it comes in by. A
 -- floating window, or one alone on its desktop, goes at once.
+--
+-- The view follows the window: a column as wide as the screen stays put on
+-- it, and the one it swaps with passes to its other side, under it, as
+-- Hyprland draws the active window over the others. hyprslide draws that
+-- one over it instead while it passes, told before the swap.
 local function beside(m, side)
     local a = area(m)
     for _, o in ipairs(hl.get_monitors()) do
@@ -214,6 +220,30 @@ local function beside(m, side)
     end
 end
 
+-- The swap moves on its own curve (looknfeel.lua), the windows' own again
+-- once it's done (but for a swap since).
+local swaps = 0
+local function swap(w, col, side)
+    local slide, to = hl.plugin.hyprslide, col.index + (side == "left" and -1 or 1)
+    if slide and slide.pass then
+        for _, o in ipairs(hl.get_windows({ workspace = w.workspace, floating = false })) do
+            local c = column(o)
+            if c and c.index == to then
+                slide.pass(o)
+            end
+        end
+    end
+    swaps = swaps + 1
+    local this = swaps
+    hl.animation(look.swap)
+    layout("swapcol " .. side:sub(1, 1))
+    hl.timer(function()
+        if swaps == this then
+            hl.animation(look.move)
+        end
+    end, { timeout = look.swap.speed * 100 + 100, type = "oneshot" })
+end
+
 local function along(side)
     local w = hl.get_active_window()
     if not w then
@@ -221,7 +251,7 @@ local function along(side)
     end
     local col = column(w)
     if col and (side == "left" and col.index > 0 or side == "right" and col.index + 1 < columns(w.workspace)) then
-        layout("swapcol " .. side:sub(1, 1))
+        swap(w, col, side)
         return
     end
     local m = beside(w.monitor, side)
