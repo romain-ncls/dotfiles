@@ -2,9 +2,9 @@
 # Hyprland does (module.yaml: built-against): Hyprland only loads a plugin
 # built against its exact headers.
 pkgname=hyprslide
-pkgver=3
+pkgver=4
 pkgrel=1
-pkgdesc="Hyprland plugin: the grid's desktops as one plane, sliding the way the next one lies, dragged by four fingers"
+pkgdesc="Hyprland plugin: the grid's desktops as one plane, sliding the way the next one lies, dragged by four fingers; a column swapped along the tape seen passing"
 arch=(x86_64)
 license=(MIT)
 options=(!debug)

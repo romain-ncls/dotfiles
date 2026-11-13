@@ -8,6 +8,9 @@
 // a KDE desktop is the screen's rectangle. A window taken along
 // (Meta+Ctrl+Shift+arrow) stays in sight, going from where it was to its
 // place on the next desktop while the plane slides under it, as KWin's.
+// And a window moved along the tape (its column swapped with the next one)
+// stays put as the view follows it: the one it swaps with is seen passing
+// over it to its other side.
 //
 // The config says where the desktops lie (each screen's, row by row; again
 // whenever that changes), and switches when a swipe lands:
@@ -16,11 +19,13 @@
 //         ["DP-3"] = { "1", "2", "3", "4" }, ["HDMI-A-1"] = { "5", "6", "7", "8" } } })
 //     hl.on("hyprslide.swipe", function(d) ... end) -- to desktop d, from 1
 //     hl.plugin.hyprslide.carry(window)                -- one going there, before it moves
+//     hl.plugin.hyprslide.pass(window)                 -- one of the column swapped with, before
 //
 // Built against the exact Hyprland it runs in (modules/hyprslide).
 
 #include <hyprland/src/animation/WorkspaceAnimationController.hpp>
 #include <hyprland/src/config/ConfigValue.hpp>
+#include <hyprland/src/desktop/state/FocusState.hpp>
 #include <hyprland/src/desktop/view/window/Window.hpp>
 #include <hyprland/src/desktop/view/window/WindowPresentation.hpp>
 #include <hyprland/src/event/EventBus.hpp>
@@ -46,6 +51,9 @@ namespace {
     CFunctionHook*                         startHook = nullptr;
     CFunctionHook*                         renderHook = nullptr;
     CFunctionHook*                         floatHook = nullptr;
+    CFunctionHook*                         windowHook = nullptr;
+    CFunctionHook*                         workspaceHook = nullptr;
+    CFunctionHook*                         workspaceNowHook = nullptr;
     Hyprutils::Signal::CHyprSignalListener beginListener, updateListener, endListener, reloadListener;
     SP<Event::CEventBus::CCustomEvent>     swiped;
 
@@ -256,6 +264,87 @@ namespace {
         const CBox screen{monitor->m_position, monitor->m_size};
         const CBox place{window->positionAnimation()->goal(), window->sizeAnimation()->goal()};
         return screen.containsPoint(place.middle());
+    }
+
+    // The windows of the column the active window's is swapped with
+    // (Meta+Shift+Q/D), told before the swap. The view follows the active
+    // window: a column as wide as the screen stays put on it, and the other
+    // passes to its other side, under it, unseen: Hyprland draws the active
+    // tiled window after the others. One passing is drawn right after it
+    // instead, while it moves (from the swap on: told, it hasn't yet).
+    struct Passing {
+        PHLWINDOWREF window;
+        bool         moved = false;
+    };
+    std::vector<Passing> passing;
+
+    // A window passing now; those that have gone by forgotten.
+    bool isPassing(const PHLWINDOW& window) {
+        bool now = false;
+        std::erase_if(passing, [&](Passing& p) {
+            const auto w = p.window.lock();
+            if (!w)
+                return true;
+            const bool moving = w->positionAnimation()->isBeingAnimated();
+            if (!moving)
+                return p.moved;
+            p.moved = true;
+            now = now || w == window;
+            return false;
+        });
+        return now;
+    }
+
+    // What a passing window is drawn with, kept until the active window is.
+    struct Deferred {
+        PHLWINDOW                         window;
+        PHLMONITOR                        monitor;
+        Render::SWindowRenderPresentation presentation;
+        Time::steady_tp                   time;
+        bool                              decorate, ignorePosition, standalone;
+    };
+    std::vector<Deferred>   deferred;
+    Render::CRenderContext* drawing = nullptr; // the windows of a desktop being drawn: their context
+
+    using RenderWindow = void (*)(void*, Render::CRenderContext&, PHLWINDOW, PHLMONITOR, const Render::SWindowRenderPresentation&, const Time::steady_tp&, bool,
+                                  Render::eRenderPassMode, bool, bool);
+    using RenderWorkspaceWindows = void (*)(void*, Render::CRenderContext&, PHLMONITOR, PHLWORKSPACE, const Time::steady_tp&, Render::eSceneMode);
+    using RenderWorkspaceWindowsNow = void (*)(void*, Render::CRenderContext&, PHLMONITOR, PHLWORKSPACE, const Time::steady_tp&);
+
+    void drawDeferred(void* self, Render::CRenderContext& ctx) {
+        const auto draw = reinterpret_cast<RenderWindow>(windowHook->m_original);
+        for (const auto& h : std::exchange(deferred, {}))
+            draw(self, ctx, h.window, h.monitor, h.presentation, h.time, h.decorate, Render::RENDER_PASS_MAIN, h.ignorePosition, h.standalone);
+    }
+
+    void renderWindow(void* self, Render::CRenderContext& ctx, PHLWINDOW window, PHLMONITOR monitor, const Render::SWindowRenderPresentation& presentation,
+                      const Time::steady_tp& time, bool decorate, Render::eRenderPassMode mode, bool ignorePosition, bool standalone) {
+        const bool main = drawing == &ctx && mode == Render::RENDER_PASS_MAIN && window;
+        const auto active = main ? Desktop::focusState()->window() : nullptr;
+        if (active && window != active && !passing.empty() && !window->isFloating() && !active->isFloating() && window->m_workspace == active->m_workspace &&
+            isPassing(window)) {
+            deferred.push_back({window, monitor, presentation, time, decorate, ignorePosition, standalone});
+            return;
+        }
+        reinterpret_cast<RenderWindow>(windowHook->m_original)(self, ctx, window, monitor, presentation, time, decorate, mode, ignorePosition, standalone);
+        if (active && window == active)
+            drawDeferred(self, ctx);
+    }
+
+    // A desktop's windows being drawn: a passing one not drawn after the
+    // active window (not drawn there) is drawn last, not left out.
+    template <typename Draw>
+    void drawingWindows(void* self, Render::CRenderContext& ctx, Draw draw) {
+        auto* outer = std::exchange(drawing, &ctx);
+        draw();
+        drawDeferred(self, ctx);
+        drawing = outer;
+    }
+    void renderWorkspaceWindows(void* self, Render::CRenderContext& ctx, PHLMONITOR monitor, PHLWORKSPACE ws, const Time::steady_tp& time, Render::eSceneMode mode) {
+        drawingWindows(self, ctx, [&] { reinterpret_cast<RenderWorkspaceWindows>(workspaceHook->m_original)(self, ctx, monitor, ws, time, mode); });
+    }
+    void renderWorkspaceWindowsNow(void* self, Render::CRenderContext& ctx, PHLMONITOR monitor, PHLWORKSPACE ws, const Time::steady_tp& time) {
+        drawingWindows(self, ctx, [&] { reinterpret_cast<RenderWorkspaceWindowsNow>(workspaceNowHook->m_original)(self, ctx, monitor, ws, time); });
     }
 
     // A swipe of ours: the screens it drags, each from the desktop it was
@@ -480,21 +569,31 @@ namespace {
         return 0;
     }
 
+    // hl.plugin.hyprslide.pass(window): one of the column the active
+    // window's is swapped with, before the swap.
+    int pass(lua_State* L) {
+        const auto w = static_cast<PHLWINDOWREF*>(luaL_checkudata(L, 1, "HL.Window"))->lock();
+        if (w)
+            passing.push_back({w});
+        return 0;
+    }
+
     void fail(const std::string& why) {
         HyprlandAPI::addNotification(handle, "[hyprslide] " + why, CHyprColor{1.0, 0.3, 0.3, 1.0}, 10000);
         throw std::runtime_error("[hyprslide] " + why);
     }
 
-    // The function named name whose full signature contains part.
-    void* find(const std::string& name, const std::string& part) {
+    // The function named name whose full signature contains part, and ends
+    // with end (one overload of several).
+    void* find(const std::string& name, const std::string& part, const std::string& end) {
         for (const auto& f : HyprlandAPI::findFunctionsByName(handle, name))
-            if (f.demangled.contains(part))
+            if (f.demangled.contains(part) && f.demangled.ends_with(end))
                 return f.address;
         return nullptr;
     }
 
-    CFunctionHook* hook(const std::string& name, const std::string& part, void* to) {
-        void* from = find(name, part);
+    CFunctionHook* hook(const std::string& name, const std::string& part, void* to, const std::string& end = "") {
+        void* from = find(name, part, end);
         if (!from)
             fail("no " + name + " in this Hyprland: hyprslide needs updating");
         auto* h = HyprlandAPI::createFunctionHook(handle, from, to);
@@ -515,7 +614,11 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE h) {
     startHook = hook("startAnimation", "Animation::Workspace::startAnimation(", reinterpret_cast<void*>(&startAnimation));
     renderHook = hook("shouldRenderWindow", "CMonitor", reinterpret_cast<void*>(&shouldRenderWindow));
     floatHook = hook("onWorkspaceAnimUpdate", "CWindowPresentation", reinterpret_cast<void*>(&onWorkspaceAnimUpdate));
-    if (!HyprlandAPI::addLuaFunction(handle, "hyprslide", "grid", grid) || !HyprlandAPI::addLuaFunction(handle, "hyprslide", "carry", carry))
+    windowHook = hook("renderWindow", "IHyprRenderer::renderWindow(", reinterpret_cast<void*>(&renderWindow));
+    workspaceHook = hook("renderWorkspaceWindows", "IHyprRenderer::renderWorkspaceWindows(", reinterpret_cast<void*>(&renderWorkspaceWindows), "const&, Render::eSceneMode)");
+    workspaceNowHook = hook("renderWorkspaceWindows", "IHyprRenderer::renderWorkspaceWindows(", reinterpret_cast<void*>(&renderWorkspaceWindowsNow), "> > > const&)");
+    if (!HyprlandAPI::addLuaFunction(handle, "hyprslide", "grid", grid) || !HyprlandAPI::addLuaFunction(handle, "hyprslide", "carry", carry) ||
+        !HyprlandAPI::addLuaFunction(handle, "hyprslide", "pass", pass))
         fail("can't add hl.plugin.hyprslide's functions");
     swiped = makeShared<Event::CEventBus::CCustomEvent>("hyprslide.swipe", std::vector{Event::CEventBus::CCustomEvent::TYPE_INT});
     if (!HyprlandAPI::addEvent(handle, swiped))
@@ -529,7 +632,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE h) {
     beginListener = Event::bus()->m_events.gesture.swipe.begin.listen(begin);
     updateListener = Event::bus()->m_events.gesture.swipe.update.listen(update);
     endListener = Event::bus()->m_events.gesture.swipe.end.listen(end);
-    return {"hyprslide", "The grid's desktops as one plane: slides, swipes", "Romain Nicolas", "3"};
+    return {"hyprslide", "The grid's desktops as one plane: slides, swipes; a swapped column seen passing", "Romain Nicolas", "4"};
 }
 
 APICALL EXPORT void PLUGIN_EXIT() {

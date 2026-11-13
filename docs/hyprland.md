@@ -79,7 +79,7 @@ rejects (`bezier` or `spring`).
   (`hl.dsp.event`, `custom>>grid d`): Hyprland reports a workspace change
   only for the focused screen.
 - **The slides and swipes are a plugin of ours, hyprslide**
-  (`modules/hyprslide`, C++, three hooks and the touchpad's swipe events).
+  (`modules/hyprslide`, C++, six hooks and the touchpad's swipe events).
   Hyprland slides two workspaces sideways or up and down only, the
   direction from the ids' order, and draws during a slide the columns the
   scrolling layout keeps beside the screen, which then cross it. grid.lua
@@ -110,7 +110,16 @@ rejects (`bezier` or `spring`).
   is a screen away: hyprslide stops all three for it. Hyprland moves a
   window first, then switches, so it otherwise rides in with the new
   desktop; no plugin found does KWin's (2026-11 survey: Hyprgrid,
-  hyprland-virtual-desktops, hyprtasking, hyprmosaic). Plugins must match the exact
+  hyprland-virtual-desktops, hyprtasking, hyprmosaic). A window moved
+  along the tape (Meta+Shift+Q/D: its column swapped with the next) stays
+  put as the view follows it, and the column it swaps with passes to its
+  other side under it, Hyprland drawing the active tiled window last:
+  told before the swap (`hl.plugin.hyprslide.pass(window)`), hyprslide
+  draws that one right after the active window while it moves (hooks on
+  the renderer's `renderWindow` and `renderWorkspaceWindows`), and the swap
+  runs on a curve slow in and out (looknfeel.lua), as the window passing
+  would cross the screen at the fastest of the windows' quick start.
+  Plugins must match the exact
   Hyprland build, so lodestar rebuilds it with each new Hyprland
   (`pkg: built-against: [hyprland]`); Hyprland refuses one built for
   another, and the grid then falls back to short slides that fade (10 %,
@@ -399,9 +408,8 @@ migrations and update channels (lodestar does that), their titlebar plugin.
   tile), a docked window staying docked, the tape scrolled to put it there.
   Meta+Shift+Q/D move the window along the tape, and past its end onto the
   next screen; Meta+Shift+Left/Right straight to the other screen (KDE's).
-  With columns as wide as the screen the move shows nothing: the view
-  follows the window, and the neighbour passes behind it (Hyprland draws
-  the focused window last).
+  The window stays put as the view follows it, and the neighbour is seen
+  passing over it to its other side (hyprslide, above).
   Meta+Down, KDE's minimize, is unbound since 2026-11-13: Hyprland has no
   minimize, and a window hidden in a special workspace left no trace to find
   it by (a minimize would need the bar to list hidden windows).
