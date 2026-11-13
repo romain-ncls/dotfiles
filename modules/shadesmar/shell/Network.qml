@@ -1,9 +1,12 @@
-// The network, as Plasma's applet: the bar shows the Wi-Fi's signal, or the
-// cable. The popup: the Wi-Fi's switch and networks (a click connects or
-// disconnects; a new secured one asks its password here), the cable, and
-// the VPNs, through nmcli (Quickshell's NetworkManager knows no VPN). What a
-// connection asks, spanreed's secret agent passes on: a card where the
-// popup opens.
+// The network, as Plasma's applet, laid out as Omarchy's panel: the bar
+// shows the Wi-Fi's signal, or the cable. The popup: the connection in use,
+// big (its name; connected, limited or asking to sign in, with a button to
+// the network's sign-in page) and the Wi-Fi's switch; its details (address,
+// gateway, traffic, signal and band, speed); the Wi-Fi's networks, the known
+// ones first (a click connects or disconnects, Forget on hover; a new
+// secured one asks its password under it); the VPNs, through nmcli
+// (Quickshell's NetworkManager knows no VPN). What a connection asks,
+// spanreed's secret agent passes on: a card where the popup opens.
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -15,41 +18,179 @@ BarButton {
     readonly property var wifi: Networking.devices.values.find(d => d.type === DeviceType.Wifi) ?? null
     readonly property var wired: Networking.devices.values.find(d => d.type === DeviceType.Wired && d.connected) ?? null
     readonly property var current: wifi ? wifi.networks.values.find(n => n.connected) ?? null : null
+    // the device in use: the cable first
+    readonly property var device: wired ?? (current ? wifi : null)
+    // NetworkManager's check (nmcli general): a portal is a network's
+    // sign-in page, in the way until one signs in
+    readonly property bool portal: Networking.connectivity === NetworkConnectivity.Portal
+    readonly property bool limited: portal || Networking.connectivity === NetworkConnectivity.Limited
 
     // Quickshell's strength is 0 to 1
     function strength(n) {
         return n.signalStrength > 1 ? n.signalStrength / 100 : n.signalStrength
     }
-    function signalIcon(n) {
+    function signalIcon(n, locked) {
         const s = strength(n)
-        return s > 0.75 ? "network-wireless-signal-excellent-symbolic" : s > 0.5 ? "network-wireless-signal-good-symbolic" : s > 0.25 ? "network-wireless-signal-ok-symbolic" : "network-wireless-signal-weak-symbolic"
+        const level = s > 0.75 ? "excellent" : s > 0.5 ? "good" : s > 0.25 ? "ok" : "weak"
+        return `network-wireless-signal-${level}${locked ? "-locked" : ""}-symbolic`
     }
     function secured(n) {
         return n.security !== WifiSecurityType.Open && n.security !== WifiSecurityType.Owe
     }
 
     popup: "network"
-    icon: wired ? "network-wired-symbolic" : current ? signalIcon(current) : "network-offline-symbolic"
+    icon: wired ? "network-wired-symbolic" : current ? signalIcon(current, false) : wifi && Networking.wifiEnabled ? "network-wireless-disconnected-symbolic" : "network-disconnect-symbolic"
 
-    // the networks: the one in use, then the known ones, then by signal
-    readonly property var networks: {
+    // the networks: the one in use and the known ones, then the others, by
+    // signal; each section's name on its first
+    readonly property var rows: {
         if (!wifi)
             return []
-        return wifi.networks.values.filter(n => n.name !== "").sort((a, b) => (b.connected - a.connected) || (b.known - a.known) || (strength(b) - strength(a))).slice(0, 12)
+        const all = wifi.networks.values.filter(n => n.name !== "").sort((a, b) => (b.connected - a.connected) || (strength(b) - strength(a)))
+        const known = all.filter(n => n.known || n.connected)
+        const other = all.filter(n => !n.known && !n.connected).slice(0, 20)
+        return [...known.map((n, i) => ({ net: n, section: i === 0 ? "Known networks" : "" })), ...other.map((n, i) => ({ net: n, section: i === 0 ? "Other networks" : "" }))]
     }
 
-    // the network whose password is asked, and the last one that failed
+    // the network whose password is asked, the one last given one, and
+    // what failed, by name
     property var asking: null
-    property string failed: ""
+    property string tried: ""
+    property var failed: ({})
 
+    function fail(n, text) {
+        failed = Object.assign({}, failed, { [n.name]: text })
+    }
     function pick(n) {
-        failed = ""
+        const f = Object.assign({}, failed)
+        delete f[n.name]
+        failed = f
         if (n.connected)
             n.disconnect()
         else if (n.known || !secured(n))
             n.connect()
         else
             asking = n
+    }
+    function status(n) {
+        if (n.state === ConnectionState.Connecting)
+            return "Connecting…"
+        if (n.state === ConnectionState.Disconnecting)
+            return "Disconnecting…"
+        if (failed[n.name])
+            return failed[n.name]
+        if (n.connected)
+            return portal ? "Sign-in required" : limited ? "Limited access" : "Connected"
+        return ""
+    }
+
+    // the scan: on while the popup is open, the networks coming in the
+    // first seconds; again on Rescan
+    property bool scanning: false
+
+    function rescan() {
+        if (!wifi)
+            return
+        wifi.scannerEnabled = false
+        scanning = true
+        scanAgain.restart()
+        scanned.restart()
+    }
+    Timer {
+        id: scanAgain
+
+        interval: 100
+        onTriggered: {
+            if (net.wifi)
+                net.wifi.scannerEnabled = popup.shown
+        }
+    }
+    Timer {
+        id: scanned
+
+        interval: 4000
+        onTriggered: net.scanning = false
+    }
+
+    // The details of the device in use: its address and gateway, and the
+    // Wi-Fi's band, channel, rate and signal (nmcli, no new scan); its
+    // traffic from the kernel's counters, each second while open.
+    property var info: ({})
+    property real rx: -1
+    property real tx: -1
+    property var last: null
+    property real infoAt: 0
+
+    Process {
+        id: readInfo
+
+        command: ["sh", "-c", "nmcli -t -f IP4.ADDRESS,IP4.GATEWAY device show \"$1\"; [ -z \"$2\" ] || nmcli -t -f IN-USE,FREQ,CHAN,RATE,SIGNAL device wifi list ifname \"$2\" --rescan no | grep '^\\*'", "sh", net.device ? net.device.name : "", net.device === net.wifi && net.wifi ? net.wifi.name : ""]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const i = {}
+                for (const l of text.split("\n")) {
+                    if (l.startsWith("IP4.ADDRESS"))
+                        i.ip = l.slice(l.indexOf(":") + 1).split("/")[0]
+                    else if (l.startsWith("IP4.GATEWAY:"))
+                        i.gateway = l.slice(12)
+                    else if (l.startsWith("*:")) {
+                        const f = l.split(":")
+                        const mhz = parseInt(f[1])
+                        i.band = mhz > 5900 ? "6 GHz" : mhz > 4900 ? "5 GHz" : "2.4 GHz"
+                        i.channel = f[2]
+                        i.rate = f[3].replace(" Mbit/s", " Mb/s")
+                        i.signal = f[4]
+                    }
+                }
+                net.info = i
+            }
+        }
+    }
+
+    Process {
+        id: readTraffic
+
+        command: ["sh", "-c", "cat /sys/class/net/\"$1\"/statistics/rx_bytes /sys/class/net/\"$1\"/statistics/tx_bytes", "sh", net.device ? net.device.name : "-"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const [r, t] = text.trim().split("\n").map(Number)
+                const now = Date.now()
+                if (net.last && now > net.last.time) {
+                    const s = (now - net.last.time) / 1000
+                    net.rx = Math.max(0, (r - net.last.r) / s)
+                    net.tx = Math.max(0, (t - net.last.t) / s)
+                }
+                net.last = { r: r, t: t, time: now }
+            }
+        }
+    }
+
+    Timer {
+        running: popup.shown && net.device !== null
+        repeat: true
+        triggeredOnStart: true
+        interval: 1000
+        onTriggered: {
+            readTraffic.running = true
+            // the rest every few seconds
+            if (Date.now() - net.infoAt > 4000) {
+                readInfo.running = true
+                net.infoAt = Date.now()
+            }
+        }
+    }
+    onDeviceChanged: {
+        info = ({})
+        infoAt = 0
+        last = null
+        rx = tx = -1
+    }
+
+    function rate(bytes) {
+        if (bytes < 0)
+            return "—"
+        const k = bytes / 1000
+        return k < 1000 ? `${k < 10 ? k.toFixed(1) : Math.round(k)} kB/s` : `${(k / 1000).toFixed(1)} MB/s`
     }
 
     // VPNs: name, uuid, active, from nmcli's terse output (colons escaped)
@@ -168,100 +309,287 @@ BarButton {
         }
     }
 
+
     BarPopup {
         id: popup
 
         bar: net.bar
         from: net
         name: "network"
+        popupWidth: 380
         onShownChanged: {
-            if (net.wifi)
-                net.wifi.scannerEnabled = shown
-            if (!shown)
+            if (shown) {
+                net.rescan()
+            } else {
+                if (net.wifi)
+                    net.wifi.scannerEnabled = false
                 net.asking = null
+            }
         }
 
-        PopupHeader {
-            visible: net.wifi !== null
-            title: "Wi-Fi"
-            toggle: true
+        // what's in use, big
+        PopupHero {
+            icon: net.icon
+            title: net.wired ? "Wired" : net.current ? net.current.name : "Offline"
+            caption: net.portal ? "Sign-in required" : net.limited ? "Limited access" : net.device ? (net.device === net.wifi && net.info.band ? `Connected · ${net.info.band}` : "Connected") : net.wifi && !Networking.wifiEnabled ? "Wi-Fi off" : "No network"
+            warn: net.limited
+            toggle: net.wifi !== null
             checked: Networking.wifiEnabled
             onToggled: Networking.wifiEnabled = !Networking.wifiEnabled
         }
 
-        Repeater {
-            model: Networking.wifiEnabled ? net.networks : []
+        // the network's sign-in page: any plain http address leads there
+        // (NetworkManager's own check is on a site browsers only reach by
+        // https, which the portal can't take over)
+        Rectangle {
+            visible: net.portal
+            width: parent.width
+            height: 34
+            radius: 8
+            color: portalArea.containsMouse ? Theme.alpha(Theme.warn, 0.22) : Theme.alpha(Theme.warn, 0.12)
+            border.width: 1
+            border.color: Theme.alpha(Theme.warn, 0.5)
 
-            ListRow {
-                id: row
+            Text {
+                anchors.centerIn: parent
+                text: "Sign in to the network"
+                color: Theme.warn
+                font.family: Theme.font
+                font.pixelSize: 13
+                font.weight: Font.DemiBold
+            }
 
-                required property var modelData
+            MouseArea {
+                id: portalArea
 
-                icon: net.signalIcon(modelData)
-                title: modelData.name
-                active: modelData.connected
-                subtitle: modelData.state === ConnectionState.Connecting ? "Connecting…" : modelData.state === ConnectionState.Disconnecting ? "Disconnecting…" : net.failed === modelData.name ? "Couldn't connect" : modelData.connected ? "Connected" : ""
-                trailing: net.secured(modelData) ? "🔒" : ""
-                onClicked: net.pick(modelData)
+                anchors.fill: parent
+                hoverEnabled: true
+                onClicked: {
+                    Quickshell.execDetached(["xdg-open", "http://neverssl.com"])
+                    popup.close()
+                }
+            }
+        }
 
-                Connections {
-                    target: row.modelData
+        // its details, two by two; a click copies an address
+        Grid {
+            visible: net.device !== null
+            width: parent.width
+            columns: 2
+            columnSpacing: 20
+            rowSpacing: 3
+            topPadding: 2
+            bottomPadding: 4
 
-                    function onConnectionFailed(reason) {
-                        net.failed = row.modelData.name
-                        if (reason === ConnectionFailReason.NoSecrets)
-                            net.asking = row.modelData
+            Repeater {
+                model: !net.device ? [] : [
+                    { label: "IP address", value: net.info.ip, copy: true },
+                    { label: "Gateway", value: net.info.gateway, copy: true },
+                    { label: "Receiving", value: net.rate(net.rx) },
+                    { label: "Sending", value: net.rate(net.tx) },
+                    ...(net.device === net.wifi ? [
+                        { label: "Signal", value: net.info.signal ? `${net.info.signal} %` : "" },
+                        { label: "Band", value: net.info.band ? `${net.info.band} · ch ${net.info.channel}` : "" },
+                        { label: "Speed", value: net.info.rate }
+                    ] : [
+                        { label: "Speed", value: net.wired.linkSpeed > 0 ? (net.wired.linkSpeed >= 1000 ? `${net.wired.linkSpeed / 1000} Gb/s` : `${net.wired.linkSpeed} Mb/s`) : "" },
+                        { label: "Interface", value: net.wired.name }
+                    ])
+                ]
+
+                Item {
+                    id: cell
+
+                    required property var modelData
+                    property bool copied: false
+
+                    width: (parent.width - 20) / 2
+                    height: 18
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        x: 4
+                        text: cell.modelData.label
+                        color: Theme.dim
+                        font.family: Theme.font
+                        font.pixelSize: 11
+                    }
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.right: parent.right
+                        anchors.rightMargin: 4
+                        text: cell.copied ? "Copied" : cell.modelData.value || "—"
+                        color: cell.copied ? Theme.accent : copyArea.containsMouse ? Theme.accent : Theme.text
+                        font.family: Theme.font
+                        font.pixelSize: 11
+                        font.features: {
+                            "tnum": 1
+                        }
+
+                        MouseArea {
+                            id: copyArea
+
+                            enabled: cell.modelData.copy === true && !!cell.modelData.value
+                            anchors.fill: parent
+                            anchors.margins: -3
+                            hoverEnabled: true
+                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            onClicked: {
+                                Quickshell.execDetached(["wl-copy", cell.modelData.value])
+                                cell.copied = true
+                                uncopy.restart()
+                            }
+                        }
+                    }
+
+                    Timer {
+                        id: uncopy
+
+                        interval: 900
+                        onTriggered: cell.copied = false
                     }
                 }
             }
         }
 
-        // a new secured network's password
-        Rectangle {
-            visible: net.asking !== null
+        // the Wi-Fi's networks
+        Text {
+            visible: net.wifi !== null && Networking.wifiEnabled && net.rows.length === 0
+            x: 4
+            height: 30
+            verticalAlignment: Text.AlignVCenter
+            text: net.scanning ? "Looking for networks…" : "No network in reach"
+            color: Theme.dim
+            font.family: Theme.font
+            font.pixelSize: 12
+        }
+
+        ListView {
+            id: networks
+
+            visible: net.wifi !== null && Networking.wifiEnabled && net.rows.length > 0
             width: parent.width
-            height: 40
-            radius: 8
-            color: Theme.slot
+            height: Math.min(contentHeight, 330)
+            clip: true
+            interactive: contentHeight > height
+            boundsBehavior: Flickable.StopAtBounds
+            model: net.rows
 
-            TextInput {
-                id: psk
+            delegate: Column {
+                id: entry
 
-                x: 12
-                width: parent.width - 24
-                anchors.verticalCenter: parent.verticalCenter
-                focus: net.asking !== null
-                echoMode: TextInput.Password
-                color: Theme.text
-                font.family: Theme.font
-                font.pixelSize: 13
-                onAccepted: {
-                    net.asking.connectWithPsk(text)
-                    text = ""
-                    net.asking = null
+                required property var modelData
+                required property int index
+                readonly property var n: modelData.net
+
+                width: networks.width
+
+                SectionLabel {
+                    visible: entry.modelData.section !== ""
+                    text: entry.modelData.section
+                    action: entry.index === 0 ? (net.scanning ? "Scanning…" : "Rescan") : ""
+                    onActed: net.rescan()
                 }
 
-                Text {
-                    visible: psk.text === ""
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: net.asking ? `Password for ${net.asking.name}, then Enter` : ""
-                    color: Theme.dim
-                    font: psk.font
+                ListRow {
+                    icon: net.signalIcon(entry.n, false)
+                    trailingIcon: net.secured(entry.n) ? Qt.resolvedUrl("icons/lock.svg") : ""
+                    title: entry.n.name
+                    active: entry.n.connected
+                    subtitle: net.status(entry.n)
+                    removable: entry.n.known && !entry.n.connected
+                    removeLabel: "Forget"
+                    onClicked: net.pick(entry.n)
+                    onRemoved: entry.n.forget()
+                }
+
+                // a new secured network's password, under it
+                Rectangle {
+                    visible: net.asking === entry.n
+                    width: parent.width
+                    height: visible ? 36 : 0
+                    radius: 8
+                    color: Theme.slot
+
+                    TextInput {
+                        id: psk
+
+                        x: 12
+                        width: parent.width - 24 - join.width
+                        anchors.verticalCenter: parent.verticalCenter
+                        focus: net.asking === entry.n
+                        echoMode: TextInput.Password
+                        color: Theme.text
+                        font.family: Theme.font
+                        font.pixelSize: 13
+                        clip: true
+                        onAccepted: join.go()
+                        Keys.onEscapePressed: event => {
+                            net.asking = null
+                            text = ""
+                        }
+
+                        Text {
+                            visible: psk.text === ""
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "Password"
+                            color: Theme.dim
+                            font: psk.font
+                        }
+                    }
+
+                    Text {
+                        id: join
+
+                        function go() {
+                            if (psk.text === "")
+                                return
+                            net.tried = entry.n.name
+                            entry.n.connectWithPsk(psk.text)
+                            psk.text = ""
+                            net.asking = null
+                        }
+
+                        anchors.right: parent.right
+                        anchors.rightMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Connect"
+                        color: psk.text === "" ? Theme.dim : joinArea.containsMouse ? Theme.text : Theme.accent
+                        font.family: Theme.font
+                        font.pixelSize: 12
+                        font.weight: Font.DemiBold
+
+                        MouseArea {
+                            id: joinArea
+
+                            anchors.fill: parent
+                            anchors.margins: -6
+                            hoverEnabled: true
+                            onClicked: join.go()
+                        }
+                    }
+                }
+
+                Connections {
+                    target: entry.n
+
+                    function onConnectionFailed(reason) {
+                        if (reason === ConnectionFailReason.NoSecrets) {
+                            net.fail(entry.n, net.tried === entry.n.name ? "Wrong password" : "")
+                            net.asking = entry.n
+                        } else {
+                            net.fail(entry.n, "Couldn't connect")
+                        }
+                        net.tried = ""
+                    }
                 }
             }
         }
 
-        ListRow {
-            visible: net.wired !== null
-            icon: "network-wired-symbolic"
-            title: "Wired"
-            active: true
-            subtitle: net.wired && net.wired.linkSpeed > 0 ? `Connected · ${net.wired.linkSpeed} Mb/s` : "Connected"
-        }
-
-        PopupHeader {
+        SectionLabel {
             visible: net.vpns.length > 0
-            title: "VPN"
+            text: "VPN"
         }
 
         Repeater {
