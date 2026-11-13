@@ -410,9 +410,10 @@ migrations and update channels (lodestar does that), their titlebar plugin.
   next screen; Meta+Shift+Left/Right straight to the other screen (KDE's).
   The window stays put as the view follows it, and the neighbour is seen
   passing over it to its other side (hyprslide, above).
-  Meta+Down, KDE's minimize, is unbound since 2026-11-13: Hyprland has no
-  minimize, and a window hidden in a special workspace left no trace to find
-  it by (a minimize would need the bar to list hidden windows).
+  Meta+Down, KDE's minimize, hides the window in a special workspace
+  (Hyprland has no minimize); Meta+Shift+Down shows the hidden ones over
+  the screen, and Meta+Down on one puts it back on the desktop under.
+  Nothing else shows a window is hidden (the bar could list them).
   Ctrl+Alt+Esc kill.
 - Meta+Return: the terminal, floating. Meta+E: the files (Nautilus, a new
   window, as Dolphin's). Meta+²: Spotify's scratchpad (the key that opens
