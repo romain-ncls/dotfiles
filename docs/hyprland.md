@@ -397,8 +397,11 @@ migrations and update channels (lodestar does that), their titlebar plugin.
   a floating window, full width, and floats a docked one (KDE's maximize
   and restore); Meta+Left/Right: half the screen on that side (KDE's quick
   tile), a docked window staying docked, the tape scrolled to put it there.
-  Meta+Shift+Left/Right move the window along the tape, and past its end
-  onto the next screen; Meta+Shift+Q/D straight to the other screen.
+  Meta+Shift+Q/D move the window along the tape, and past its end onto the
+  next screen; Meta+Shift+Left/Right straight to the other screen (KDE's).
+  With columns as wide as the screen the move shows nothing: the view
+  follows the window, and the neighbour passes behind it (Hyprland draws
+  the focused window last).
   Meta+Down, KDE's minimize, is unbound since 2026-11-13: Hyprland has no
   minimize, and a window hidden in a special workspace left no trace to find
   it by (a minimize would need the bar to list hidden windows).
