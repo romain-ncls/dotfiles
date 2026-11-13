@@ -32,10 +32,9 @@ Item {
         anchors.centerIn: parent
         spacing: 6
 
-        IconImage {
+        Glyph {
             anchors.verticalCenter: parent.verticalCenter
-            implicitSize: Theme.icon
-            source: Quickshell.iconPath(button.icon, "image-missing")
+            icon: button.icon
         }
 
         Text {
