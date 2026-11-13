@@ -9,12 +9,14 @@
 // the history, where a click shows the app's window instead. The history
 // lasts across the shell's restarts (a file in its state folder, under the
 // home folder only its owner reads): the last 100 of the last day, without
-// what an app marked transient, without pictures.
+// what an app marked transient, without pictures. The apps in `brief` (a
+// screenshot taken) are only on screen, as transient ones.
 //
 // An app's popups stack, its newest in front (NotificationStack.qml); the
 // same notification again counts ("×2") instead. Their time (5 s when the
-// app leaves it to us; critical ones stay; new words start it again) pauses
-// while the pointer is on them. A click runs the notification's default
+// app leaves it to us, or asks for none: Discord's would stay until
+// clicked; critical ones stay; new words start it again) pauses while the
+// pointer is on them. A click runs the notification's default
 // action (Discord: its channel), else opens its file, else shows its app; a
 // right click dismisses it, gone from the history too. Do not disturb: no
 // popups but critical ones. A notification about a file (Plasma's x-kde-urls
@@ -57,6 +59,8 @@ Scope {
     readonly property var popupsBy: by(entries.filter(e => e.popup))
     readonly property var stacks: order(entries.filter(e => e.popup)).reverse().map(g => ({ key: g }))
 
+    // apps whose notifications aren't kept (their app names)
+    readonly property var brief: ["LumineCapture"]
     readonly property int keep: 100
     readonly property real keepFor: 24 * 3600 * 1000
     property int serial: 0
@@ -121,8 +125,8 @@ Scope {
             body: n.body,
             critical: critical(n),
             resident: n.resident,
-            transient: n.transient,
-            timeout: critical(n) ? 0 : n.expireTimeout > 0 ? n.expireTimeout : n.expireTimeout === 0 ? 0 : 5000,
+            transient: n.transient || brief.includes(n.appName),
+            timeout: critical(n) ? 0 : n.expireTimeout > 0 ? n.expireTimeout : 5000,
             files: files(n),
             group: named ? (n.desktopEntry || n.appName).toLowerCase() : ""
         }
@@ -396,7 +400,7 @@ Scope {
         if (!Array.isArray(list))
             list = []
         const known = entries.map(e => e.key)
-        const back = list.filter(e => e && typeof e.key === "string" && typeof e.group === "string" && typeof e.time === "number" && typeof e.summary === "string" && !known.includes(e.key)).map(e => Object.assign({
+        const back = list.filter(e => e && typeof e.key === "string" && typeof e.group === "string" && typeof e.time === "number" && typeof e.summary === "string" && !known.includes(e.key) && !brief.includes(e.app)).map(e => Object.assign({
                 app: "",
                 icon: "",
                 body: "",
