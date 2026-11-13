@@ -303,8 +303,9 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    nm-applet), Bluetooth (pairing through spanreed's agent); both agents
    ask in a card above the bar, a window of its own, as a request can
    come with no popup open (BarCard.qml), the sound (devices, volume, the
-   microphone; Meta+~), the battery (power profiles,
-   brightness).
+   microphone; Meta+~), the battery (power profiles, brightness, the
+   other devices' batteries: the mouse, the headset). Their look: a pass
+   on 13 Nov 2026, below, Open.
 4. **lumar, from scratch.** One palette, templates rendered at apply (Go
    templates, as now): Hyprland, shadesmar, Ghostty, libadwaita and adw-gtk3
    (below, Apps and toolkits), `kdeglobals` for the few Qt apps, then each app with
@@ -768,3 +769,31 @@ later (yazi, btop, lazygit…).
   picker), Kooha (a window; the portal's picker at each recording), OBS
   (much more than clips of a few seconds). LumineCapture's own recording
   is only on its roadmap.
+- [x] A pass on the bar and its popups (13 Nov 2026). The tray in line
+      icons, as the bar's: the apps' own are colored (Spotify's green,
+      Easy Effects' blue); each shows in the text's color instead, ours
+      for the apps we know (Lucide's, in the shell's icons/), else its
+      theme's "-symbolic", else its picture as a silhouette (Discord's,
+      whose shape says muted). Not in nalthis's theme: Plasma's tray would
+      change too. The bar's own icons are tinted the same (Glyph.qml), the
+      battery's by tens (UPower's names fell back on Breeze's, grey). The
+      popups take Omarchy's panels' look: a head (icon, name, a caption in
+      capitals, the switch) and sections in small capitals. The network's
+      after Omarchy 4.5's panel: details (address, gateway, traffic,
+      signal and band, speed), known networks first, a lock on the secured
+      ones, Forget on hover, a password asked under its network, and a
+      button to a captive portal's sign-in page (NetworkManager says
+      "portal"; it opens http://neverssl.com, as its own check's site is
+      https-only in browsers). The clipboard's list scrolls (it ran off the
+      screen past 30 entries) and shows pictures (decoded once into the
+      runtime folder); Up, Down and Enter pick. Every popup scrolls once
+      taller than the screen allows. The battery's lists the other
+      devices' batteries: UPower's (a Logitech mouse, which UPower files
+      as a keyboard) and the Alienware headset's (`awpro --json status`
+      when it opens). The sound's names its devices by PipeWire's short
+      name, their kind under it. Notifications: a popup's time is 5 s when
+      the app asks for none too (`expire_timeout` 0: Discord's stayed until
+      clicked); LumineCapture's are only on screen (`brief`), the old ones
+      dropped. Tried headless with fake tray items (Discord's real picture)
+      and a test clipboard (cliphist under XDG_CACHE_HOME); the network,
+      Bluetooth, sound and battery popups on the machine's own services.

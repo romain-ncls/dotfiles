@@ -45,8 +45,31 @@ BarButton {
         onPressed: volume.bar.open = volume.bar.open === "volume" ? "" : "volume"
     }
 
+    // A device by its short name (node.nick: "HDMI 3", a monitor's, the
+    // headset's), the card's own kind of output under it when it says more
+    // ("HDMI / DisplayPort 2 Output"); else its description.
     function name(node) {
-        return node.description || node.nickname || node.name
+        return node.nickname || node.description || node.name
+    }
+    function detail(node) {
+        const kind = node.properties["device.profile.description"] || ""
+        return node.nickname && kind !== node.nickname ? kind : ""
+    }
+    function kindIcon(node, input) {
+        const text = `${node.description} ${node.nickname}`
+        if (input)
+            return "audio-input-microphone-symbolic"
+        if (/HDMI|DisplayPort/.test(text))
+            return "video-display-symbolic"
+        if (/Headphones/.test(text))
+            return "audio-headphones-symbolic"
+        if (node.properties["device.bus"] === "usb")
+            return "audio-headset-symbolic"
+        return "audio-speakers-symbolic"
+    }
+    // Easy Effects' own sink, in its tray icon's shape
+    function effects(node) {
+        return /easyeffects/i.test(node.name)
     }
 
     BarPopup {
@@ -54,39 +77,21 @@ BarButton {
         from: volume
         name: "volume"
 
-        PopupHeader {
-            title: "Output"
+        SectionLabel {
+            text: "Output"
         }
 
-        Row {
-            width: parent.width
-            spacing: 10
-
-            ListRow {
-                width: 40
-                icon: volume.icon
-                onClicked: {
-                    if (volume.sink && volume.sink.audio)
-                        volume.sink.audio.muted = !volume.sink.audio.muted
-                }
+        SliderRow {
+            icon: volume.icon
+            value: volume.sink && volume.sink.audio ? volume.sink.audio.volume : 0
+            off: volume.muted
+            onClicked: {
+                if (volume.sink && volume.sink.audio)
+                    volume.sink.audio.muted = !volume.sink.audio.muted
             }
-
-            Slider {
-                anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - 100
-                value: volume.sink && volume.sink.audio ? volume.sink.audio.volume : 0
-                onMoved: v => {
-                    if (volume.sink && volume.sink.audio)
-                        volume.sink.audio.volume = v
-                }
-            }
-
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: volume.percent + "%"
-                color: volume.muted ? Theme.dim : Theme.text
-                font.family: Theme.font
-                font.pixelSize: 12
+            onMoved: v => {
+                if (volume.sink && volume.sink.audio)
+                    volume.sink.audio.volume = v
             }
         }
 
@@ -96,48 +101,32 @@ BarButton {
             ListRow {
                 required property var modelData
 
-                icon: "audio-speakers-symbolic"
+                icon: volume.effects(modelData) ? "" : volume.kindIcon(modelData, false)
+                lineIcon: volume.effects(modelData) ? Qt.resolvedUrl("icons/sliders-vertical.svg") : ""
                 title: volume.name(modelData)
+                subtitle: volume.detail(modelData)
                 active: modelData === volume.sink
                 onClicked: Pipewire.preferredDefaultAudioSink = modelData
             }
         }
 
-        PopupHeader {
-            title: "Microphone"
+        SectionLabel {
+            text: "Microphone"
         }
 
-        Row {
-            width: parent.width
-            spacing: 10
-
+        SliderRow {
             readonly property bool micMuted: volume.source && volume.source.audio ? volume.source.audio.muted : false
 
-            ListRow {
-                width: 40
-                icon: parent.micMuted ? "microphone-sensitivity-muted" : "microphone-sensitivity-high"
-                onClicked: {
-                    if (volume.source && volume.source.audio)
-                        volume.source.audio.muted = !volume.source.audio.muted
-                }
+            icon: micMuted ? "microphone-sensitivity-muted" : "microphone-sensitivity-high"
+            value: volume.source && volume.source.audio ? volume.source.audio.volume : 0
+            off: micMuted
+            onClicked: {
+                if (volume.source && volume.source.audio)
+                    volume.source.audio.muted = !volume.source.audio.muted
             }
-
-            Slider {
-                anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - 100
-                value: volume.source && volume.source.audio ? volume.source.audio.volume : 0
-                onMoved: v => {
-                    if (volume.source && volume.source.audio)
-                        volume.source.audio.volume = v
-                }
-            }
-
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: volume.source && volume.source.audio ? Math.round(volume.source.audio.volume * 100) + "%" : ""
-                color: parent.micMuted ? Theme.dim : Theme.text
-                font.family: Theme.font
-                font.pixelSize: 12
+            onMoved: v => {
+                if (volume.source && volume.source.audio)
+                    volume.source.audio.volume = v
             }
         }
 
@@ -147,8 +136,9 @@ BarButton {
             ListRow {
                 required property var modelData
 
-                icon: "audio-input-microphone-symbolic"
+                icon: volume.kindIcon(modelData, true)
                 title: volume.name(modelData)
+                subtitle: volume.detail(modelData)
                 active: modelData === volume.source
                 onClicked: Pipewire.preferredDefaultAudioSource = modelData
             }

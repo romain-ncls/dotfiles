@@ -1,8 +1,10 @@
 // The clipboard's history, Klipper's: what was copied, kept by cliphist
 // (clipboard-history.service watches the clipboard; a password manager's
-// copies, marked secret, are left out). The popup: a filter, the entries,
-// the newest first (a click copies one back, the cross forgets it), and
-// Clear.
+// copies, marked secret, are left out). The popup: a filter, then the
+// entries, the newest first, in a list that scrolls past half the screen; a
+// click, or Enter on the one Up and Down are on, copies one back; the cross
+// forgets it; Clear forgets them all. A picture shows as one: cliphist
+// decodes it, once, into the runtime folder.
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -13,13 +15,32 @@ BarButton {
     popup: "clipboard"
     icon: "klipper"
 
-    // cliphist's lines: "id<TAB>preview"
+    // cliphist's lines: "id<TAB>preview"; a picture's preview is
+    // "[[ binary data 134 KiB png 300x500 ]]"
     property var entries: []
     property string filter: ""
+    // the entry the keys are on
+    property int current: 0
 
-    readonly property var shown: {
+    readonly property var matching: {
         const f = filter.toLowerCase()
-        return entries.filter(e => f === "" || e.preview.toLowerCase().includes(f)).slice(0, 30)
+        return entries.filter(e => f === "" || e.text.toLowerCase().includes(f))
+    }
+    onMatchingChanged: current = 0
+
+    readonly property string pictures: Quickshell.env("XDG_RUNTIME_DIR") + "/shadesmar-clipboard"
+
+    function parse(l) {
+        const tab = l.indexOf("\t")
+        const preview = l.slice(tab + 1)
+        const m = preview.match(/^\[\[ binary data (.+) (\w+) (\d+)x(\d+) \]\]$/)
+        return {
+            line: l,
+            id: l.slice(0, tab),
+            preview: preview,
+            image: m ? { size: m[1], type: m[2], width: m[3], height: m[4] } : null,
+            text: m ? "image" : preview.replace(/\s+/g, " ").trim()
+        }
     }
 
     Process {
@@ -27,17 +48,8 @@ BarButton {
 
         command: ["cliphist", "list"]
         stdout: StdioCollector {
-            onStreamFinished: {
-                cb.entries = text.split("\n").filter(l => l.includes("\t")).map(l => {
-                    const tab = l.indexOf("\t")
-                    return { line: l, preview: l.slice(tab + 1) }
-                })
-            }
+            onStreamFinished: cb.entries = text.split("\n").filter(l => l.includes("\t")).map(l => cb.parse(l))
         }
-    }
-
-    function refresh() {
-        list.running = true
     }
 
     // the line goes to cliphist's stdin, as its docs have it
@@ -45,8 +57,15 @@ BarButton {
         Quickshell.execDetached(["sh", "-c", script, "sh", line])
     }
 
-    function image(e) {
-        return e.preview.startsWith("[[ binary data")
+    function copy(e) {
+        if (!e)
+            return
+        run("printf '%s' \"$1\" | cliphist decode | wl-copy", e.line)
+        popup.close()
+    }
+    function forget(e) {
+        run(`printf '%s' "$1" | cliphist delete; rm -f "${pictures}/${e.id}".*`, e.line)
+        entries = entries.filter(o => o.line !== e.line)
     }
 
     BarPopup {
@@ -59,17 +78,14 @@ BarButton {
         onShownChanged: {
             if (shown) {
                 cb.filter = ""
-                cb.refresh()
+                list.running = true
             }
         }
 
-        PopupHeader {
+        PopupHero {
+            icon: cb.icon
             title: "Clipboard"
-            action: cb.entries.length > 0 ? "Clear" : ""
-            onActed: {
-                Quickshell.execDetached(["cliphist", "wipe"])
-                cb.entries = []
-            }
+            caption: cb.entries.length === 1 ? "1 copy kept" : `${cb.entries.length} copies kept`
         }
 
         Rectangle {
@@ -100,18 +116,24 @@ BarButton {
                     font: search.font
                 }
 
-                // Enter copies the first
-                onAccepted: {
-                    if (cb.shown.length > 0) {
-                        cb.run("printf '%s' \"$1\" | cliphist decode | wl-copy", cb.shown[0].line)
-                        popup.close()
-                    }
-                }
+                Keys.onUpPressed: cb.current = Math.max(0, cb.current - 1)
+                Keys.onDownPressed: cb.current = Math.min(cb.matching.length - 1, cb.current + 1)
+                onAccepted: cb.copy(cb.matching[cb.current])
+            }
+        }
+
+        SectionLabel {
+            visible: cb.entries.length > 0
+            text: "History"
+            action: "Clear"
+            onActed: {
+                Quickshell.execDetached(["sh", "-c", `cliphist wipe; rm -rf "${cb.pictures}"`])
+                cb.entries = []
             }
         }
 
         Text {
-            visible: cb.shown.length === 0
+            visible: cb.matching.length === 0
             x: 4
             height: 30
             verticalAlignment: Text.AlignVCenter
@@ -121,22 +143,41 @@ BarButton {
             font.pixelSize: 12
         }
 
-        Repeater {
-            model: cb.shown
+        ListView {
+            id: rows
 
-            ListRow {
+            visible: cb.matching.length > 0
+            width: parent.width
+            height: Math.min(contentHeight, (cb.bar.screen ? cb.bar.screen.height : 1080) / 2)
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            model: cb.matching
+            currentIndex: cb.current
+            onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
+
+            delegate: ListRow {
+                id: row
+
                 required property var modelData
+                required property int index
+                readonly property var e: modelData
+                readonly property string file: e.image ? `${cb.pictures}/${e.id}.${e.image.type}` : ""
+                property bool decoded: false
 
-                icon: cb.image(modelData) ? "image-x-generic" : ""
-                title: cb.image(modelData) ? "Image " + modelData.preview.replace(/^\[\[ binary data /, "").replace(/ \]\]$/, "") : modelData.preview.replace(/\s+/g, " ").trim()
+                width: rows.width
+                thumbnail: decoded ? "file://" + file : ""
+                icon: e.image && !decoded ? "image-x-generic" : ""
+                title: e.image ? "Image" : e.text
+                subtitle: e.image ? `${e.image.type.toUpperCase()} · ${e.image.width} × ${e.image.height} · ${e.image.size}` : ""
+                selected: index === cb.current
                 removable: true
-                onClicked: {
-                    cb.run("printf '%s' \"$1\" | cliphist decode | wl-copy", modelData.line)
-                    popup.close()
-                }
-                onRemoved: {
-                    cb.run("printf '%s' \"$1\" | cliphist delete", modelData.line)
-                    cb.entries = cb.entries.filter(e => e.line !== modelData.line)
+                onClicked: cb.copy(e)
+                onRemoved: cb.forget(e)
+
+                Process {
+                    running: row.file !== ""
+                    command: ["sh", "-c", "mkdir -p \"${2%/*}\" && { [ -s \"$2\" ] || { printf '%s' \"$1\" | cliphist decode > \"$2.part\" && mv \"$2.part\" \"$2\"; }; }", "sh", row.e.line, row.file]
+                    onExited: code => row.decoded = code === 0
                 }
             }
         }
