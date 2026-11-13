@@ -205,14 +205,7 @@ function G.go(d, instant)
         unpeek(true)
     end
     local from, slide = current(), hyprslide()
-    -- hyprslide 2 (a session started before 3 was built) is told the
-    -- direction around the switch instead
-    local towards = slide and not slide.grid
-    if towards and from ~= d then
-        local ra, ca = place(from)
-        local rb, cb = place(d)
-        slide.towards(cb - ca, rb - ra)
-    elseif slide then
+    if slide then
         declare(slide)
     end
     animate(from == d and "fade" or slide and "slide" or style(from, d), instant)
@@ -222,15 +215,12 @@ function G.go(d, instant)
         s.monitor:set_workspace(tostring(s.base + d))
     end
     switching = false
-    if towards then
-        slide.towards(0, 0)
-    end
     announce(d)
 end
 
 -- A swipe that lands goes there (hyprslide: four fingers). The plugin
 -- loads after the config's first run, which runs again then.
-if hyprslide() and hyprslide().grid then
+if hyprslide() then
     hl.on("hyprslide.swipe", function(d)
         G.go(d)
     end)
