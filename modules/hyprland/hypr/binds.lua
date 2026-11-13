@@ -198,6 +198,23 @@ bind(mod .. " + up", dock_or_float)
 bind(mod .. " + left", function() half("left") end)
 bind(mod .. " + right", function() half("right") end)
 
+-- Meta+Down hides the window (Plasma's minimize; Hyprland has none: a
+-- special workspace, "hidden"), Meta+Shift+Down shows the hidden ones over
+-- the screen; Meta+Down on one of them puts it back on the desktop under.
+local function hide()
+    local w = hl.get_active_window()
+    if not w then
+        return
+    end
+    if w.workspace and w.workspace.name == "special:hidden" then
+        hl.dispatch(hl.dsp.window.move({ workspace = w.monitor.active_workspace }))
+    else
+        hl.dispatch(hl.dsp.window.move({ workspace = "special:hidden", follow = false }))
+    end
+end
+bind(mod .. " + down", hide)
+bind(mod .. " + SHIFT + down", hl.dsp.workspace.toggle_special("hidden"))
+
 -- Meta+Shift+Q and D (left and right on AZERTY's home row): the window one
 -- place along the tape (its column swapped with the next one), and from
 -- either end onto the screen on that side, at the end it comes in by. A
