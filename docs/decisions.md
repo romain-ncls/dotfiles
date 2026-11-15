@@ -279,6 +279,14 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   negotiation* to **TLS**; the phone's Windows App cannot, so it waits for the
   fix (or a separate RDP user in System Settings → Remote Desktop).
 
+## SSH server (home PC)
+
+- **sshd on menadion only, public keys only** (15 Nov 2026), so wandersail can
+  reach it. `modules/sshd`: no passwords, no root login, port 22 in the
+  firewall. Who may log in is per host, in `hosts/<host>/home/.ssh/authorized_keys`
+  (wandersail's key, the same one the homelab authorizes). The key's comment is
+  dropped there: it is the work email, and this repo is public.
+
 ## Docker
 
 - **docker + docker-compose + docker-buildx from the Arch repos**, not Docker

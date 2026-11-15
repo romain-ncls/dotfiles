@@ -1,0 +1,13 @@
+# OpenSSH server (openssh comes with base): public keys only, no root login.
+# Who may log in is the host's own ~/.ssh/authorized_keys, in
+# hosts/<host>/home/.ssh/ (docs/decisions.md, SSH server).
+services:
+  - sshd.service
+
+files:
+  /etc/ssh/sshd_config.d/10-keys-only.conf:
+    then: systemctl try-reload-or-restart sshd.service
+
+firewall:
+  tcp:
+    - 22

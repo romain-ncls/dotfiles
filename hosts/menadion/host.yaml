@@ -19,6 +19,7 @@ modules:
   - logi-smartshift
   - nvidia
   - krdp
+  - sshd
   - lodestar
 
 vars:
@@ -39,6 +40,8 @@ files:
   /etc/sudoers.d/50-reboot-to-windows:
     mode: 0440
     check: visudo -cf {}
+  ~/.ssh/authorized_keys:
+    mode: 0600
 
 json:
   # Sizes for the 4K TV, on top of the readest module's settings.
