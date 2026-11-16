@@ -53,6 +53,7 @@ Singleton {
     }
     readonly property color frameColor: palette.frame
     readonly property color paneColor: palette.pane
+    readonly property color baseColor: palette.base
     readonly property color textColor: palette.text
 
     // Nalthis's glass in Plasma: the window background (the pane) at 80 %,
@@ -60,6 +61,9 @@ Singleton {
     readonly property real glass: 0.80
     readonly property color bar: alpha(paneColor, glass)
     readonly property color popup: alpha(paneColor, glass) // the bar's popups
+    // the bar: the new tab's islands' glass (modules/new-tab), the base, at
+    // 83 % rather than their 66 %, for reading
+    readonly property color island: alpha(baseColor, 0.83)
     readonly property color outline: alpha(textColor, 0.10)
     readonly property color shade: alpha(frameColor, 0.88) // behind the overview
     readonly property color text: palette.text

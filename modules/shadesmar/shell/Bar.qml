@@ -38,7 +38,7 @@ PanelWindow {
     Rectangle {
         anchors.fill: parent
         radius: Theme.floating ? Theme.radius : 0
-        color: Theme.bar
+        color: Theme.island
         border.width: Theme.floating ? 1 : 0
         border.color: Theme.outline
     }
