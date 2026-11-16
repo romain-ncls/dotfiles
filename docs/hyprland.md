@@ -400,8 +400,8 @@ migrations and update channels (lodestar does that), their titlebar plugin.
 - Desktops: Meta+A/Z/Q/S and Ctrl+F1..F4 jump (as now), Meta+Ctrl+arrows
   move in the grid (KDE's default), four fingers on the touchpad drag it
   (hyprslide). The side screens only.
-- Windows: Alt+Tab (or Alt+Shift+D; back: Alt+Shift+Tab or Alt+Shift+Q)
-  along the tape, left to right and round again (the
+- Windows: Alt+Tab along the tape, left to right and round again, Alt+Shift+Tab
+  back (Alt+Shift+D and Q: the same, stopping at the ends; the
   docked windows in the tape's order, then the floating ones; the view
   scrolling to the window; a switcher with previews, as Plasma's, was tried
   and dropped on 2026-11-04: romain prefers the plain scroll). Meta+Up docks
