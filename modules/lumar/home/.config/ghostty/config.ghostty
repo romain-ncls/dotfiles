@@ -11,7 +11,7 @@ window-padding-y = 8
 window-padding-balance = true
 cursor-style-blink = false
 # lumar's glass, a little thicker than shadesmar's bar (80 %, Theme.qml): the
-# background at 85 %, blurred behind (by Hyprland, lumar.lua; by KWin in
+# background at 88 %, blurred behind (by Hyprland, lumar.lua; by KWin in
 # Plasma); what an app paints itself (Neovim's background) stays opaque
-background-opacity = 0.85
+background-opacity = 0.88
 background-blur = true
