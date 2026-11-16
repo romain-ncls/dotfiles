@@ -28,8 +28,9 @@ bind(mod .. " + twosuperior", function() G.spotify() end)
 -- Meta+~ (Meta+Shift+²): the sound's popup, as Plasma's audio applet (Volume.qml).
 bind(mod .. " + SHIFT + twosuperior", hl.dsp.global("shadesmar:volume"))
 
--- Windows. Alt+Tab goes through the desktop's windows from left to right,
--- then round to the first again (Alt+Shift+Tab: the other way), in the
+-- Windows. Alt+Tab (or Alt+Shift+D) goes through the desktop's windows from
+-- left to right, then round to the first again (Alt+Shift+Tab or
+-- Alt+Shift+Q: the other way; Q left and D right, as with Meta), in the
 -- order they stand, not in the order of use: the docked ones along the
 -- tape (those of one column top to bottom), then the floating ones. (A
 -- floating window's place on the screen changes as the tape scrolls: among
@@ -69,6 +70,8 @@ local function cycle(step)
 end
 bind("ALT + Tab", function() cycle(1) end)
 bind("ALT + SHIFT + Tab", function() cycle(-1) end)
+bind("ALT + SHIFT + d", function() cycle(1) end)
+bind("ALT + SHIFT + q", function() cycle(-1) end)
 
 -- Alt+² and Alt+Shift+² (Plasma's Alt+` and Alt+~): the current app's
 -- windows on the screens. (hl.get_windows' class is the exact class.)
