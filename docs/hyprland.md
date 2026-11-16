@@ -334,14 +334,18 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    default, as close to maximized as it gets: no gaps, no borders, square
    tiled windows (floating ones keep 10 px corners in both layouts), the bar
    docked; floating on Meta+G (gaps, 10 px corners, the bar floating), kept
-   across logins. The bar, its popups, notifications, the OSD and the
+   across logins. The bar's popups, notifications, the OSD and the
    launcher in Nalthis's glass from Plasma: the pane at 80 %, blurred
    behind, a 10 % outline in the text's color (the page's 92 % of the
-   frame, dropped). Noto Sans; Ghostty in Fira Code, no title bar, the
-   page's terminal colors on the pane (about Konsole's Nalthis background)
-   and the second text color. The wallpaper: shadesmar's, Backdrop's current
-   picture (the newest liked one, ~/Pictures/Backdrop, until its daemon ran
-   in Hyprland: below, Open). The GNOME apps are in,
+   frame, dropped); the bar and Ghostty in the glass of Brave's new tab's
+   islands (2026-11-16): the base at 83 % (Ghostty's 86 %: it blends in
+   linear light), the blur six by three passes, livelier (contrast 1,
+   vibrancy 0.3 at 0.7 darkness; lumar.lua). Noto Sans; Ghostty in Fira
+   Code, no title bar, the page's terminal colors on the base (on the pane
+   before, as Konsole's Nalthis background) and the second text color. The
+   wallpaper: shadesmar's, Backdrop's current picture (the newest liked
+   one, ~/Pictures/Backdrop, until its daemon ran in Hyprland: below,
+   Open). The GNOME apps are in,
    Hyprland's defaults through hyprland-mimeapps.list; Brave's theme too
    (docs/manual-steps.md); the file chooser is GTK's (Nautilus's needs
    GNOME Shell). Done.

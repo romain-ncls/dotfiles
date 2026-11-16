@@ -10,8 +10,10 @@ window-padding-x = 10
 window-padding-y = 8
 window-padding-balance = true
 cursor-style-blink = false
-# lumar's glass, a little thicker than shadesmar's bar (80 %, Theme.qml): the
-# background at 88 %, blurred behind (by Hyprland, lumar.lua; by KWin in
-# Plasma); what an app paints itself (Neovim's background) stays opaque
-background-opacity = 0.88
+# lumar's glass, as Brave's new tab's islands (modules/new-tab) and shadesmar's
+# bar: the base (apply-lumar's theme) at 86 %, blurred behind (by Hyprland,
+# lumar.lua; by KWin in Plasma). Ghostty blends in linear light: its 86 %
+# looks as the bar's 83 %. What an app paints itself (Neovim's background)
+# stays opaque.
+background-opacity = 0.86
 background-blur = true
