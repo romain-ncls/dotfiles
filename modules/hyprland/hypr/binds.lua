@@ -28,14 +28,15 @@ bind(mod .. " + twosuperior", function() G.spotify() end)
 -- Meta+~ (Meta+Shift+²): the sound's popup, as Plasma's audio applet (Volume.qml).
 bind(mod .. " + SHIFT + twosuperior", hl.dsp.global("shadesmar:volume"))
 
--- Windows. Alt+Tab (or Alt+Shift+D) goes through the desktop's windows from
--- left to right, then round to the first again (Alt+Shift+Tab or
--- Alt+Shift+Q: the other way; Q left and D right, as with Meta), in the
+-- Windows. Alt+Tab goes through the desktop's windows from left to right,
+-- then round to the first again (Alt+Shift+Tab: the other way); Alt+Shift+D
+-- and Alt+Shift+Q (Q left, D right, as with Meta) the same, but they stop
+-- at the last window and the first. All of them go in the
 -- order they stand, not in the order of use: the docked ones along the
 -- tape (those of one column top to bottom), then the floating ones. (A
 -- floating window's place on the screen changes as the tape scrolls: among
 -- the docked ones, it would come round twice or not at all.)
-local function cycle(step)
+local function cycle(step, stop)
     local w = hl.get_active_window()
     local ws = w and w.workspace or hl.get_active_workspace()
     if not ws then
@@ -62,6 +63,9 @@ local function cycle(step)
     local n = step > 0 and 1 or #list
     for i, o in ipairs(list) do
         if w and o.window.address == w.address then
+            if stop and (i + step < 1 or i + step > #list) then
+                return
+            end
             n = (i - 1 + step) % #list + 1
         end
     end
@@ -70,8 +74,8 @@ local function cycle(step)
 end
 bind("ALT + Tab", function() cycle(1) end)
 bind("ALT + SHIFT + Tab", function() cycle(-1) end)
-bind("ALT + SHIFT + d", function() cycle(1) end)
-bind("ALT + SHIFT + q", function() cycle(-1) end)
+bind("ALT + SHIFT + d", function() cycle(1, true) end)
+bind("ALT + SHIFT + q", function() cycle(-1, true) end)
 
 -- Alt+² and Alt+Shift+² (Plasma's Alt+` and Alt+~): the current app's
 -- windows on the screens. (hl.get_windows' class is the exact class.)
