@@ -65,9 +65,9 @@ end
 -- shadesmar's bar, notifications, OSD, launcher, cards (spanreed's
 -- requests), share picker and Backdrop's menu are see-through: blurred
 -- behind, the bar's popups too, not their transparent margins; and the
--- see-through windows (Ghostty). Three passes: the shapes behind still
--- there, their details gone (two let them through, Ghostty's text over them).
-hl.config({ decoration = { blur = { enabled = true, size = 8, passes = 3, popups = true } } })
+-- see-through windows (Ghostty). Wider than Hyprland's default, between two
+-- passes of 8 (details through, under Ghostty's text) and three (shapes gone).
+hl.config({ decoration = { blur = { enabled = true, size = 12, passes = 2, popups = true } } })
 hl.layer_rule({
     name = "shadesmar-blur",
     match = { namespace = "^shadesmar-(bar|notifications|osd|launcher|card|share|backdrop)$" },
