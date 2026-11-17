@@ -803,23 +803,28 @@ later (yazi, btop, lazygit…).
       and a test clipboard (cliphist under XDG_CACHE_HOME); the network,
       Bluetooth, sound and battery popups on the machine's own services.
 - [x] Claude Code's limits and the clock's popup in the bar (17 Nov 2026),
-      after Omarchy 4.5's agents panel and clock. Claude: the spark and the
-      5-hour session's use, red from 90 %; the popup a meter for the
-      session and one for the week (a gateway's spend limit too), a tick
-      where an even pace would be, the time until each starts again, how
-      old the numbers are, and a new session in Ghostty. The numbers are
-      the ones Claude Code hands its status line (`rate_limits`), which
-      writes them to ~/.local/state/claude/limits.json at each reply
-      (modules/claude): nothing holds a token or asks Anthropic, as
-      Omarchy's collector does (it reads Claude Code's OAuth token and
-      calls the usage endpoint), so they're as fresh as the last reply and
-      the item is hidden until a session has said them. Omarchy's per-model
-      weekly windows aren't in the status line's data. The clock: today
-      big (to the second while open), the week's number and the day of the
-      year, and a month with ISO week numbers (chevrons, wheel, arrows,
-      PageUp/PageDown a year, Home back), in LC_TIME's language.
-- [x] The French almanac, the year's calendar and the world clock (17 Nov
-      2026). Almanac.js: each day's saint as the post office's calendar
+      after Omarchy 4.5's agents panel and clock. Claude, beside the
+      desktops: the spark and both windows' use ("5h 14% · 7d 19%", the
+      names dim as in the status line), a window red from 90 % and the
+      spark with it; the popup a meter for the session and one for the
+      week (a gateway's spend limit too), a tick where an even pace would
+      be, the time until each starts again, how old the numbers are, and
+      Reload (the file again at once; it's read every 30 s anyway). The
+      numbers are the ones Claude Code hands its status line
+      (`rate_limits`), which writes them to ~/.local/state/claude/
+      limits.json at each reply (modules/claude): nothing holds a token or
+      asks Anthropic, as Omarchy's collector does (it reads Claude Code's
+      OAuth token and calls the usage endpoint), so they're as fresh as the
+      last reply and the item is hidden until a session has said them.
+      Omarchy's per-model weekly windows aren't in the status line's data.
+      A new session from the popup and a world clock (after Omarchy's
+      Elsewhen) were tried and dropped the same day: not wanted. The
+      clock: today big (to the second while open), the week's number and
+      the day of the year, and a month with ISO week numbers (chevrons,
+      wheel, arrows, PageUp/PageDown a year, Home back), in LC_TIME's
+      language.
+- [x] The French almanac and the year's calendar (17 Nov 2026).
+      Almanac.js: each day's saint as the post office's calendar
       prints it (romain's 2026 calendar for January to June and each
       month's first nine days, then two published lists where they agree:
       Mubelotix/calendrier's ephemeris.json, Cinnamon's Calendarium
@@ -834,13 +839,4 @@ later (yazi, btop, lazygit…).
       ±1h), weekends shaded, the days off red, the school holidays of zones
       A, B and C as stripes (data.education.gouv.fr's open data, asked
       when shown, kept a week in the shell's cache), the line under the
-      pointer spelled out. The world clock (WorldClock.qml), after Omarchy's
-      Elsewhen: a city a row (who lives there, its time and offset, the
-      part of its day, its weather, its day as a line with the daylight and
-      now), searched and added by name (Open-Meteo's geocoding; the
-      weather and the sun from Open-Meteo too, no key), the offsets from the
-      system's time zones (right offline and across clock changes); the
-      list in the shell's state, not the repo (Omarchy keeps it in its
-      shell.json). Not taken: its globe. Tried headless; a row's hover
-      (people, remove) isn't: the rig's pointer, moved by Hyprland, sends
-      no hover.
+      pointer spelled out.
