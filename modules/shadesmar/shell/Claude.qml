@@ -95,11 +95,13 @@ BarButton {
     popup: "claude"
     iconSource: Qt.resolvedUrl("icons/claude.svg")
     iconColor: high ? Theme.warn : Theme.text
-    // side by side: a window's name, a ring filled as far as it's used, the
-    // number (red from 90 %)
+    // side by side, as the bar's other items have theirs: a window's name
+    // (dim), a ring filled as far as it's used (an icon's size), the number
+    // (red from 90 %); the text the size of theirs, the gaps too
     extra: Component {
         Row {
-            spacing: 12
+            leftPadding: 2
+            spacing: 14
 
             Repeater {
                 model: [{ name: "5h", w: claude.session }, { name: "7d", w: claude.week }].filter(x => x.w)
@@ -110,18 +112,19 @@ BarButton {
                     required property var modelData
                     readonly property bool full: modelData.w.used >= 90
 
-                    spacing: 5
+                    spacing: 6
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: win.modelData.name
                         color: Theme.dim
                         font.family: Theme.font
-                        font.pixelSize: 11
+                        font.pixelSize: 13
                     }
 
                     Ring {
                         anchors.verticalCenter: parent.verticalCenter
+                        size: Theme.icon
                         value: win.modelData.w.used / 100
                         color: win.full ? Theme.warn : Theme.accent
                     }
