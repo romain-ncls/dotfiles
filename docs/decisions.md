@@ -171,10 +171,14 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   (10/100), `d3cold_allowed=0`, MSI "Wake Up Event By BIOS" + "Resume By PCI-E
   Device". Same unresolved reports for 8086:15f3 on other boards. The config
   stays so it works if the driver gets fixed. The dark port LEDs during sleep
-  mean nothing: `igc` drives the LEDs and `led_suspend` turns them off.
-  On trial (2026-11-17): udev arms it too, at boot
+  mean nothing: `igc` drives the LEDs and `led_suspend` turns them off. But
+  the link itself is down after a Linux poweroff: the Freebox shows menadion's
+  port inactive (2026-11-17), so the magic packet never reaches the card.
+  On trial: udev arms it too, at boot
   (`etc/systemd/network/10-wake-on-lan.link`), after a CachyOS user with the
   same card reported that a `.link` file with `WakeOnLan=magic` made it wake.
+  The whole investigation, the tests to run and the plan to fix `igc`:
+  `docs/wake-on-lan.md`.
 
 ## Logitech mice (logi-smartshift)
 
