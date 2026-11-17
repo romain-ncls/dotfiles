@@ -20,14 +20,22 @@ BarButton {
     // seconds, a minute's precision: the resets and the age count down
     property real now: Date.now() / 1000
 
+    // Read again with the clock: the status line replaces the file at each
+    // write (a rename), and a file that wasn't there yet can't be watched;
+    // the watch is only the quick way.
     Timer {
         interval: 30000
         running: true
         repeat: true
-        onTriggered: claude.now = Date.now() / 1000
+        onTriggered: {
+            claude.now = Date.now() / 1000
+            limitsFile.reload()
+        }
     }
 
     FileView {
+        id: limitsFile
+
         path: (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/claude/limits.json"
         watchChanges: true
         printErrors: false
