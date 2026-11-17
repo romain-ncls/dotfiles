@@ -1,0 +1,52 @@
+// A ring filled clockwise from the top as far as `value` (0 to 1): Claude's
+// limits in the bar.
+import QtQuick
+import QtQuick.Shapes
+
+Shape {
+    id: ring
+
+    property real value: 0
+    property color color: Theme.accent
+    property color track: Theme.slot
+    property real thickness: 3
+    property int size: 18
+
+    readonly property real radius: (size - thickness) / 2
+
+    implicitWidth: size
+    implicitHeight: size
+    preferredRendererType: Shape.CurveRenderer
+
+    ShapePath {
+        strokeColor: ring.track
+        strokeWidth: ring.thickness
+        fillColor: "transparent"
+
+        PathAngleArc {
+            centerX: ring.size / 2
+            centerY: ring.size / 2
+            radiusX: ring.radius
+            radiusY: ring.radius
+            startAngle: 0
+            sweepAngle: 360
+        }
+    }
+
+    ShapePath {
+        strokeColor: ring.value > 0 ? ring.color : "transparent"
+        strokeWidth: ring.thickness
+        fillColor: "transparent"
+        capStyle: ShapePath.RoundCap
+
+        PathAngleArc {
+            centerX: ring.size / 2
+            centerY: ring.size / 2
+            radiusX: ring.radius
+            radiusY: ring.radius
+            startAngle: -90
+            // a little is still seen
+            sweepAngle: Math.max(8, 360 * Math.min(1, ring.value))
+        }
+    }
+}
