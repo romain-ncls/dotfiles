@@ -72,8 +72,9 @@ the registers don't survive and the method fails.
 
 The reader is a throwaway Python script, not in the repo
 (`~/wol-test/igc-regs.py`): it maps BAR0 through
-`/sys/bus/pci/devices/0000:04:00.0/resource0` (root; kernel lockdown is off),
-turns on the device's memory decoding if nothing has, and prints CTRL,
+`/sys/bus/pci/devices/0000:04:00.0/resource0` (root; kernel lockdown is off;
+only while no driver holds the BAR: Arch builds with
+`CONFIG_IO_STRICT_DEVMEM`, so with `igc` loaded the map fails), turns on the device's memory decoding if nothing has, and prints CTRL,
 STATUS, CTRL_EXT, LEDCTL, PHPM, EEER, IPCNFG, WUC, WUFC, WUS, MANC, the MAC
 filter and the PCI power-management state. If the investigation goes on, it
 moves into the repo with the `igc` package.
@@ -85,9 +86,10 @@ after any hibernate: the `ntfs` driver mounts C: read-only. The ESP they share
 stays writable, so avoid `lds upgrade` (kernels go to `/boot`) until Windows
 has resumed once.
 
-1. Check the reader with `igc` loaded:
-   `sudo python3 -I ~/wol-test/igc-regs.py --live` (RAL0/RAH0 must spell the
-   card's MAC).
+1. Check the reader, unloading `igc` for a moment (the network drops for a
+   few seconds):
+   `sudo modprobe -r igc; sudo python3 -I ~/wol-test/igc-regs.py; sudo modprobe igc`
+   (the MAC filter must read the card's MAC).
 2. `echo 'blacklist igc' | sudo tee /etc/modprobe.d/zz-wol-test.conf`.
    `igc` isn't in the initramfs, so no rebuild; `sudo modprobe igc` still
    loads it by hand.
