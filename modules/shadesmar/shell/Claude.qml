@@ -6,7 +6,7 @@
 // asks Anthropic. Hidden until Claude Code has written them once.
 //
 // The bar (beside the desktops): Claude's spark, then the session's and the
-// week's use on two lines (a bar filled as far, the number), red from 90 %
+// week's use side by side (a ring filled as far, the number), red from 90 %
 // (the spark too). The popup: a meter for each window, a tick where an even
 // pace would be, the time until it starts again, and how old the numbers
 // are (as fresh as the last reply); Reload, in its corner, reads the file
@@ -95,54 +95,43 @@ BarButton {
     popup: "claude"
     iconSource: Qt.resolvedUrl("icons/claude.svg")
     iconColor: high ? Theme.warn : Theme.text
-    // two lines, as the clock's: a window's name, a bar filled as far as it's
-    // used, the number (red from 90 %)
+    // side by side: a window's name, a ring filled as far as it's used, the
+    // number (red from 90 %)
     extra: Component {
-        Column {
-            spacing: 2
+        Row {
+            spacing: 12
 
             Repeater {
                 model: [{ name: "5h", w: claude.session }, { name: "7d", w: claude.week }].filter(x => x.w)
 
                 Row {
+                    id: win
+
                     required property var modelData
                     readonly property bool full: modelData.w.used >= 90
 
-                    spacing: 6
+                    spacing: 5
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 14
-                        text: modelData.name
+                        text: win.modelData.name
                         color: Theme.dim
                         font.family: Theme.font
-                        font.pixelSize: 10
+                        font.pixelSize: 11
                     }
 
-                    Rectangle {
+                    Ring {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 40
-                        height: 5
-                        radius: 2.5
-                        color: Theme.slot
-
-                        Rectangle {
-                            width: modelData.w.used > 0 ? Math.max(height, parent.width * Math.min(1, modelData.w.used / 100)) : 0
-                            height: parent.height
-                            radius: parent.radius
-                            color: full ? Theme.warn : Theme.accent
-                        }
+                        value: win.modelData.w.used / 100
+                        color: win.full ? Theme.warn : Theme.accent
                     }
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 28
-                        horizontalAlignment: Text.AlignRight
-                        text: `${Math.round(modelData.w.used)}%`
-                        color: full ? Theme.warn : Theme.text
+                        text: `${Math.round(win.modelData.w.used)}%`
+                        color: win.full ? Theme.warn : Theme.text
                         font.family: Theme.font
-                        font.pixelSize: 11
-                        font.weight: Font.DemiBold
+                        font.pixelSize: 13
                     }
                 }
             }
