@@ -62,10 +62,10 @@ if ok and type(colors) == "table" and colors.frame then
     hl.config({ misc = { background_color = "rgb(" .. colors.frame:sub(2) .. ")" } })
 end
 
--- shadesmar's bar, notifications, OSD, launcher, cards (spanreed's
--- requests), share picker and Backdrop's menu are see-through: blurred
--- behind, the bar's popups too, not their transparent margins; and the
--- see-through windows (Ghostty). As the new tab's islands (modules/new-tab:
+-- shadesmar's bar, notifications, OSD, launcher, year's calendar, cards
+-- (spanreed's requests), share picker and Backdrop's menu are see-through:
+-- blurred behind, the bar's popups too, not their transparent margins; and
+-- the see-through windows (Ghostty). As the new tab's islands (modules/new-tab:
 -- blur(30px) saturate(1.5)): about as wide, in six by three passes (twelve
 -- by two drew a diagonal grid), the colors kept (contrast 1: Hyprland's 0.89
 -- greyed them) and livened (the vibrancy just past its threshold: more
@@ -73,7 +73,7 @@ end
 hl.config({ decoration = { blur = { enabled = true, size = 6, passes = 3, popups = true, contrast = 1, vibrancy = 0.3, vibrancy_darkness = 0.7 } } })
 hl.layer_rule({
     name = "shadesmar-blur",
-    match = { namespace = "^shadesmar-(bar|notifications|osd|launcher|card|share|backdrop)$" },
+    match = { namespace = "^shadesmar-(bar|notifications|osd|launcher|card|share|backdrop|calendar)$" },
     blur = true,
     blur_popups = true,
     ignore_alpha = 0.2,

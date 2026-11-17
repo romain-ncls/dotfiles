@@ -817,6 +817,30 @@ later (yazi, btop, lazygit…).
       weekly windows aren't in the status line's data. The clock: today
       big (to the second while open), the week's number and the day of the
       year, and a month with ISO week numbers (chevrons, wheel, arrows,
-      PageUp/PageDown a year, Home back), in LC_TIME's language. Not taken
-      from Omarchy: Elsewhen (its world clock), the weather, a calendar's
-      events.
+      PageUp/PageDown a year, Home back), in LC_TIME's language.
+- [x] The French almanac, the year's calendar and the world clock (17 Nov
+      2026). Almanac.js: each day's saint as the post office's calendar
+      prints it (romain's 2026 calendar for January to June and each
+      month's first nine days, then two published lists where they agree:
+      Mubelotix/calendrier's ephemeris.json, Cinnamon's Calendarium
+      namedays/fr.json), the eleven days off, the feasts that move (Mardi
+      gras to the Fête des grands-pères, from Easter or the Sundays), the
+      seasons (Meeus's equinoxes and solstices) and the clock's changes
+      (the system's zone). The clock's popup marks the days off in red,
+      lists the month's days off and feasts, and names today's saint; its
+      button opens the year (YearCalendar.qml; `qs -c shadesmar ipc call
+      calendar toggle`), laid out as that calendar: half a year, a day a
+      line (weekday, number, saint or feast, the week's number on Mondays,
+      ±1h), weekends shaded, the days off red, the school holidays of zones
+      A, B and C as stripes (data.education.gouv.fr's open data, asked
+      when shown, kept a week in the shell's cache), the line under the
+      pointer spelled out. The world clock (WorldClock.qml), after Omarchy's
+      Elsewhen: a city a row (who lives there, its time and offset, the
+      part of its day, its weather, its day as a line with the daylight and
+      now), searched and added by name (Open-Meteo's geocoding; the
+      weather and the sun from Open-Meteo too, no key), the offsets from the
+      system's time zones (right offline and across clock changes); the
+      list in the shell's state, not the repo (Omarchy keeps it in its
+      shell.json). Not taken: its globe. Tried headless; a row's hover
+      (people, remove) isn't: the rig's pointer, moved by Hyprland, sends
+      no hover.

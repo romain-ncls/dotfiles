@@ -3,15 +3,20 @@
 // the date in full), and a month with ISO week numbers, stepped with the
 // chevrons, the wheel or the arrow keys (PageUp/PageDown a year; Home, or a
 // click on the month's name or today's date, comes back). A read-out, not a
-// picker: today is the one day marked. The names and the week's first day
-// are LC_TIME's (French here), as the dates elsewhere on the desktop.
+// picker: today is the one day marked, the days off in red (Almanac.js),
+// and under the month its days off and feasts; today's saint in the
+// caption. The button at the top opens the whole year (YearCalendar.qml).
+// The names and the week's first day are LC_TIME's (French here), as the
+// dates elsewhere on the desktop.
 import QtQuick
 import Quickshell
+import "Almanac.js" as Almanac
 
 Item {
     id: root
 
     required property var bar
+    property var yearView: null // YearCalendar.qml
     readonly property var locale: Qt.locale((Quickshell.env("LC_TIME") || Quickshell.env("LANG") || "C").split(".")[0])
 
     implicitWidth: column.implicitWidth + 14
@@ -140,21 +145,36 @@ Item {
                 }
             }
 
+            // the week, the day of the year, today's saint (or feast)
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideRight
                 y: 76
                 text: {
                     const d = clock.date
                     const start = new Date(d.getFullYear(), 0, 1, 12)
                     const day = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12) - start) / 86400000) + 1
-                    const days = new Date(d.getFullYear(), 1, 29).getDate() === 29 ? 366 : 365
-                    return `Week ${calendar.isoWeek(d)} · day ${day} of ${days}`.toUpperCase()
+                    return `Week ${calendar.isoWeek(d)} · day ${day} · ${Almanac.label(d).name}`.toUpperCase()
                 }
                 color: Theme.dim
                 font.family: Theme.font
                 font.pixelSize: 10
                 font.weight: Font.DemiBold
                 font.letterSpacing: 1
+            }
+
+            // the whole year
+            Chevron {
+                visible: root.yearView !== null
+                anchors.right: parent.right
+                y: 0
+                icon: "calendar-range"
+                onClicked: {
+                    popup.close()
+                    root.yearView.open()
+                }
             }
         }
 
@@ -306,6 +326,7 @@ Item {
                         readonly property bool inMonth: date !== null && date.getMonth() === popup.month
                         readonly property bool isToday: date !== null && calendar.same(date, clock.date)
                         readonly property bool weekend: date !== null && (date.getDay() === 0 || date.getDay() === 6)
+                        readonly property bool off: date !== null && Almanac.holiday(date)
 
                         width: calendar.cell
                         height: 34
@@ -316,18 +337,79 @@ Item {
                             width: 30
                             height: 30
                             radius: 15
-                            color: Theme.accent
+                            color: cell.off ? Theme.warn : Theme.accent
                         }
 
                         Text {
                             anchors.centerIn: parent
                             text: cell.column === 0 ? calendar.isoWeek(calendar.day(cell.row * 7)) : cell.date.getDate()
-                            color: cell.isToday ? Theme.accentText : cell.column === 0 || cell.weekend ? Theme.dim : Theme.text
+                            color: cell.isToday ? Theme.accentText : cell.off ? Theme.warn : cell.column === 0 || cell.weekend ? Theme.dim : Theme.text
                             opacity: cell.column === 0 ? 0.7 : cell.inMonth ? 1 : 0.35
                             font.family: Theme.font
                             font.pixelSize: cell.column === 0 ? 10 : 13
-                            font.weight: cell.isToday ? Font.Bold : Font.Normal
+                            font.weight: cell.isToday || cell.off ? Font.Bold : Font.Normal
                         }
+                    }
+                }
+            }
+        }
+
+        // the month's days off and feasts: its number (red for a day off)
+        // and its name
+        Column {
+            id: events
+
+            readonly property var list: {
+                const out = []
+                const length = new Date(popup.year, popup.month + 1, 0).getDate()
+                for (let n = 1; n <= length; n++) {
+                    const info = Almanac.label(Almanac.day(popup.year, popup.month, n))
+                    if (info.kind === "holiday" || info.kind === "feast" && Almanac.FEASTS.indexOf(Almanac.key(Almanac.day(popup.year, popup.month, n))) < 0)
+                        out.push({ day: n, name: info.name, off: info.kind === "holiday" })
+                }
+                return out
+            }
+
+            visible: list.length > 0
+            width: parent.width
+            topPadding: 2
+            bottomPadding: 4
+            spacing: 2
+
+            Rectangle {
+                width: parent.width
+                height: 1
+                color: Theme.outline
+            }
+
+            Item {
+                width: 1
+                height: 4
+            }
+
+            Repeater {
+                model: events.list
+
+                Row {
+                    required property var modelData
+
+                    spacing: 10
+
+                    Text {
+                        width: calendar.cell - 4
+                        horizontalAlignment: Text.AlignRight
+                        text: modelData.day
+                        color: modelData.off ? Theme.warn : Theme.dim
+                        font.family: Theme.font
+                        font.pixelSize: 12
+                        font.weight: Font.Bold
+                    }
+
+                    Text {
+                        text: modelData.name
+                        color: modelData.off ? Theme.text : Theme.dim
+                        font.family: Theme.font
+                        font.pixelSize: 12
                     }
                 }
             }
