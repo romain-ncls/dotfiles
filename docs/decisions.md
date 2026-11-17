@@ -167,7 +167,7 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   `ethernet.wake-on-lan=magic`; `ethtool` shows `Wake-on: g`), the device and its
   root port are ACPI wake sources, and the DSDT has nothing OS-dependent on that
   path (`_PRW` → GPE 0x69, S4). Still, after suspend, hibernate or poweroff from
-  Linux the card does not wake; from Windows it does. Why: Linux leaves the
+  Linux the card does not wake. Why: Linux leaves the
   card with no link at all (Freebox: menadion's port inactive, port LEDs off),
   so the magic packet never reaches it, while a Windows hibernate keeps the
   link up (port active, LEDs on) (2026-11-17). Ruled out: link speed (10/100),

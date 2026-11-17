@@ -8,8 +8,9 @@ investigation, the tests to run at home and the plan to fix `igc`.
 
 - menadion's network card: Intel I225-V (`8086:15f3`, 2.5G), driver `igc`,
   interface `enp4s0`, MAC `d8:bb:c1:8a:38:87`, PCI `0000:04:00.0`.
-- Wake-on-LAN works after a shutdown from Windows, never after a suspend,
-  hibernate or poweroff from Linux.
+- Wake-on-LAN never works after a suspend, hibernate or poweroff from Linux.
+  From Windows: the link stays up after a hibernate (below); whether a magic
+  packet then wakes it, and what a Windows shutdown does, are still to test.
 - **Linux drops the link, Windows keeps it.** Freebox OS → Réseau local →
   Switch: menadion is on port 3 (Ethernet 3, 2.5G; its MAC is learned
   there). In the same sleep state, S4:
@@ -35,7 +36,7 @@ investigation, the tests to run at home and the plan to fix `igc`.
   OS-dependent.
 - Link speed forced to 10/100, `d3cold_allowed=0`, MSI "Wake Up Event By
   BIOS" + "Resume By PCI-E Device".
-- The board: Windows wakes this one, and other boards with the same chip fail
+- The board: Windows keeps this one's link up in S4, and other boards with the same chip fail
   the same way on Linux (CachyOS and Proxmox reports, below).
 - udev arming it too: a `.link` file matching `Driver=igc` with
   `WakeOnLan=magic`, which a CachyOS user with the same card said made it
@@ -63,8 +64,9 @@ investigation, the tests to run at home and the plan to fix `igc`.
 The wake registers (WUC, WUFC, WUS…) should survive a reboot: the card keeps
 them on standby power so it can report why it woke. `igc` resets them when it
 loads, so boot once with `igc` blacklisted and read them before anything
-touches them. Done after a Windows shutdown and after a Linux poweroff, it
-shows what Windows sets that Linux doesn't. Self-check: after the Linux
+touches them. Done after a Windows hibernate and after a Linux poweroff
+(same driver function as a Linux hibernate), it shows what Windows sets that
+Linux doesn't. Self-check: after the Linux
 poweroff WUFC must read `0x2` (magic packet, set by `igc`); if it reads 0,
 the registers don't survive and the method fails.
 
@@ -76,10 +78,12 @@ STATUS, CTRL_EXT, LEDCTL, PHPM, EEER, IPCNFG, WUC, WUFC, WUS, MANC, the MAC
 filter and the PCI power-management state. If the investigation goes on, it
 moves into the repo with the `igc` package.
 
-Windows does a **full** shutdown (`shutdown /s /full /t 0`), not a
-hibernate: Linux would then boot under a hibernated Windows and write to the
-ESP they share. It also answers an open question: does Windows keep the link
-from S5 too, or only from S4?
+Windows **hibernates** (`shutdown /h`): it is the one state where it is seen
+to keep the link, so its registers are the good reference; a Windows shutdown
+isn't known to keep the link. Linux then boots under a hibernated Windows, as
+after any hibernate: the `ntfs` driver mounts C: read-only. The ESP they share
+stays writable, so avoid `lds upgrade` (kernels go to `/boot`) until Windows
+has resumed once.
 
 1. Check the reader with `igc` loaded:
    `sudo python3 -I ~/wol-test/igc-regs.py --live` (RAL0/RAH0 must spell the
@@ -87,8 +91,9 @@ from S5 too, or only from S4?
 2. `echo 'blacklist igc' | sudo tee /etc/modprobe.d/zz-wol-test.conf`.
    `igc` isn't in the initramfs, so no rebuild; `sudo modprobe igc` still
    loads it by hand.
-3. Windows: boot it, `shutdown /s /full /t 0`, note port 3. Power on, boot
-   Linux (no network now):
+3. Windows: boot it (it resumes if hibernated), hibernate it
+   (`shutdown /h`), check port 3 is Actif. Power on, boot Linux (no network
+   now):
    `sudo python3 -I ~/wol-test/igc-regs.py | tee ~/wol-test/1-windows.txt`.
 4. Linux: `sudo modprobe igc`, wait for the network (NetworkManager arms
    Wake-on-LAN when it connects), `poweroff`, note port 3. Power on:
@@ -103,14 +108,17 @@ changes nothing.
 
 Still to do, in order:
 
-1. **Windows registers vs Linux registers**, with the Windows full shutdown
+1. **Windows registers vs Linux registers**, with a Windows hibernate
    (above).
-2. **Linux suspend** (`systemctl suspend`): port 3? Suspend and poweroff go
+2. **Windows, the wake itself.** Hibernated from Windows, does a magic packet
+   from the Freebox wake it? And after a Windows shutdown, is port 3 still
+   Actif? Not needed for the `igc` hunt; tells what to expect of a fix.
+3. **Linux suspend** (`systemctl suspend`): port 3? Suspend and poweroff go
    through the same driver function, and suspend is much faster to iterate.
-3. **RTC alarm as a safety net.** `sudo rtcwake -m off -s 180` must power it
+4. **RTC alarm as a safety net.** `sudo rtcwake -m off -s 180` must power it
    back on after 3 minutes (`-m mem` for suspend). Needed so automated tries
    never leave it off.
-4. **Freebox API token.** Request one (`POST /api/v16/login/authorize/`; the
+5. **Freebox API token.** Request one (`POST /api/v16/login/authorize/`; the
    version is in http://192.168.1.254/api_version) and approve it on the box
    side, then check which permission `GET /api/v16/switch/status/` needs.
    With it, a script on wandersail reads port 3 without anyone looking at
