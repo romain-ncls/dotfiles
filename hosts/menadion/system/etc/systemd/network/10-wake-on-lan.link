@@ -1,0 +1,15 @@
+# Arm the I225-V for magic-packet Wake-on-LAN from udev, as soon as the card
+# appears, on top of NetworkManager's conf.d/wake-on-lan.conf. One report says
+# this made the I225-V wake from Linux (docs/decisions.md, Wake-on-LAN).
+#
+# Only the first matching .link file applies, so this one replaces
+# 99-default.link for the card: its [Link] policies are copied from systemd's
+# so the interface keeps its name.
+[Match]
+Driver=igc
+
+[Link]
+NamePolicy=keep kernel database onboard slot path
+AlternativeNamesPolicy=database onboard slot path mac
+MACAddressPolicy=persistent
+WakeOnLan=magic

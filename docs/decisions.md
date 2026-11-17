@@ -172,6 +172,9 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   Device". Same unresolved reports for 8086:15f3 on other boards. The config
   stays so it works if the driver gets fixed. The dark port LEDs during sleep
   mean nothing: `igc` drives the LEDs and `led_suspend` turns them off.
+  On trial (2026-11-17): udev arms it too, at boot
+  (`etc/systemd/network/10-wake-on-lan.link`), after a CachyOS user with the
+  same card reported that a `.link` file with `WakeOnLan=magic` made it wake.
 
 ## Logitech mice (logi-smartshift)
 
