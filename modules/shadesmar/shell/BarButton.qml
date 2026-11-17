@@ -16,6 +16,8 @@ Item {
     property string label: ""
     property color labelColor: Theme.text
     property int badge: 0
+    // more of the item's own after the label (Claude's meters)
+    property alias extra: extra.sourceComponent
 
     signal middleClicked
     signal scrolled(int delta)
@@ -49,6 +51,14 @@ Item {
             color: button.labelColor
             font.family: Theme.font
             font.pixelSize: 13
+        }
+
+        Loader {
+            id: extra
+
+            anchors.verticalCenter: parent.verticalCenter
+            active: sourceComponent !== null
+            visible: active
         }
     }
 

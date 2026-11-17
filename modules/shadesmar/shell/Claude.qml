@@ -5,11 +5,12 @@
 // (modules/claude's statusline-command.sh): nothing here holds a token or
 // asks Anthropic. Hidden until Claude Code has written them once.
 //
-// The bar (beside the desktops): Claude's spark, the session's and the
-// week's use, a window red from 90 % (the spark too). The popup: a meter for
-// each window, a tick where an even pace would be, the time until it starts
-// again, and how old the numbers are (as fresh as the last reply); Reload
-// reads the file again at once.
+// The bar (beside the desktops): Claude's spark, then the session's and the
+// week's use on two lines (a bar filled as far, the number), red from 90 %
+// (the spark too). The popup: a meter for each window, a tick where an even
+// pace would be, the time until it starts again, and how old the numbers
+// are (as fresh as the last reply); Reload, in its corner, reads the file
+// again at once.
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -94,16 +95,59 @@ BarButton {
     popup: "claude"
     iconSource: Qt.resolvedUrl("icons/claude.svg")
     iconColor: high ? Theme.warn : Theme.text
-    // "5h 14% · 7d 19%", the names dim as in the status line, a window red
-    // from 90 %
-    function part(name, w) {
-        if (!w)
-            return ""
-        const n = Math.round(w.used)
-        return `<font color="${Theme.dim}">${name}</font> ${n >= 90 ? `<font color="${Theme.warn}">${n}%</font>` : `${n}%`}`
+    // two lines, as the clock's: a window's name, a bar filled as far as it's
+    // used, the number (red from 90 %)
+    extra: Component {
+        Column {
+            spacing: 2
+
+            Repeater {
+                model: [{ name: "5h", w: claude.session }, { name: "7d", w: claude.week }].filter(x => x.w)
+
+                Row {
+                    required property var modelData
+                    readonly property bool full: modelData.w.used >= 90
+
+                    spacing: 6
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 14
+                        text: modelData.name
+                        color: Theme.dim
+                        font.family: Theme.font
+                        font.pixelSize: 10
+                    }
+
+                    Rectangle {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 40
+                        height: 5
+                        radius: 2.5
+                        color: Theme.slot
+
+                        Rectangle {
+                            width: modelData.w.used > 0 ? Math.max(height, parent.width * Math.min(1, modelData.w.used / 100)) : 0
+                            height: parent.height
+                            radius: parent.radius
+                            color: full ? Theme.warn : Theme.accent
+                        }
+                    }
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 28
+                        horizontalAlignment: Text.AlignRight
+                        text: `${Math.round(modelData.w.used)}%`
+                        color: full ? Theme.warn : Theme.text
+                        font.family: Theme.font
+                        font.pixelSize: 11
+                        font.weight: Font.DemiBold
+                    }
+                }
+            }
+        }
     }
-    label: [part("5h", session), part("7d", week)].filter(p => p !== "").join(` <font color="${Theme.dim}">·</font> `)
-    labelColor: Theme.text
 
     // a window's line: its name and use, the meter, its length and reset
     component Limit: Column {
@@ -185,11 +229,33 @@ BarButton {
                 claude.now = Date.now() / 1000
         }
 
-        PopupHero {
-            iconSource: Qt.resolvedUrl("icons/claude.svg")
-            title: "Claude Code"
-            caption: claude.high ? `Near the limit · ${claude.age}` : claude.age
-            warn: claude.high
+        // the head, and in its corner Reload: the file now rather than at the
+        // next half minute (the numbers themselves are new at Claude Code's
+        // next reply)
+        Item {
+            width: parent.width
+            height: hero.height
+
+            PopupHero {
+                id: hero
+
+                iconSource: Qt.resolvedUrl("icons/claude.svg")
+                title: "Claude Code"
+                caption: claude.high ? `Near the limit · ${claude.age}` : claude.age
+                warn: claude.high
+            }
+
+            Chevron {
+                id: reload
+
+                anchors.right: parent.right
+                icon: "refresh-cw"
+                onClicked: {
+                    reload.turn()
+                    limitsFile.reload()
+                    claude.now = Date.now() / 1000
+                }
+            }
         }
 
         SectionLabel {
@@ -230,23 +296,6 @@ BarButton {
             color: Theme.dim
             font.family: Theme.font
             font.pixelSize: 12
-        }
-
-        Item {
-            width: 1
-            height: 4
-        }
-
-        // the file now rather than at the next half minute: the numbers
-        // themselves are new at Claude Code's next reply
-        ListRow {
-            lineIcon: Qt.resolvedUrl("icons/refresh-cw.svg")
-            title: "Reload"
-            subtitle: "Claude Code's latest numbers"
-            onClicked: {
-                limitsFile.reload()
-                claude.now = Date.now() / 1000
-            }
         }
     }
 }
