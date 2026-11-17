@@ -59,7 +59,7 @@ investigation, the tests to run at home and the plan to fix `igc`.
   `d8:bb:c1:8a:38:87`; the other is probably Windows registering separately,
   or the Wi-Fi.
 
-## Register comparison (2026-11-17): no answer, two findings
+## Register comparison (2026-11-17): no answer, some findings
 
 The idea: boot once with `igc` blacklisted, right after a Windows hibernate
 and right after a Linux poweroff, and read what each OS left in the card's
@@ -72,64 +72,77 @@ the hunt goes on). It maps BAR0 through
 only while no driver holds the BAR (Arch builds with
 `CONFIG_IO_STRICT_DEVMEM`). It prints the PCI power-management state, CTRL,
 STATUS, CTRL_EXT, LEDCTL, PHPM, EEER, IPCNFG, WUC, WUFC, WUS, MANC, the MAC
-filter and the last wake packet the card kept (WUPM: sender, addresses);
-`--clear-wake-status` then clears WUS and WUPL. Reads have no side effect
-except PHPM bit 8 (PHY reset done), cleared when read; harmless.
+filter and the wake packet buffer (WUPM); `--clear-wake-status` then clears
+WUS. Reads have no side effect except PHPM bit 8 (PHY reset done), cleared
+when read; harmless.
 
 Result: the two dumps are the same, and WUFC reads 0 after the Linux
 poweroff although `igc` writes 2 (magic packet) there: the card reloads its
 wake configuration from its NVM when it powers up, so the dumps show the
 card's power-on defaults, not what either OS left. Still:
 
-- **The card's own default is APM wake on: `WUC = 0x9` (`APME`).** APM wake
-  is the card waking the machine by itself, through the WAKE# pin, with no
-  OS involved. `igc` writes WUC in one place only, `__igc_shutdown`, with
-  `PME_EN` (`0x2`): Linux turns APM wake off at the last moment. Windows
-  probably leaves it on.
+- The card's own default is APM wake on: `WUC = 0x9` (`APME`), the card
+  waking the machine by itself through the WAKE# pin. `igc` writes WUC in
+  one place only, `__igc_shutdown`, with `PME_EN` (`0x2`), which clears it.
 - Without `igc` the card links up by itself (`STATUS` link up, 2.5G).
-- `WUS = MAG`, `WUPL` = 148 bytes: the card had kept a magic packet (148 is
-  a UDP magic packet with its headers). WUS survives power cycles and `igc`
-  clears it only on resume, so when it came is unknown.
+- **The card keeps its standby power under Linux.** `WUS = MAG` (it saw a
+  magic packet at some point) was still there after a Linux poweroff; a
+  power loss would have reset it. `igc` clears WUS only on resume.
+- WUPL/WUPM are not a wake packet: the buffer holds whatever frame the card
+  last looked at and changes while it is up (an ARP request from a Freebox
+  device, `38:07:16:…`, on VLAN 400). Only WUS says something about a wake.
 - Power-on values, for later: `CTRL 0x081c0641`, `PHPM 0x00045398`,
   `IPCNFG 0x1`, `EEER 0`, `MANC 0x40000000`.
 
-## Next test: Linux sleeping with the card untouched
+## Linux sleeping with the card untouched (2026-11-17): link still drops
 
-Boot with `igc` blacklisted, so Linux never touches the card: it keeps its
-power-on configuration, APM wake on and link up. Then hibernate: S4 is the
-state Windows keeps the link in, and the deepest one the DSDT's `_PRW` gives
-the card's wake path.
+Booted with `igc` blacklisted (the journal shows no `igc` until after the
+test), the card in its power-on state, then `systemctl hibernate`: port 3
+**Inactif**. WUS stayed 0 (no packet sent, the link was down).
 
-- Port 3 **Actif**: `igc`'s shutdown is what drops the link. Patch it,
-  starting with leaving `APME` set (`WUC |= PME_EN` instead of `=`).
-- Port 3 **Inactif**: Linux drops it even without `igc`; look at the PCI and
-  ACPI side (root port, power resources), not the driver.
+| sleeping with | card at sleep | port 3 |
+|---|---|---|
+| Linux + `igc` | D3hot, PME_En 1, WUC `PME_EN`, WUFC `MAG` (from the source) | Inactif |
+| Linux, card untouched | D0, PME_En 0, WUC `APME`, WUFC 0, link 2.5G (read) | Inactif |
+| Windows | unknown | Actif |
 
-Windows is still hibernated: avoid `lds upgrade` until it has resumed once
-(C: is read-only, but the ESP they share isn't).
+So `igc`'s WUC overwrite is not the whole story: APM wake on doesn't keep
+the link either. The card has power under Linux, so it is the card that
+turns its link off in sleep, and Windows' driver sets something that neither
+the NVM defaults nor `igc` set.
 
-1. `echo 'blacklist igc' | sudo tee /etc/modprobe.d/zz-wol-test.conf`
-   (`igc` isn't in the initramfs, so no rebuild), then **reboot**: the
-   blacklist only acts at boot, and `modprobe -r igc` instead would power
-   the PHY down on its way out. Check: `ip -br link` lists no `enp4s0`.
-2. `sudo python3 -I ~/wol-test/igc-regs.py --clear-wake-status | tee ~/wol-test/3-noigc.txt`
-   (shows who sent the magic packet the card kept, then clears it).
-3. `systemctl hibernate`, then Freebox OS → Switch: port 3?
-4. If Actif: wake `d8:bb:c1:8a:38:87` from the Freebox and give it a minute.
-   If it doesn't wake, use the power button (it resumes).
-5. `sudo python3 -I ~/wol-test/igc-regs.py | tee ~/wol-test/4-after.txt`:
-   WUS says whether the card saw the packet, woken or not.
-6. Clean up: `sudo rm /etc/modprobe.d/zz-wol-test.conf && sudo modprobe igc`.
+## Next test: what Windows' driver sets
+
+The registers can't tell (they reset at power-up), so ask Windows itself:
+
+1. In Windows, PowerShell:
+   ```
+   & { Get-NetAdapter | Format-Table -AutoSize Name, InterfaceDescription, MacAddress, LinkSpeed
+       Get-NetAdapterAdvancedProperty -Name * -AllProperties | Format-Table -AutoSize Name, DisplayName, DisplayValue, RegistryKeyword, RegistryValue
+       Get-NetAdapterPowerManagement -Name * | Format-List *
+       powercfg /devicequery wake_armed } | Out-File -Width 400 -Encoding utf8 C:\wol-windows.txt
+   ```
+2. Hibernate (`shutdown /h`), then Freebox OS → Switch: port 3's **mode**
+   (speed and duplex). 10 or 100 Mbit/s while 2.5G when awake means Windows
+   renegotiates a low-power link for sleep.
+3. Boot Linux: `/mnt/win/wol-windows.txt` is readable (C: is mounted
+   read-only while Windows is hibernated).
+
+Then switch Windows' power settings off one at a time (Reduce Speed On
+Power Down, Wake on Link, Energy Efficient Ethernet, Ultra Low Power…) and
+hibernate each time: the one that makes Windows drop the link too is what
+`igc` lacks.
 
 ## Tests at home
 
 Done (2026-11-17): port mapping (menadion is on port 3); Windows hibernate
 keeps port 3 Actif, Linux hibernate and poweroff don't; the `.link` file
-changes nothing; the register comparison (above).
+changes nothing; the register comparison; Linux hibernate with the card
+untouched (link still drops).
 
 Still to do, in order:
 
-1. **Linux sleeping with the card untouched** (above).
+1. **What Windows' driver sets** (above).
 2. **Windows, the wake itself.** Hibernated from Windows, does a magic packet
    from the Freebox wake it? And after a Windows shutdown, is port 3 still
    Actif? Tells what to expect of a fix.
@@ -161,15 +174,17 @@ What the source of kernel 7.3.4 says (`drivers/net/ethernet/intel/igc/`):
   the machine. So the driver doesn't cut the link on purpose: the link drops
   after it hands the card back (`igc_release_hw_control`, then
   `pci_disable_device` and D3).
-- **Main lead:** it writes `IGC_WUC = IGC_WUC_PME_EN`, overwriting the whole
-  wake-control register, and this card's NVM sets APM wake (`WUC = 0x9`,
-  `APME`): Linux clears it at the last moment. `igb` does the same and I210
-  cards wake, so it needs the test above to be proven.
-- It never writes `PHPM` (PHY power management, `0x0E14`); it only reads it
-  while waiting for a PHY reset to finish. That register decides what the PHY
-  does outside D0 (low-power link-up, speeds allowed, link disconnect), so it
-  stays at its power-on value (`0x00045398`). Windows' "Reduce link speed
-  during standby" setting probably writes there.
+- It writes `IGC_WUC = IGC_WUC_PME_EN`, overwriting the whole wake-control
+  register, which clears the APM wake this card's NVM sets (`WUC = 0x9`).
+  Not enough on its own: the untouched card had APM wake on and still
+  dropped its link.
+- **Main lead:** it never writes `PHPM` (PHY power management, `0x0E14`); it
+  only reads it while waiting for a PHY reset to finish. That register
+  decides what the PHY does outside D0 (low-power link-up, speeds allowed,
+  link disconnect), so it stays at its power-on value (`0x00045398`).
+  Windows' "Reduce Speed On Power Down" setting probably writes there; the
+  Windows test above should say. (Forcing 10/100 from Linux didn't help, but
+  that sets the speed while awake, not what the PHY does once asleep.)
 - Still to check: EEE, `PME_En` in the PCI config space at the moment of
   sleep.
 
@@ -180,7 +195,7 @@ Method:
    installed, it replaces the in-kernel module; removed, the stock one is back.
 2. Log CTRL, WUC, WUFC, PHPM and the PHY control registers in
    `__igc_shutdown` (dmesg).
-3. One change per try, starting with keeping `APME` in WUC: set the RTC alarm, suspend or poweroff,
+3. One change per try, starting with what Windows sets (test above): set the RTC alarm, suspend or poweroff,
    read port 3 from wandersail through the Freebox API, let the alarm bring
    menadion back, next. Port 3 Actif after a Linux shutdown = found; then the
    wake test.

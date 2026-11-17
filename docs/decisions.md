@@ -170,7 +170,9 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   Linux the card does not wake. Why: Linux leaves the
   card with no link at all (Freebox: menadion's port inactive, port LEDs off),
   so the magic packet never reaches it, while a Windows hibernate keeps the
-  link up (port active, LEDs on) (2026-11-17). Ruled out: link speed (10/100),
+  link up (port active, LEDs on) (2026-11-17). The card keeps its standby
+  power under Linux and drops the link even when Linux never touches it, so
+  Windows' driver sets something `igc` doesn't. Ruled out: link speed (10/100),
   `d3cold_allowed=0`, MSI "Wake Up Event By BIOS" + "Resume By PCI-E Device",
   a udev `.link` file with `WakeOnLan=magic` (reported to help on CachyOS; no
   change here, removed). Same unresolved reports for 8086:15f3 on other boards.
