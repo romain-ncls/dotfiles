@@ -6,38 +6,45 @@ investigation, the tests to run at home and the plan to fix `igc`.
 
 ## Where it stands (2026-11-17)
 
-- menadion's network card: Intel I225-V (`8086:15f3`, 2.5G), driver `igc`.
+- menadion's network card: Intel I225-V (`8086:15f3`, 2.5G), driver `igc`,
+  interface `enp4s0`, MAC `d8:bb:c1:8a:38:87`, PCI `0000:04:00.0`.
 - Wake-on-LAN works after a shutdown from Windows, never after a suspend,
   hibernate or poweroff from Linux.
-- **After a Linux poweroff the card has no link at all.** Freebox OS →
-  Réseau local → Switch, menadion off:
+- **Linux drops the link, Windows keeps it.** Freebox OS → Réseau local →
+  Switch: menadion is on port 3 (Ethernet 3, 2.5G; its MAC is learned
+  there). In the same sleep state, S4:
 
-  | port | | link | mode |
-  |---|---|---|---|
-  | Ethernet 1 (1G + power) | free | Inactif | |
-  | Ethernet 2 (1G) | the TV, in standby | Actif | 10BaseT-HD, no MAC learned |
-  | Ethernet 3 (2.5G) | menadion | **Inactif** | |
+  | menadion | port 3 | card's port LEDs |
+  |---|---|---|
+  | hibernated from Windows | Actif | on |
+  | hibernated or powered off from Linux | **Inactif** | off |
 
-  So the magic packet has nothing to arrive on, whoever sends it. The port
-  mapping (menadion on the 2.5G port, the TV beside it) is from memory: to
-  confirm. The TV kept a minimal link while asleep, which is also why it
-  didn't answer pings.
+  With no link, the magic packet has nothing to arrive on, whoever sends it.
+  Same hardware, firmware and sleep state: the difference is software, most
+  likely `igc` (or what Linux's PCI code does around it).
+- The TV, on port 2, keeps a minimal link in standby (10BaseT-HD, no MAC
+  learned), which is also why it doesn't answer pings.
 - USB wake works, but nothing at home can make a USB event remotely today.
-- On trial on this branch: a udev `.link` file arming Wake-on-LAN at boot
-  (below).
 
 ## Already ruled out
 
 - Linux arms the card: NetworkManager `ethernet.wake-on-lan=magic`, `ethtool`
   shows `Wake-on: g`.
-- The card and its root port are ACPI wake sources; the DSDT path (`_PRW` →
-  GPE 0x69, S4) has nothing OS-dependent.
+- The card and its root port are ACPI wake sources (PCI `power/wakeup`
+  enabled on both); the DSDT path (`_PRW` → GPE 0x69, S4) has nothing
+  OS-dependent.
 - Link speed forced to 10/100, `d3cold_allowed=0`, MSI "Wake Up Event By
   BIOS" + "Resume By PCI-E Device".
 - The board: Windows wakes this one, and other boards with the same chip fail
   the same way on Linux (CachyOS and Proxmox reports, below).
-- The card's dark port LEDs mean nothing (`igc`'s `led_suspend` turns them
-  off), but the Freebox's port status does: the link is really down.
+- udev arming it too: a `.link` file matching `Driver=igc` with
+  `WakeOnLan=magic`, which a CachyOS user with the same card said made it
+  wake. Tried 2026-11-17 on kernel 7.3.4: udev applied it
+  (`ID_NET_LINK_FILE`), port 3 still Inactif after a hibernate and after a
+  poweroff. Removed. On paper it is the same ethtool call NetworkManager
+  makes.
+- The port LEDs are not misleading (an earlier note blamed `igc`'s
+  `led_suspend`): they follow the link, off after Linux, on after Windows.
 
 ## Sending the magic packet
 
@@ -47,47 +54,63 @@ investigation, the tests to run at home and the plan to fix `igc`.
   over the VPN. The home server could too (wandersail's key isn't authorized
   on it yet).
 - The Freebox lists menadion twice: `menadion.home` (192.168.1.157) and
-  `menadion1.home` (192.168.1.102). Check both MACs: probably Linux and
-  Windows registering separately, but if they differ, one isn't the wired
-  card (Wi-Fi?) and a wake sent to it can never work.
+  `menadion1.home` (192.168.1.102). Wake the one with the wired card's MAC,
+  `d8:bb:c1:8a:38:87`; the other is probably Windows registering separately,
+  or the Wi-Fi.
 
-## Trial: the `.link` file
+## Next test: what Windows leaves in the card's registers
 
-`hosts/menadion/system/etc/systemd/network/10-wake-on-lan.link` sets
-`WakeOnLan=magic` from udev as soon as the card appears, on top of
-NetworkManager. A CachyOS user with the same card reported that it made the
-card wake; nobody else confirmed it, and on paper it is the same ethtool call
-NetworkManager makes. Cheap to try. Only the first matching `.link` file
-applies, so it replaces `99-default.link` for the card and copies systemd's
-naming policies: the interface name must not change.
+The wake registers (WUC, WUFC, WUS…) should survive a reboot: the card keeps
+them on standby power so it can report why it woke. `igc` resets them when it
+loads, so boot once with `igc` blacklisted and read them before anything
+touches them. Done after a Windows shutdown and after a Linux poweroff, it
+shows what Windows sets that Linux doesn't. Self-check: after the Linux
+poweroff WUFC must read `0x2` (magic packet, set by `igc`); if it reads 0,
+the registers don't survive and the method fails.
 
-At home:
+The reader is a throwaway Python script, not in the repo
+(`~/wol-test/igc-regs.py`): it maps BAR0 through
+`/sys/bus/pci/devices/0000:04:00.0/resource0` (root; kernel lockdown is off),
+turns on the device's memory decoding if nothing has, and prints CTRL,
+STATUS, CTRL_EXT, LEDCTL, PHPM, EEER, IPCNFG, WUC, WUFC, WUS, MANC, the MAC
+filter and the PCI power-management state. If the investigation goes on, it
+moves into the repo with the `igc` package.
 
-1. On menadion, get the branch. If `~/dotfiles` is on `main` and clean:
-   `git fetch && git switch feat/wol-link`; otherwise cherry-pick its commit.
-2. `lds apply`, then reboot: udev reads `.link` files only when the device
-   appears.
-3. Check: `ip -br link` (same interface name as before),
-   `udevadm info /sys/class/net/<if> | grep ID_NET_LINK_FILE` (→
-   `10-wake-on-lan.link`), `ethtool <if> | grep Wake-on` (→ `g`).
-4. `poweroff`, then Freebox OS → Switch. Port 3 **Actif**: it helped, send a
-   wake from the Freebox. **Inactif**: it didn't; drop the `.link` file and
-   go to the `igc` hunt.
+Windows does a **full** shutdown (`shutdown /s /full /t 0`), not a
+hibernate: Linux would then boot under a hibernated Windows and write to the
+ESP they share. It also answers an open question: does Windows keep the link
+from S5 too, or only from S4?
 
-## Tests at home, in order
+1. Check the reader with `igc` loaded:
+   `sudo python3 -I ~/wol-test/igc-regs.py --live` (RAL0/RAH0 must spell the
+   card's MAC).
+2. `echo 'blacklist igc' | sudo tee /etc/modprobe.d/zz-wol-test.conf`.
+   `igc` isn't in the initramfs, so no rebuild; `sudo modprobe igc` still
+   loads it by hand.
+3. Windows: boot it, `shutdown /s /full /t 0`, note port 3. Power on, boot
+   Linux (no network now):
+   `sudo python3 -I ~/wol-test/igc-regs.py | tee ~/wol-test/1-windows.txt`.
+4. Linux: `sudo modprobe igc`, wait for the network (NetworkManager arms
+   Wake-on-LAN when it connects), `poweroff`, note port 3. Power on:
+   `sudo python3 -I ~/wol-test/igc-regs.py | tee ~/wol-test/2-linux.txt`.
+5. Clean up: `sudo rm /etc/modprobe.d/zz-wol-test.conf && sudo modprobe igc`.
 
-1. **Port mapping.** With both on, the Switch page lists the MACs seen on each
-   port: confirm menadion is on port 3.
-2. **Control, from Windows.** Shut down from Windows: port 3 should stay
-   Actif (note its mode); then wake it from the Freebox. If port 3 goes
-   Inactif after Windows too, the explanation above is wrong.
-3. **Linux poweroff with the `.link`** (above).
-4. **Linux suspend** (`systemctl suspend`): port 3? Suspend and poweroff go
+## Tests at home
+
+Done (2026-11-17): port mapping (menadion is on port 3); Windows hibernate
+keeps port 3 Actif, Linux hibernate and poweroff don't; the `.link` file
+changes nothing.
+
+Still to do, in order:
+
+1. **Windows registers vs Linux registers**, with the Windows full shutdown
+   (above).
+2. **Linux suspend** (`systemctl suspend`): port 3? Suspend and poweroff go
    through the same driver function, and suspend is much faster to iterate.
-5. **RTC alarm as a safety net.** `sudo rtcwake -m off -s 180` must power it
+3. **RTC alarm as a safety net.** `sudo rtcwake -m off -s 180` must power it
    back on after 3 minutes (`-m mem` for suspend). Needed so automated tries
    never leave it off.
-6. **Freebox API token.** Request one (`POST /api/v16/login/authorize/`; the
+4. **Freebox API token.** Request one (`POST /api/v16/login/authorize/`; the
    version is in http://192.168.1.254/api_version) and approve it on the box
    side, then check which permission `GET /api/v16/switch/status/` needs.
    With it, a script on wandersail reads port 3 without anyone looking at
@@ -95,22 +118,33 @@ At home:
 
 ## Finding the bug in `igc`
 
-Why it's within reach: Windows wakes the same hardware, so it's software.
-Intel's I225 datasheet is public (wake-up registers WUC, WUFC, WUS; PHY power
-management). Suspend and poweroff both go through `__igc_shutdown` in
-`drivers/net/ethernet/intel/igc/igc_main.c`.
+Why it's within reach: Windows keeps the link on the same hardware in the
+same sleep state, so it's software. Intel's I225 datasheet is public
+(wake-up registers WUC, WUFC, WUS; PHY power management).
 
-Leads, to verify in the source of menadion's kernel:
+What the source of kernel 7.3.4 says (`drivers/net/ethernet/intel/igc/`):
 
-- The driver doesn't switch off the cable side on purpose: the PHY
-  power-down write in `igc_power_down_phy_copper` is disabled (2023
-  intel-wired-lan thread, below). So the chip drops the link itself when it
-  sleeps; a chip like this keeps it only when told to wake on something.
-- `__igc_shutdown` seems to write `IGC_WUC = IGC_WUC_PME_EN`, overwriting the
-  whole wake-control register. That would clear APM wake (`APME`) if the
-  firmware or Windows had set it. First thing to check.
-- The PHY's power settings for sleep states (low-power link-up, 1G/2.5G
-  disabled in D3), EEE, `PME_En` in the PCI config space.
+- `__igc_shutdown` (`igc_main.c`) runs for suspend, hibernate (it is also
+  the `.poweroff` callback) and poweroff. With Wake-on-LAN armed it does
+  **not** power the PHY down: it resets it and restarts autonegotiation
+  (`igc_power_up_link`). The power-down write (`MII_CR_POWER_DOWN` in
+  `igc_power_down_phy_copper`) is active in this kernel (the 2023 thread
+  below found it disabled), but it is only taken when nothing should wake
+  the machine. So the driver doesn't cut the link on purpose: the link drops
+  after it hands the card back (`igc_release_hw_control`, then
+  `pci_disable_device` and D3).
+- It writes `IGC_WUC = IGC_WUC_PME_EN`, overwriting the whole wake-control
+  register, which clears APM wake (`APME`) if the firmware or Windows had set
+  it. `igb` does exactly the same and I210 cards wake, so not proven to be it.
+- **Main lead:** it never writes `PHPM` (PHY power management, `0x0E14`); it
+  only reads it while waiting for a PHY reset to finish. That register
+  decides what the PHY does outside D0 (low-power link-up, speeds allowed,
+  link disconnect), so it stays at its reset value. Windows' "Reduce link
+  speed during standby" and "Wake on Magic Packet from power off state"
+  settings probably write there or in WUC; the register comparison above
+  should show it.
+- Still to check: EEE, `PME_En` in the PCI config space at the moment of
+  sleep.
 
 Method:
 
@@ -118,11 +152,12 @@ Method:
    package of the repo (`modules/<tool>/pkg`, like logi-smartshift):
    installed, it replaces the in-kernel module; removed, the stock one is back.
 2. Log CTRL, WUC, WUFC, PHPM and the PHY control registers in
-   `__igc_shutdown` (dmesg; or read BAR0 from
-   `/sys/bus/pci/devices/<addr>/resource0` as root).
-3. One change per try: set the RTC alarm, suspend or poweroff, read port 3
-   from wandersail through the Freebox API, let the alarm bring menadion back,
-   next. Port 3 Actif after a Linux shutdown = found; then the wake test.
+   `__igc_shutdown` (dmesg).
+3. One change per try, starting with what the register comparison shows
+   (Windows' PHPM and WUC values): set the RTC alarm, suspend or poweroff,
+   read port 3 from wandersail through the Freebox API, let the alarm bring
+   menadion back, next. Port 3 Actif after a Linux shutdown = found; then the
+   wake test.
 4. Last resort: compare with what the Windows driver does (disassembly, as
    done for Options+).
 
@@ -153,7 +188,8 @@ Linux) to intel-wired-lan is useful to Intel's maintainers.
 ## Sources
 
 - [CachyOS: WOL on Intel I225-V (Rev 03)](https://discuss.cachyos.org/t/wol-on-intel-i225-v-rev-03/10013):
-  works from Windows, not Linux; later, a `.link` file reportedly fixed it.
+  works from Windows, not Linux; later, a `.link` file reportedly fixed it
+  (not here).
 - [Proxmox: WoL not working on NUC 12 with I225-V](https://forum.proxmox.com/threads/wol-not-working-on-intel-nuc-12-nuc12wski7-with-i225-v-nic-under-proxmox.184101/):
   Linux seems to cut the card's power at shutdown; Windows keeps the link LED on.
 - [intel-wired-lan: igc driver doesn't power down the PHY when link is brought down](https://lore.kernel.org/all/Y926GPvm0f544ogG@wantstofly.org/T/)

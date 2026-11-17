@@ -167,17 +167,15 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   `ethernet.wake-on-lan=magic`; `ethtool` shows `Wake-on: g`), the device and its
   root port are ACPI wake sources, and the DSDT has nothing OS-dependent on that
   path (`_PRW` → GPE 0x69, S4). Still, after suspend, hibernate or poweroff from
-  Linux the card does not wake; from Windows it does. Ruled out: link speed
-  (10/100), `d3cold_allowed=0`, MSI "Wake Up Event By BIOS" + "Resume By PCI-E
-  Device". Same unresolved reports for 8086:15f3 on other boards. The config
-  stays so it works if the driver gets fixed. The dark port LEDs during sleep
-  mean nothing: `igc` drives the LEDs and `led_suspend` turns them off. But
-  the link itself is down after a Linux poweroff: the Freebox shows menadion's
-  port inactive (2026-11-17), so the magic packet never reaches the card.
-  On trial: udev arms it too, at boot
-  (`etc/systemd/network/10-wake-on-lan.link`), after a CachyOS user with the
-  same card reported that a `.link` file with `WakeOnLan=magic` made it wake.
-  The whole investigation, the tests to run and the plan to fix `igc`:
+  Linux the card does not wake; from Windows it does. Why: Linux leaves the
+  card with no link at all (Freebox: menadion's port inactive, port LEDs off),
+  so the magic packet never reaches it, while a Windows hibernate keeps the
+  link up (port active, LEDs on) (2026-11-17). Ruled out: link speed (10/100),
+  `d3cold_allowed=0`, MSI "Wake Up Event By BIOS" + "Resume By PCI-E Device",
+  a udev `.link` file with `WakeOnLan=magic` (reported to help on CachyOS; no
+  change here, removed). Same unresolved reports for 8086:15f3 on other boards.
+  The config stays so it works if the driver gets fixed. The whole
+  investigation, the tests to run and the plan to fix `igc`:
   `docs/wake-on-lan.md`.
 
 ## Logitech mice (logi-smartshift)
