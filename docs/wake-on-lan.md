@@ -15,10 +15,11 @@ investigation, the tests to run at home and the plan to fix `igc`.
   Switch: menadion is on port 3 (Ethernet 3, 2.5G; its MAC is learned
   there). In the same sleep state, S4:
 
-  | menadion | port 3 | card's port LEDs |
-  |---|---|---|
-  | hibernated from Windows | Actif | on |
-  | hibernated or powered off from Linux | **Inactif** | off |
+  | menadion | port 3 | mode | card's port LEDs |
+  |---|---|---|---|
+  | awake, either OS | Actif | 2500BaseT-FD | on |
+  | hibernated from Windows | Actif | **100BaseTX-FD** | on |
+  | hibernated or powered off from Linux | **Inactif** | | off |
 
   With no link, the magic packet has nothing to arrive on, whoever sends it.
   Same hardware, firmware and sleep state: the difference is software, most
@@ -34,8 +35,11 @@ investigation, the tests to run at home and the plan to fix `igc`.
 - The card and its root port are ACPI wake sources (PCI `power/wakeup`
   enabled on both); the DSDT path (`_PRW` → GPE 0x69, S4) has nothing
   OS-dependent.
-- Link speed forced to 10/100, `d3cold_allowed=0`, MSI "Wake Up Event By
-  BIOS" + "Resume By PCI-E Device".
+- `d3cold_allowed=0`, MSI "Wake Up Event By BIOS" + "Resume By PCI-E
+  Device".
+- Not ruled out after all: link speed forced to 10/100. It was judged by
+  whether the machine woke, before anyone looked at the port, and Windows
+  turns out to sleep at 100 Mbit/s: retested below.
 - The board: Windows keeps this one's link up in S4, and other boards with the same chip fail
   the same way on Linux (CachyOS and Proxmox reports, below).
 - udev arming it too: a `.link` file matching `Driver=igc` with
@@ -111,38 +115,51 @@ the link either. The card has power under Linux, so it is the card that
 turns its link off in sleep, and Windows' driver sets something that neither
 the NVM defaults nor `igc` set.
 
-## Next test: what Windows' driver sets
+## What Windows' driver does (2026-11-17)
 
-The registers can't tell (they reset at power-up), so ask Windows itself:
+**Hibernated, Windows keeps the link at 100 Mbit/s**: the Freebox shows port 3
+in `2500BaseT-FD` while Windows runs, `100BaseTX-FD` once it hibernates. It
+renegotiates a slow, low-power link for sleep; under Linux the link is gone
+instead.
 
-1. In Windows, PowerShell:
-   ```
-   & { Get-NetAdapter | Format-Table -AutoSize Name, InterfaceDescription, MacAddress, LinkSpeed
-       Get-NetAdapterAdvancedProperty -Name * -AllProperties | Format-Table -AutoSize Name, DisplayName, DisplayValue, RegistryKeyword, RegistryValue
-       Get-NetAdapterPowerManagement -Name * | Format-List *
-       powercfg /devicequery wake_armed } | Out-File -Width 400 -Encoding utf8 C:\wol-windows.txt
-   ```
-2. Hibernate (`shutdown /h`), then Freebox OS → Switch: port 3's **mode**
-   (speed and duplex). 10 or 100 Mbit/s while 2.5G when awake means Windows
-   renegotiates a low-power link for sleep.
-3. Boot Linux: `/mnt/win/wol-windows.txt` is readable (C: is mounted
-   read-only while Windows is hibernated).
+Its settings (Intel driver 2.1.4.2, 2023-10-03; `Get-NetAdapterAdvancedProperty
+-AllProperties`, dump in `C:\Users\nicol\wol-windows.txt`): Wake on Magic
+Packet on, Wake on Pattern Match on, Wake on Magic Packet from S5 on, ARP and
+NS offload on, speed auto, and hidden `EnablePME=1`, `WakeOnLink=2`,
+`EnableModernStandby=1`. No "Reduce Speed On Power Down" or EEE setting is
+offered for this card: the slowdown isn't a user setting, the driver does it
+(most likely the PHY's low-power link-up for non-D0 states, in `PHPM`).
 
-Then switch Windows' power settings off one at a time (Reduce Speed On
-Power Down, Wake on Link, Energy Efficient Ethernet, Ultra Low Power…) and
-hibernate each time: the one that makes Windows drop the link too is what
-`igc` lacks.
+## Next test: Linux at 100 Mbit/s before sleeping
+
+`igc`'s shutdown renegotiates the link with the speeds it advertises
+(`hw->phy.autoneg_advertised`, which `ethtool -s … advertise` sets), so
+limiting them to 100 Mbit/s full duplex reproduces Windows' sleep link from
+Linux. If port 3 stays Actif at 100, the fix is to do the same before every
+sleep: a hook now, a patch to `igc` (low-power link-up when Wake-on-LAN is
+armed) later.
+
+1. `sudo pacman -S ethtool` (a trial; keep it or `lodestar prune` it after).
+2. `sudo ethtool -s enp4s0 advertise 0x008` (100baseT/Full only). Check:
+   `cat /sys/class/net/enp4s0/speed` reads 100, the Freebox shows
+   `100BaseTX-FD`.
+3. `systemctl hibernate`, then Freebox: port 3 Actif, and in which mode?
+4. If Actif: wake `d8:bb:c1:8a:38:87` from the Freebox. If it doesn't wake,
+   power button.
+5. Back to normal: `sudo modprobe -r igc && sudo modprobe igc` (advertises
+   every speed again).
 
 ## Tests at home
 
 Done (2026-11-17): port mapping (menadion is on port 3); Windows hibernate
 keeps port 3 Actif, Linux hibernate and poweroff don't; the `.link` file
 changes nothing; the register comparison; Linux hibernate with the card
-untouched (link still drops).
+untouched (link still drops); what Windows' driver does (100 Mbit/s link in
+sleep).
 
 Still to do, in order:
 
-1. **What Windows' driver sets** (above).
+1. **Linux at 100 Mbit/s before sleeping** (above).
 2. **Windows, the wake itself.** Hibernated from Windows, does a magic packet
    from the Freebox wake it? And after a Windows shutdown, is port 3 still
    Actif? Tells what to expect of a fix.
@@ -182,9 +199,9 @@ What the source of kernel 7.3.4 says (`drivers/net/ethernet/intel/igc/`):
   only reads it while waiting for a PHY reset to finish. That register
   decides what the PHY does outside D0 (low-power link-up, speeds allowed,
   link disconnect), so it stays at its power-on value (`0x00045398`).
-  Windows' "Reduce Speed On Power Down" setting probably writes there; the
-  Windows test above should say. (Forcing 10/100 from Linux didn't help, but
-  that sets the speed while awake, not what the PHY does once asleep.)
+  Windows sleeps at 100 Mbit/s without any setting asking for it, so its
+  driver most likely sets low-power link-up there; `igc` renegotiates at
+  full speed (2.5G) on its way down instead.
 - Still to check: EEE, `PME_En` in the PCI config space at the moment of
   sleep.
 
