@@ -1,5 +1,6 @@
 // A small button with a line icon of ours (icons/<icon>.svg): the clock's
-// month steps, the year view's.
+// month steps and year button, the year view's, Claude's reload (turn():
+// the icon goes round once, to say it was done).
 import QtQuick
 
 Item {
@@ -8,6 +9,10 @@ Item {
     property string icon: ""
 
     signal clicked
+
+    function turn() {
+        spin.restart()
+    }
 
     width: 32
     height: 32
@@ -19,10 +24,22 @@ Item {
     }
 
     Glyph {
+        id: glyph
+
         anchors.centerIn: parent
         size: 16
         source: Qt.resolvedUrl(`icons/${chevron.icon}.svg`)
-        color: Theme.dim
+        color: press.containsMouse ? Theme.text : Theme.dim
+    }
+
+    RotationAnimator {
+        id: spin
+
+        target: glyph
+        from: 0
+        to: 360
+        duration: 500
+        easing.type: Easing.OutCubic
     }
 
     MouseArea {

@@ -804,13 +804,14 @@ later (yazi, btop, lazygit…).
       Bluetooth, sound and battery popups on the machine's own services.
 - [x] Claude Code's limits and the clock's popup in the bar (17 Nov 2026),
       after Omarchy 4.5's agents panel and clock. Claude, beside the
-      desktops: the spark and both windows' use ("5h 14% · 7d 19%", the
-      names dim as in the status line), a window red from 90 % and the
+      desktops: the spark and both windows' use on two lines, as the clock's
+      (a name, a bar filled as far, the number; one line read "5h 14% · 7d
+      19%", hard to take in at a glance), a window red from 90 % and the
       spark with it; the popup a meter for the session and one for the
       week (a gateway's spend limit too), a tick where an even pace would
       be, the time until each starts again, how old the numbers are, and
-      Reload (the file again at once; it's read every 30 s anyway). The
-      numbers are the ones Claude Code hands its status line
+      Reload in its corner (the file again at once; it's read every 30 s
+      anyway). The numbers are the ones Claude Code hands its status line
       (`rate_limits`), which writes them to ~/.local/state/claude/
       limits.json at each reply (modules/claude): nothing holds a token or
       asks Anthropic, as Omarchy's collector does (it reads Claude Code's
