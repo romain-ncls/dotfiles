@@ -807,7 +807,9 @@ later (yazi, btop, lazygit…).
       desktops: the spark and both windows' use side by side, each a ring
       filled as far and its number (one line of text read "5h 14% · 7d
       19%", hard to take in at a glance; two stacked lines with bars, too
-      small), a window red from 90 % and the spark with it; the popup a
+      small), a window red from 90 % and the spark with it, one not started
+      still there and saying so (Claude Code leaves it out of
+      `rate_limits` until it starts); the popup a
       meter for the session and one for the week (a gateway's spend limit
       too), a tick where an even pace would be, the time until each starts
       again, how old the numbers are, and

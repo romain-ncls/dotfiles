@@ -6,8 +6,8 @@
 // asks Anthropic. Hidden until Claude Code has written them once.
 //
 // The bar (beside the desktops): Claude's spark, then the session's and the
-// week's use side by side (a ring filled as far, the number), red from 90 %
-// (the spark too). The popup: a meter for each window, a tick where an even
+// week's use side by side (a ring filled as far, the number, or "not
+// started"), red from 90 % (the spark too). The popup: a meter for each window, a tick where an even
 // pace would be, the time until it starts again, and how old the numbers
 // are (as fresh as the last reply); Reload, in its corner, reads the file
 // again at once.
@@ -41,7 +41,8 @@ BarButton {
         path: (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/claude/limits.json"
         watchChanges: true
         printErrors: false
-        onFileChanged: reload()
+        // by its id: unqualified, reload() isn't found from inside this item
+        onFileChanged: limitsFile.reload()
         onLoaded: {
             try {
                 claude.limits = JSON.parse(text())
@@ -53,16 +54,21 @@ BarButton {
         onLoadFailed: claude.limits = null
     }
 
-    // A window: {used (0-100), resets (epoch seconds), pace (0-1, -1 when
-    // unknown)}. One whose reset has passed starts again from nothing.
-    function window(key, length) {
+    // A window: {started, used (0-100), resets (epoch seconds), pace (0-1,
+    // -1 when unknown)}. Claude Code leaves out a window with no use since
+    // its last reset, and one whose reset has passed starts again from
+    // nothing: the session and the week are still shown then, as not
+    // started (`always`); a spend limit only behind a gateway that sets one.
+    function window(key, length, always) {
         const w = limits ? limits[key] : null
+        const idle = { started: false, used: 0, resets: 0, pace: -1, length: length }
         if (!w || typeof w.used_percentage !== "number")
-            return null
+            return limits && always ? idle : null
         const resets = w.resets_at || 0
         if (resets > 0 && resets <= now)
-            return { used: 0, resets: 0, pace: -1, length: length }
+            return idle
         return {
+            started: true,
             used: Math.max(0, w.used_percentage),
             resets: resets,
             pace: resets > 0 && length > 0 ? Math.max(0, Math.min(1, 1 - (resets - now) / length)) : -1,
@@ -70,10 +76,10 @@ BarButton {
         }
     }
 
-    readonly property var session: window("five_hour", 5 * 3600)
-    readonly property var week: window("seven_day", 7 * 86400)
+    readonly property var session: window("five_hour", 5 * 3600, true)
+    readonly property var week: window("seven_day", 7 * 86400, true)
     // a gateway's: its period's length isn't said, so no pace
-    readonly property var spend: window("spend_limit", 0)
+    readonly property var spend: window("spend_limit", 0, false)
     readonly property bool high: [session, week, spend].some(w => w && w.used >= 90)
 
     // "3d 4h", "2h 13m", "42m"
@@ -131,8 +137,8 @@ BarButton {
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: `${Math.round(win.modelData.w.used)}%`
-                        color: win.full ? Theme.warn : Theme.text
+                        text: win.modelData.w.started ? `${Math.round(win.modelData.w.used)}%` : "not started"
+                        color: win.full ? Theme.warn : win.modelData.w.started ? Theme.text : Theme.dim
                         font.family: Theme.font
                         font.pixelSize: 13
                     }
@@ -201,7 +207,7 @@ BarButton {
 
             Text {
                 anchors.right: parent.right
-                text: !limit.w ? "" : limit.w.resets > 0 ? `resets in ${claude.span(limit.w.resets - claude.now)}` : "not started"
+                text: !limit.w ? "" : !limit.w.started ? "not started" : limit.w.resets > 0 ? `resets in ${claude.span(limit.w.resets - claude.now)}` : ""
                 color: Theme.dim
                 font.family: Theme.font
                 font.pixelSize: 11
@@ -277,17 +283,6 @@ BarButton {
                 const s = claude.limits ? claude.limits.spend_limit : null
                 return s && typeof s.used_usd === "number" && typeof s.limit_usd === "number" ? `$${Math.round(s.used_usd)} of $${Math.round(s.limit_usd)}` : w ? `${Math.round(w.used)}%` : ""
             }
-        }
-
-        Text {
-            visible: claude.session === null && claude.week === null && claude.spend === null
-            width: parent.width
-            leftPadding: 4
-            text: "Claude Code hasn't said anything about its limits since they last reset."
-            wrapMode: Text.Wrap
-            color: Theme.dim
-            font.family: Theme.font
-            font.pixelSize: 12
         }
     }
 }
