@@ -109,7 +109,9 @@ Windows is still hibernated: avoid `lds upgrade` until it has resumed once
 (C: is read-only, but the ESP they share isn't).
 
 1. `echo 'blacklist igc' | sudo tee /etc/modprobe.d/zz-wol-test.conf`
-   (`igc` isn't in the initramfs, so no rebuild), then reboot: no network.
+   (`igc` isn't in the initramfs, so no rebuild), then **reboot**: the
+   blacklist only acts at boot, and `modprobe -r igc` instead would power
+   the PHY down on its way out. Check: `ip -br link` lists no `enp4s0`.
 2. `sudo python3 -I ~/wol-test/igc-regs.py --clear-wake-status | tee ~/wol-test/3-noigc.txt`
    (shows who sent the magic packet the card kept, then clears it).
 3. `systemctl hibernate`, then Freebox OS → Switch: port 3?
