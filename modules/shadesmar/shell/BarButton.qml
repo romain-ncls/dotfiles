@@ -10,6 +10,9 @@ Item {
     required property var bar
     required property string popup
     property string icon: ""
+    // or a picture of ours (icons/), and its color
+    property string iconSource: ""
+    property color iconColor: Theme.text
     property string label: ""
     property color labelColor: Theme.text
     property int badge: 0
@@ -35,6 +38,8 @@ Item {
         Glyph {
             anchors.verticalCenter: parent.verticalCenter
             icon: button.icon
+            source: button.iconSource !== "" ? button.iconSource : button.icon !== "" ? Quickshell.iconPath(button.icon, "image-missing") : ""
+            color: button.iconColor
         }
 
         Text {
