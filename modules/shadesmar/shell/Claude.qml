@@ -5,10 +5,11 @@
 // (modules/claude's statusline-command.sh): nothing here holds a token or
 // asks Anthropic. Hidden until Claude Code has written them once.
 //
-// The bar: Claude's spark and the session's use, red from 90 % (either
-// window). The popup: a meter for each window, a tick where an even pace
-// would be, the time until it starts again, and how old the numbers are (as
-// fresh as the last reply); a new session to start.
+// The bar (beside the desktops): Claude's spark, the session's and the
+// week's use, a window red from 90 % (the spark too). The popup: a meter for
+// each window, a tick where an even pace would be, the time until it starts
+// again, and how old the numbers are (as fresh as the last reply); Reload
+// reads the file again at once.
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -93,8 +94,16 @@ BarButton {
     popup: "claude"
     iconSource: Qt.resolvedUrl("icons/claude.svg")
     iconColor: high ? Theme.warn : Theme.text
-    label: session ? `${Math.round(session.used)}%` : ""
-    labelColor: high ? Theme.warn : Theme.text
+    // "5h 14% · 7d 19%", the names dim as in the status line, a window red
+    // from 90 %
+    function part(name, w) {
+        if (!w)
+            return ""
+        const n = Math.round(w.used)
+        return `<font color="${Theme.dim}">${name}</font> ${n >= 90 ? `<font color="${Theme.warn}">${n}%</font>` : `${n}%`}`
+    }
+    label: [part("5h", session), part("7d", week)].filter(p => p !== "").join(` <font color="${Theme.dim}">·</font> `)
+    labelColor: Theme.text
 
     // a window's line: its name and use, the meter, its length and reset
     component Limit: Column {
@@ -228,13 +237,15 @@ BarButton {
             height: 4
         }
 
+        // the file now rather than at the next half minute: the numbers
+        // themselves are new at Claude Code's next reply
         ListRow {
-            lineIcon: Qt.resolvedUrl("icons/square-terminal.svg")
-            title: "New session"
-            subtitle: "Claude Code in Ghostty"
+            lineIcon: Qt.resolvedUrl("icons/refresh-cw.svg")
+            title: "Reload"
+            subtitle: "Claude Code's latest numbers"
             onClicked: {
-                popup.close()
-                Quickshell.execDetached(["ghostty", "-e", "claude"])
+                limitsFile.reload()
+                claude.now = Date.now() / 1000
             }
         }
     }
