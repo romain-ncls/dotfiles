@@ -267,7 +267,7 @@ namespace {
     }
 
     // The windows of the column the active window's is swapped with
-    // (Meta+Shift+Q/D), told before the swap. The view follows the active
+    // (binds.lua's along()), told before the swap. The view follows the active
     // window: a column as wide as the screen stays put on it, and the other
     // passes to its other side, under it, unseen: Hyprland draws the active
     // tiled window after the others. One passing is drawn right after it

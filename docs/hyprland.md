@@ -111,7 +111,7 @@ rejects (`bezier` or `spring`).
   window first, then switches, so it otherwise rides in with the new
   desktop; no plugin found does KWin's (2026-11 survey: Hyprgrid,
   hyprland-virtual-desktops, hyprtasking, hyprmosaic). A window moved
-  along the tape (Meta+Shift+Q/D: its column swapped with the next) stays
+  along the tape (Meta+Alt+Q/D: its column swapped with the next) stays
   put as the view follows it, and the column it swaps with passes to its
   other side under it, Hyprland drawing the active tiled window last:
   told before the swap (`hl.plugin.hyprslide.pass(window)`), hyprslide
@@ -405,14 +405,14 @@ migrations and update channels (lodestar does that), their titlebar plugin.
   move in the grid (KDE's default), four fingers on the touchpad drag it
   (hyprslide). The side screens only.
 - Windows: Alt+Tab along the tape, left to right and round again, Alt+Shift+Tab
-  back (Alt+Shift+D and Q: the same, stopping at the ends; the
-  docked windows in the tape's order, then the floating ones; the view
+  back (Alt+Shift+D and Q, Meta+Shift+D and Q: the same, stopping at the
+  ends; the docked windows in the tape's order, then the floating ones; the view
   scrolling to the window; a switcher with previews, as Plasma's, was tried
   and dropped on 2026-11-04: romain prefers the plain scroll). Meta+Up docks
   a floating window, full width, and floats a docked one (KDE's maximize
   and restore); Meta+Left/Right: half the screen on that side (KDE's quick
   tile), a docked window staying docked, the tape scrolled to put it there.
-  Meta+Shift+Q/D move the window along the tape, and past its end onto the
+  Meta+Alt+Q/D move the window along the tape, and past its end onto the
   next screen; Meta+Shift+Left/Right straight to the other screen (KDE's).
   The window stays put as the view follows it, and the neighbour is seen
   passing over it to its other side (hyprslide, above).

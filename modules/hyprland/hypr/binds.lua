@@ -30,7 +30,7 @@ bind(mod .. " + SHIFT + twosuperior", hl.dsp.global("shadesmar:volume"))
 
 -- Windows. Alt+Tab goes through the desktop's windows from left to right,
 -- then round to the first again (Alt+Shift+Tab: the other way); Alt+Shift+D
--- and Alt+Shift+Q (Q left, D right, as with Meta) the same, but they stop
+-- and Q, or Meta+Shift+D and Q (Q left, D right), the same, but they stop
 -- at the last window and the first. All of them go in the
 -- order they stand, not in the order of use: the docked ones along the
 -- tape (those of one column top to bottom), then the floating ones. (A
@@ -76,6 +76,8 @@ bind("ALT + Tab", function() cycle(1) end)
 bind("ALT + SHIFT + Tab", function() cycle(-1) end)
 bind("ALT + SHIFT + d", function() cycle(1, true) end)
 bind("ALT + SHIFT + q", function() cycle(-1, true) end)
+bind(mod .. " + SHIFT + d", function() cycle(1, true) end)
+bind(mod .. " + SHIFT + q", function() cycle(-1, true) end)
 
 -- Alt+² and Alt+Shift+² (Plasma's Alt+` and Alt+~): the current app's
 -- windows on the screens. (hl.get_windows' class is the exact class.)
@@ -222,7 +224,7 @@ end
 bind(mod .. " + down", hide)
 bind(mod .. " + SHIFT + down", hl.dsp.workspace.toggle_special("hidden"))
 
--- Meta+Shift+Q and D (left and right on AZERTY's home row): the window one
+-- Meta+Alt+Q and D (left and right on AZERTY's home row): the window one
 -- place along the tape (its column swapped with the next one), and from
 -- either end onto the screen on that side, at the end it comes in by. A
 -- floating window, or one alone on its desktop, goes at once.
@@ -291,8 +293,8 @@ local function along(side)
         end
     end
 end
-bind(mod .. " + SHIFT + q", function() along("left") end)
-bind(mod .. " + SHIFT + d", function() along("right") end)
+bind(mod .. " + ALT + q", function() along("left") end)
+bind(mod .. " + ALT + d", function() along("right") end)
 
 -- On every desktop (Plasma's Meta+Ctrl+Shift+PgUp): only a floating window
 -- can be, so it floats first.
@@ -328,7 +330,7 @@ bind(mod .. " + CTRL + mouse_down", function() zoom(1 / 1.2) end)
 bind(mod .. " + agrave", function() zoom(nil) end)
 bind(mod .. " + SHIFT + agrave", function() zoom(nil) end)
 
--- To the other screens straight away, Plasma's Meta+Shift+arrows (Meta+Shift+Q
+-- To the other screens straight away, Plasma's Meta+Shift+arrows (Meta+Alt+Q
 -- and D: along the tape first, above).
 bind(mod .. " + SHIFT + right", hl.dsp.window.move({ monitor = "+1" }))
 bind(mod .. " + SHIFT + left", hl.dsp.window.move({ monitor = "-1" }))
