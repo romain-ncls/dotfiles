@@ -3,7 +3,7 @@
 // bottom of the laptop's screen where Plasma's panel is, with the
 // notifications above it; the overview and the grid view over every screen;
 // the launcher and the OSD on the focused one; the screen recorder; screen
-// sharing's picker; Backdrop's menu on the wallpaper.
+// sharing's picker; Backdrop's menu on the wallpaper; the year's calendar.
 // (The pragma: the tray's menus are Qt widgets' menus.)
 import QtQuick
 import Quickshell
@@ -39,6 +39,9 @@ ShellRoot {
         overview: overview
     }
     Osd {}
+    YearCalendar {
+        id: year
+    }
     Launcher {}
     Recorder {
         id: recorder
@@ -55,6 +58,7 @@ ShellRoot {
     Bar {
         notifications: notifications
         recorder: recorder
+        yearView: year
         screen: barScreen
     }
 }

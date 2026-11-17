@@ -1,9 +1,9 @@
 // The bar: the desktops on the left; a recording's dot, the tray, the
 // clipboard, the notifications, Claude Code's limits, the network, Bluetooth,
-// the sound, the battery and the clock on the right. Their popups open above
-// them, one at a time (`open`; qs -c shadesmar ipc call bar open <name>).
-// Docked across the screen in lumar's flush layout, floating with gaps and
-// corners in the other.
+// the sound, the battery, the world clock and the clock on the right. Their
+// popups open above them, one at a time (`open`; qs -c shadesmar ipc call
+// bar open <name>). Docked across the screen in lumar's flush layout,
+// floating with gaps and corners in the other.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -15,6 +15,7 @@ PanelWindow {
 
     required property var notifications
     required property var recorder
+    property var yearView: null // YearCalendar.qml, from the clock's popup
     property string open: ""
     readonly property int gap: Theme.floating ? 8 : 0
 
@@ -101,8 +102,12 @@ PanelWindow {
         Battery {
             bar: bar
         }
+        WorldClock {
+            bar: bar
+        }
         Clock {
             bar: bar
+            yearView: bar.yearView
             Layout.leftMargin: 6
         }
     }

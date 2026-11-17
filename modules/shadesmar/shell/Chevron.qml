@@ -1,11 +1,12 @@
 // A small button with a line icon of ours (icons/<icon>.svg): the clock's
-// month steps.
+// month steps, the year view's, the world clock's rows.
 import QtQuick
 
 Item {
     id: chevron
 
     property string icon: ""
+    readonly property bool hovered: press.containsMouse
 
     signal clicked
 
