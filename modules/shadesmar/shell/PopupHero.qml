@@ -8,6 +8,7 @@ Item {
     id: hero
 
     property string icon: ""
+    property string iconSource: "" // or a picture of ours (icons/)
     property string title: ""
     property string caption: ""
     property bool warn: false
@@ -24,6 +25,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         size: 30
         icon: hero.icon
+        source: hero.iconSource !== "" ? hero.iconSource : hero.icon !== "" ? Quickshell.iconPath(hero.icon, "image-missing") : ""
         color: hero.warn ? Theme.warn : Theme.text
     }
 

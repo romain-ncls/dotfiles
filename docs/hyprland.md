@@ -802,3 +802,21 @@ later (yazi, btop, lazygit…).
       dropped. Tried headless with fake tray items (Discord's real picture)
       and a test clipboard (cliphist under XDG_CACHE_HOME); the network,
       Bluetooth, sound and battery popups on the machine's own services.
+- [x] Claude Code's limits and the clock's popup in the bar (17 Nov 2026),
+      after Omarchy 4.5's agents panel and clock. Claude: the spark and the
+      5-hour session's use, red from 90 %; the popup a meter for the
+      session and one for the week (a gateway's spend limit too), a tick
+      where an even pace would be, the time until each starts again, how
+      old the numbers are, and a new session in Ghostty. The numbers are
+      the ones Claude Code hands its status line (`rate_limits`), which
+      writes them to ~/.local/state/claude/limits.json at each reply
+      (modules/claude): nothing holds a token or asks Anthropic, as
+      Omarchy's collector does (it reads Claude Code's OAuth token and
+      calls the usage endpoint), so they're as fresh as the last reply and
+      the item is hidden until a session has said them. Omarchy's per-model
+      weekly windows aren't in the status line's data. The clock: today
+      big (to the second while open), the week's number and the day of the
+      year, and a month with ISO week numbers (chevrons, wheel, arrows,
+      PageUp/PageDown a year, Home back), in LC_TIME's language. Not taken
+      from Omarchy: Elsewhen (its world clock), the weather, a calendar's
+      events.

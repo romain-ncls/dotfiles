@@ -47,6 +47,16 @@ fields=$("$JQ" -r '
 
 IFS=$'\x1f' read -r cwd model ctx five week <<<"$fields"
 
+# --- the limits for shadesmar's bar (its Claude item, modules/shadesmar):
+# the windows as Claude Code hands them (used_percentage 0-100, resets_at in
+# epoch seconds; a window gone once it has reset), and when. Written whole,
+# a rename, so the bar never reads half a file. ---
+limits=$("$JQ" -c --argjson at "$(date +%s)" 'select(.rate_limits) | .rate_limits + {at: $at}' <<<"$input" 2>/dev/null)
+if [ -n "$limits" ]; then
+  state=${XDG_STATE_HOME:-$HOME/.local/state}/claude
+  mkdir -p "$state" && printf '%s\n' "$limits" > "$state/limits.json.$$" && mv -f "$state/limits.json.$$" "$state/limits.json"
+fi
+
 # meter LABEL PERCENT WIDTH -> "LABEL NN% ███▍░░░░", bar colored by threshold.
 # Resolution is eighths of a cell: total = round(pct/100 * width * 8), rendered
 # as `total/8` full blocks plus one partial block for the remainder. A non-zero
