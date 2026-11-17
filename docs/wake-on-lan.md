@@ -130,24 +130,65 @@ NS offload on, speed auto, and hidden `EnablePME=1`, `WakeOnLink=2`,
 offered for this card: the slowdown isn't a user setting, the driver does it
 (most likely the PHY's low-power link-up for non-D0 states, in `PHPM`).
 
-## Next test: Linux at 100 Mbit/s before sleeping
+## Linux at 100 Mbit/s before sleeping (2026-11-17): link still drops
 
-`igc`'s shutdown renegotiates the link with the speeds it advertises
-(`hw->phy.autoneg_advertised`, which `ethtool -s … advertise` sets), so
-limiting them to 100 Mbit/s full duplex reproduces Windows' sleep link from
-Linux. If port 3 stays Actif at 100, the fix is to do the same before every
-sleep: a hook now, a patch to `igc` (low-power link-up when Wake-on-LAN is
-armed) later.
+`sudo ethtool -s enp4s0 advertise 0x008` (ethtool installed as a trial):
+the journal shows the link at 100 Mbps Full from 21:04 until the hibernate
+at 21:05, and port 3 still went Inactif. The speed before sleeping isn't it.
 
-1. `sudo pacman -S ethtool` (a trial; keep it or `lodestar prune` it after).
-2. `sudo ethtool -s enp4s0 advertise 0x008` (100baseT/Full only). Check:
-   `cat /sys/class/net/enp4s0/speed` reads 100, the Freebox shows
-   `100BaseTX-FD`.
-3. `systemctl hibernate`, then Freebox: port 3 Actif, and in which mode?
-4. If Actif: wake `d8:bb:c1:8a:38:87` from the Freebox. If it doesn't wake,
-   power button.
-5. Back to normal: `sudo modprobe -r igc && sudo modprobe igc` (advertises
-   every speed again).
+ACPI side, checked meanwhile: `RP02` (root port) and `RP02.PXSX` (the card)
+are wake-enabled for S4 in `/proc/acpi/wakeup`. `PXSX` has two power
+resources, `WRST` and `DRST`, unused (`resource_in_use 0`) and not in its
+wake list: the BIOS's generic template for Wi-Fi modules.
+
+## The cause, probably: the card may only link at 10 Mbit/s once asleep
+
+Intel's shared code (used by FreeBSD's and DPDK's `igc`, not Linux's) names
+PHPM's bits (`sys/dev/igc/igc_phy.h` in FreeBSD). The card's power-on value
+`0x00045398` decodes as:
+
+| bit | name | meaning | at power-on |
+|---|---|---|---|
+| `0x0008` | `DIS_1000_D3` | no 1G in D3 | **set** |
+| `0x0010` | `LINK_ENERGY` | link energy detect | set |
+| `0x0080` | `SPD_B2B_EN` | smart power down | set |
+| `0x0100` | `RST_COMPL` | PHY reset done (clears on read) | set |
+| `0x0200` | `DIS_100_D3` | no 100M in D3 | **set** |
+| `0x1000` | `DIS_2500_D3` | no 2.5G in D3 | **set** |
+
+So in D3 the PHY may only use 10 Mbit/s, and Linux's `igc` never writes
+PHPM. Windows sleeps at 100BaseTX: its driver clears `DIS_100_D3` (Intel's
+code has `igc_set_d3_lplu_state_i225()` for these bits; FreeBSD's driver
+doesn't call it either, and has the same bug). If the Freebox's 2.5G port
+doesn't do 10 Mbit/s, a sleeping card under Linux has no link at all, which
+fits every test: untouched card, `igc` at 2.5G, `igc` at 100.
+
+## Next tests
+
+**A. Does port 3 take 10 Mbit/s?** No reboot. Expected: no.
+
+1. `sudo ethtool -s enp4s0 advertise 0x003` (10baseT only).
+2. `cat /sys/class/net/enp4s0/speed` and Freebox → Switch: port 3?
+3. Back: `sudo modprobe -r igc && sudo modprobe igc`.
+
+**B. The fix by hand: allow 100M in D3.** The reader's `--allow-100-in-d3`
+clears `DIS_100_D3` (only with `igc` not loaded: Arch's kernel won't map the
+BAR while it holds it). Expected: port 3 Actif in `100BaseTX-FD`, and maybe
+a wake, since APM wake is on in the untouched card.
+
+1. `echo 'blacklist igc' | sudo tee /etc/modprobe.d/zz-wol-test.conf`, then
+   **reboot**. Check: `ip -br link` lists no `enp4s0`.
+2. `sudo python3 -I ~/wol-test/igc-regs.py --allow-100-in-d3 --clear-wake-status | tee ~/wol-test/5-allow100.txt`
+3. `systemctl hibernate`, then Freebox: port 3, and its mode.
+4. If Actif: wake `d8:bb:c1:8a:38:87` from the Freebox; power button if
+   nothing happens within a minute.
+5. `sudo python3 -I ~/wol-test/igc-regs.py | tee ~/wol-test/6-after.txt`
+   (WUS: did the card see the packet).
+6. Clean up: `sudo rm /etc/modprobe.d/zz-wol-test.conf && sudo modprobe igc`.
+
+If B works, the real fix is in `igc`: clear `DIS_100_D3` (or call the D3
+speed function, as Windows seems to) in `__igc_shutdown` when Wake-on-LAN
+is armed, then send it upstream. Until then, a local patched `igc` package.
 
 ## Tests at home
 
@@ -155,11 +196,11 @@ Done (2026-11-17): port mapping (menadion is on port 3); Windows hibernate
 keeps port 3 Actif, Linux hibernate and poweroff don't; the `.link` file
 changes nothing; the register comparison; Linux hibernate with the card
 untouched (link still drops); what Windows' driver does (100 Mbit/s link in
-sleep).
+sleep); Linux at 100 Mbit/s before sleeping (link still drops).
 
 Still to do, in order:
 
-1. **Linux at 100 Mbit/s before sleeping** (above).
+1. **A and B** (above): does port 3 take 10 Mbit/s; allow 100M in D3 by hand.
 2. **Windows, the wake itself.** Hibernated from Windows, does a magic packet
    from the Freebox wake it? And after a Windows shutdown, is port 3 still
    Actif? Tells what to expect of a fix.
@@ -198,10 +239,9 @@ What the source of kernel 7.3.4 says (`drivers/net/ethernet/intel/igc/`):
 - **Main lead:** it never writes `PHPM` (PHY power management, `0x0E14`); it
   only reads it while waiting for a PHY reset to finish. That register
   decides what the PHY does outside D0 (low-power link-up, speeds allowed,
-  link disconnect), so it stays at its power-on value (`0x00045398`).
-  Windows sleeps at 100 Mbit/s without any setting asking for it, so its
-  driver most likely sets low-power link-up there; `igc` renegotiates at
-  full speed (2.5G) on its way down instead.
+  link disconnect), so it stays at its power-on value (`0x00045398`): 100M,
+  1G and 2.5G all disabled in D3, 10 Mbit/s only (decoded above). Windows
+  sleeps at 100 Mbit/s, so its driver clears at least `DIS_100_D3`.
 - Still to check: EEE, `PME_En` in the PCI config space at the moment of
   sleep.
 
