@@ -109,8 +109,10 @@ type Daemon struct {
 	pending  bool // show the next committed picture right away
 	failures int
 	retryAt  time.Time
+	adoptAt  time.Time // when to try adopting liked pictures again
 
 	refilling atomic.Bool
+	adopting  atomic.Bool
 	wake      chan struct{}
 }
 
@@ -256,6 +258,7 @@ func (d *Daemon) loop(ctx context.Context) {
 			d.advance()
 		}
 		d.mu.Unlock()
+		d.maybeAdopt(ctx)
 		d.maybeRefill(ctx)
 
 		select {
@@ -626,22 +629,31 @@ func (d *Daemon) commit(c *Candidate) bool {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	d.st.Seen[c.ID] = now()
-	for _, h := range d.st.Hashes {
-		if similar(h, c.Hash) {
-			log.Printf("skipping %s: duplicate of a picture already seen", c.ID)
-			os.Remove(c.File)
-			return false
-		}
-	}
-	d.st.Hashes = append(d.st.Hashes, c.Hash)
-	if n := len(d.st.Hashes); n > maxHashes {
-		d.st.Hashes = d.st.Hashes[n-maxHashes:]
+	if !d.remember(c.Hash) {
+		log.Printf("skipping %s: duplicate of a picture already seen", c.ID)
+		os.Remove(c.File)
+		return false
 	}
 	d.st.Pool = append(d.st.Pool, c)
 	if d.pending {
 		d.advance()
 	}
 	d.save()
+	return true
+}
+
+// remember records a picture's hash, unless a similar one is recorded
+// already: then it reports false. Callers hold d.mu.
+func (d *Daemon) remember(hash uint64) bool {
+	for _, h := range d.st.Hashes {
+		if similar(h, hash) {
+			return false
+		}
+	}
+	d.st.Hashes = append(d.st.Hashes, hash)
+	if n := len(d.st.Hashes); n > maxHashes {
+		d.st.Hashes = d.st.Hashes[n-maxHashes:]
+	}
 	return true
 }
 
