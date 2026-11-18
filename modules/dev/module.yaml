@@ -2,6 +2,7 @@
 packages:
   - go
   - rustup # Rust toolchains (fabrial); once: rustup default stable
+  - clang # libclang, for the PipeWire bindings (fabrial)
   - nodejs-lts-jod # Node 22: bitwarden-cli requires it, and it conflicts with nodejs
   - pnpm
   - deno
