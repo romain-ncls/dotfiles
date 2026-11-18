@@ -39,6 +39,7 @@ modules:
   - bemoji
   - logi-smartshift
   - awpro
+  - fabrial
   - mutectl
   - spotify-vol
   - backdrop

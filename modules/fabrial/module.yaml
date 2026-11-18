@@ -1,0 +1,11 @@
+# fabrial: the headset mic, cleaned up (DeepFilterNet and the awpro-v3
+# chain), as a virtual mic that apps recording the headset are moved onto.
+# It replaces EasyEffects on the mic; EasyEffects stays in the media module,
+# installed but not started. Its PKGBUILD lives in its own repo.
+pkg:
+  git: https://github.com/romain-ncls/fabrial.git
+  ref: 8cff24a25c24d1c30817871c28f29896e7d12a53
+  path: packaging/arch
+
+user-services:
+  - fabrial.service

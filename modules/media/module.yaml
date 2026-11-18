@@ -1,5 +1,6 @@
-# Music and audio: Spotify, EasyEffects (effects on the microphone and the
-# headset; its presets are data), the PipeWire graph.
+# Music and audio: Spotify, EasyEffects (its presets are data), the PipeWire
+# graph. EasyEffects no longer starts on its own: fabrial (its own module)
+# does the mic now. `systemctl --user start easyeffects` brings it back.
 packages:
   - spotify
   - vlc
@@ -9,9 +10,6 @@ packages:
   - lsp-plugins-lv2 # expander, equalizer, compressor, limiter
   - deepfilternet-ladspa # DeepFilterNet noise removal
   - crosspipe
-
-user-services:
-  - easyeffects.service
 
 window-rules:
   - Description: Spotify on all desktops
