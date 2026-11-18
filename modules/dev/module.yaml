@@ -1,6 +1,7 @@
 # Development: languages, cluster tools, the code font.
 packages:
   - go
+  - rustup # Rust toolchains (fabrial); once: rustup default stable
   - nodejs-lts-jod # Node 22: bitwarden-cli requires it, and it conflicts with nodejs
   - pnpm
   - deno
