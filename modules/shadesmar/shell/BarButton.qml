@@ -28,7 +28,8 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: Theme.corner
-        color: button.bar.open === button.popup ? Theme.selected : area.containsMouse ? Theme.hover : "transparent"
+        color: area.pressed ? Theme.pressed : button.bar.open === button.popup ? Theme.selected : area.containsMouse ? Theme.hover : Theme.none
+        Fade on color {}
     }
 
     Row {
@@ -62,7 +63,17 @@ Item {
         }
     }
 
+    // one more: the count pops, a little bigger, then settles
+    property int counted: 0
+    onBadgeChanged: {
+        if (badge > counted)
+            pop.restart()
+        counted = badge
+    }
+
     Rectangle {
+        id: badgeBox
+
         visible: button.badge > 0
         anchors.right: parent.right
         anchors.top: parent.top
@@ -70,6 +81,24 @@ Item {
         height: 16
         radius: height / 2
         color: Theme.accent
+
+        SequentialAnimation {
+            id: pop
+
+            Ease {
+                target: badgeBox
+                property: "scale"
+                to: 1.25
+                duration: Theme.fast / 2
+            }
+            Ease {
+                target: badgeBox
+                property: "scale"
+                to: 1
+                duration: Theme.normal
+                easing.bezierCurve: Theme.move
+            }
+        }
 
         Text {
             id: count

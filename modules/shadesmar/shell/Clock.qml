@@ -35,7 +35,8 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: Theme.corner
-        color: popup.shown ? Theme.selected : area.containsMouse ? Theme.hover : "transparent"
+        color: area.pressed ? Theme.pressed : popup.shown ? Theme.selected : area.containsMouse ? Theme.hover : Theme.none
+        Fade on color {}
     }
 
     Column {
@@ -81,14 +82,29 @@ Item {
         property int year: 2000
         property int month: 0
 
+        // the month changing: its days come from the side it goes to
+        function slide(months) {
+            if (months === 0)
+                return
+            shift.x = months > 0 ? 12 : -12
+            grid.opacity = 0.4
+            slideIn.restart()
+        }
         function home() {
             popup.year = clock.date.getFullYear()
             popup.month = clock.date.getMonth()
+        }
+        // back to this month, from the one shown
+        function back() {
+            const months = (clock.date.getFullYear() - popup.year) * 12 + clock.date.getMonth() - popup.month
+            home()
+            slide(months)
         }
         function step(months) {
             const d = new Date(popup.year, popup.month + months, 1, 12)
             popup.year = d.getFullYear()
             popup.month = d.getMonth()
+            slide(months)
         }
 
         onShownChanged: {
@@ -141,7 +157,7 @@ Item {
                     anchors.fill: parent
                     anchors.margins: -4
                     hoverEnabled: true
-                    onClicked: popup.home()
+                    onClicked: popup.back()
                 }
             }
 
@@ -284,6 +300,28 @@ Item {
 
             Grid {
                 id: grid
+
+                transform: Translate {
+                    id: shift
+                }
+
+                ParallelAnimation {
+                    id: slideIn
+
+                    Ease {
+                        target: shift
+                        property: "x"
+                        to: 0
+                        easing.bezierCurve: Theme.move
+                    }
+                    Ease {
+                        target: grid
+                        property: "opacity"
+                        to: 1
+                        duration: Theme.fast
+                        easing.bezierCurve: Theme.fade
+                    }
+                }
 
                 y: head.y + head.height + 4
                 columns: 8

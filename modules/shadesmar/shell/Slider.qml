@@ -1,5 +1,7 @@
 // A slider from 0 to 1: dragged, clicked or scrolled; moved(value) as it
-// goes (the owner sets `value` from what it controls).
+// goes (the owner sets `value` from what it controls). Changed from
+// elsewhere (the wheel, the keys), it glides there; held, it's under the
+// pointer, its knob bigger.
 import QtQuick
 
 Item {
@@ -7,6 +9,11 @@ Item {
 
     property real value: 0
     readonly property real clamped: Math.max(0, Math.min(1, value))
+    property real drawn: clamped
+    Behavior on drawn {
+        enabled: Theme.speed > 0 && !area.pressed
+        Follow {}
+    }
 
     signal moved(real value)
 
@@ -20,7 +27,7 @@ Item {
         color: Theme.slot
 
         Rectangle {
-            width: parent.width * slider.clamped
+            width: parent.width * slider.drawn
             height: parent.height
             radius: parent.radius
             color: Theme.accent
@@ -28,15 +35,23 @@ Item {
     }
 
     Rectangle {
-        x: (slider.width - width) * slider.clamped
+        x: (slider.width - width) * slider.drawn
         anchors.verticalCenter: parent.verticalCenter
-        width: 14
-        height: 14
+        width: area.pressed ? 18 : 14
+        height: width
         radius: height / 2
         color: Theme.text
+
+        Behavior on width {
+            Ease {
+                duration: Theme.fast
+            }
+        }
     }
 
     MouseArea {
+        id: area
+
         anchors.fill: parent
 
         function at(x) {

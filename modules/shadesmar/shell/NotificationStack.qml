@@ -9,8 +9,16 @@ Column {
 
     required property var host
     required property string group
-    // the newest first
-    readonly property var cards: host.popupsBy[group] ?? []
+    // the newest first; gone (the stack leaving, Notifications.qml's
+    // list), the last ones, for its way out
+    readonly property var current: host.popupsBy[group] ?? []
+    property var kept: []
+    onCurrentChanged: {
+        if (current.length > 0)
+            kept = current
+    }
+    Component.onCompleted: kept = current
+    readonly property var cards: current.length > 0 ? current : kept
     readonly property string front: cards.length > 0 ? cards[0].key : ""
     readonly property bool open: hover.hovered && cards.length > 1
 

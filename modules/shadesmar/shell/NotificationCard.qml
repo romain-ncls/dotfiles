@@ -15,9 +15,16 @@ Item {
     // the others behind it, folded
     property int more: 0
 
-    // the copy, by its key: what the list has now (gone: blank, for the
-    // moment the card has left)
-    readonly property var entry: host.byKey[key] ?? ({
+    // the copy, by its key: what the list has now; gone from it (a
+    // transient one, leaving), the last it had, for its way out
+    readonly property var found: host.byKey[key] ?? null
+    property var kept: null
+    onFoundChanged: {
+        if (found)
+            kept = found
+    }
+    Component.onCompleted: kept = found
+    readonly property var entry: found ?? kept ?? ({
             app: "",
             icon: "",
             picture: "",
@@ -252,6 +259,14 @@ Item {
                             height: 28
                             radius: Theme.corner
                             color: button.containsMouse ? Theme.faceHover : Theme.face
+                            Fade on color {}
+                            // pressed, it gives a little (Emil Kowalski's 0.97)
+                            scale: button.pressed ? 0.97 : 1
+                            Behavior on scale {
+                                Ease {
+                                    duration: Theme.fast
+                                }
+                            }
 
                             Text {
                                 id: label

@@ -16,6 +16,26 @@ PopupWindow {
 
     readonly property bool shown: bar.open === name
 
+    // It opens from its item, growing a little from its foot (Emil
+    // Kowalski's popovers); Hyprland fades it in and out (looknfeel.lua),
+    // and the blur behind with it: faded by the shell, the blur would stay
+    // whole under the fading glass. Swapped for another (the bar's items
+    // clicked one after the other), it doesn't grow, as macOS's menus.
+    onShownChanged: {
+        if (shown) {
+            face.scale = bar.was !== "" ? 1 : 0.96
+            grow.restart()
+        }
+    }
+
+    Ease {
+        id: grow
+
+        target: face
+        property: "scale"
+        to: 1
+    }
+
     function close() {
         if (shown)
             bar.open = ""
@@ -56,8 +76,11 @@ PopupWindow {
         Keys.onEscapePressed: popup.close()
 
         Rectangle {
+            id: face
+
             anchors.fill: parent
             radius: Theme.surfaceCorner
+            transformOrigin: Item.Bottom
             color: Theme.reading
             border.width: 1
             border.color: Theme.outline

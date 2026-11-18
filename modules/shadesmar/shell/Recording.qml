@@ -14,7 +14,8 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: Theme.corner
-        color: area.containsMouse ? Theme.hover : "transparent"
+        color: area.pressed ? Theme.pressed : area.containsMouse ? Theme.hover : Theme.none
+        Fade on color {}
     }
 
     Row {

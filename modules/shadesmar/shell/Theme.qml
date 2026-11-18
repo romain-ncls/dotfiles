@@ -80,6 +80,7 @@ Singleton {
     readonly property color hover: alpha(textColor, 0.08)
     readonly property color selected: alpha(textColor, 0.12) // open, picked
     readonly property color pressed: alpha(textColor, 0.16)
+    readonly property color none: alpha(textColor, 0) // no state, for Fade.qml
     // a button's face (Cancel, a tile), and under the pointer; the main
     // one is the accent, lighter under the pointer
     readonly property color face: alpha(textColor, 0.10)
@@ -107,10 +108,13 @@ Singleton {
     readonly property int surfaceCorner: corner + pad // popups, toasts, menus
     readonly property int overlayCorner: 24 // the launcher, the year, pickers
 
-    // Motion (Ease.qml): quick, from where it comes, never on what's done
-    // by the keys or a hundred times a day. Three lengths: a hover going,
-    // an exit, a small change; a popup, a toast, a move; a big view.
-    // `speed` scales them all: 0, no motion at all.
+    // Motion (Ease.qml, Fade.qml, Follow.qml): quick, from where it comes,
+    // never on what's done by the keys or a hundred times a day. Glass is
+    // faded by Hyprland only, whole surfaces (looknfeel.lua): the shell
+    // moves and grows; faded by it, the blur would stay whole under the
+    // fading glass. Three lengths: a hover going, an exit, a small change; a
+    // popup, a toast, a move; a big view. `speed` scales them all: 0, no
+    // motion at all.
     readonly property real speed: 1
     readonly property int fast: 150 * speed
     readonly property int normal: 200 * speed

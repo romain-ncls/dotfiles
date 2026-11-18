@@ -161,6 +161,14 @@ PanelWindow {
         height: 28
         radius: Theme.corner
         color: accent ? (area.containsMouse ? Qt.lighter(Theme.accent, 1.1) : Theme.accent) : (area.containsMouse ? Theme.faceHover : Theme.face)
+        Fade on color {}
+        // pressed, it gives a little (Emil Kowalski's 0.97)
+        scale: area.pressed ? 0.97 : 1
+        Behavior on scale {
+            Ease {
+                duration: Theme.fast
+            }
+        }
 
         Text {
             id: label

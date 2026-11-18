@@ -20,7 +20,8 @@ Item {
         width: 36
         height: Theme.row
         radius: Theme.corner
-        color: area.containsMouse ? Theme.hover : "transparent"
+        color: area.pressed ? Theme.pressed : area.containsMouse ? Theme.hover : Theme.none
+        Fade on color {}
 
         Glyph {
             anchors.centerIn: parent

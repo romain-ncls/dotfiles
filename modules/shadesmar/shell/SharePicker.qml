@@ -476,7 +476,8 @@ Scope {
                         anchors.leftMargin: -8
                         anchors.rightMargin: -8
                         radius: Theme.corner
-                        color: fold.containsMouse ? Theme.hover : "transparent"
+                        color: fold.pressed ? Theme.pressed : fold.containsMouse ? Theme.hover : Theme.none
+                        Fade on color {}
                     }
 
                     Text {
@@ -576,6 +577,14 @@ Scope {
                         height: 28
                         radius: Theme.corner
                         color: cancelArea.containsMouse ? Theme.faceHover : Theme.face
+                        Fade on color {}
+                        // pressed, it gives a little (Emil Kowalski's 0.97)
+                        scale: cancelArea.pressed ? 0.97 : 1
+                        Behavior on scale {
+                            Ease {
+                                duration: Theme.fast
+                            }
+                        }
 
                         Text {
                             id: cancel

@@ -19,8 +19,11 @@ Scope {
     property int value: -1 // a percentage, or -1 for a message
     property string label: ""
     property bool shown: false
+    // up already, its level glides to the new one; coming up, it's there
+    property bool gliding: false
 
     function show(icon, value, label) {
+        osd.gliding = shown
         osd.icon = icon
         osd.value = value
         osd.label = label
@@ -171,9 +174,8 @@ Scope {
                         color: Theme.accent
 
                         Behavior on width {
-                            NumberAnimation {
-                                duration: 80
-                            }
+                            enabled: Theme.speed > 0 && osd.gliding
+                            Follow {}
                         }
                     }
                 }
