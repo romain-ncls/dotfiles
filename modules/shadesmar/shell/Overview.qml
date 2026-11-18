@@ -610,7 +610,7 @@ Scope {
                                 elide: Text.ElideRight
                                 color: cell.slot >= 0 && view.focusedScreen && view.selected === cell.slot ? Theme.text : Theme.dim
                                 font.family: Theme.font
-                                font.pixelSize: 13
+                                font.pixelSize: Theme.body
                             }
                         }
                     }
@@ -626,15 +626,15 @@ Scope {
                 y: 24
                 width: 360
                 height: 36
-                radius: 18
-                color: Theme.bar
+                radius: height / 2
+                color: Theme.glance
 
                 Text {
                     anchors.centerIn: parent
                     text: overview.filter === "" ? "Type to filter" : overview.filter
                     color: overview.filter === "" ? Theme.dim : Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 14
+                    font.pixelSize: Theme.title
                 }
             }
 

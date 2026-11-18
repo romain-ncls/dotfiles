@@ -344,8 +344,8 @@ BarButton {
         Rectangle {
             visible: net.portal
             width: parent.width
-            height: 34
-            radius: 8
+            height: Theme.row
+            radius: Theme.corner
             color: portalArea.containsMouse ? Theme.alpha(Theme.warn, 0.22) : Theme.alpha(Theme.warn, 0.12)
             border.width: 1
             border.color: Theme.alpha(Theme.warn, 0.5)
@@ -355,8 +355,8 @@ BarButton {
                 text: "Sign in to the network"
                 color: Theme.warn
                 font.family: Theme.font
-                font.pixelSize: 13
-                font.weight: Font.DemiBold
+                font.pixelSize: Theme.body
+                font.weight: Font.Medium
             }
 
             MouseArea {
@@ -412,7 +412,7 @@ BarButton {
                         text: cell.modelData.label
                         color: Theme.dim
                         font.family: Theme.font
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.small
                     }
 
                     Text {
@@ -422,7 +422,7 @@ BarButton {
                         text: cell.copied ? "Copied" : cell.modelData.value || "—"
                         color: cell.copied ? Theme.accent : copyArea.containsMouse ? Theme.accent : Theme.text
                         font.family: Theme.font
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.small
                         font.features: {
                             "tnum": 1
                         }
@@ -462,7 +462,7 @@ BarButton {
             text: net.scanning ? "Looking for networks…" : "No network in reach"
             color: Theme.dim
             font.family: Theme.font
-            font.pixelSize: 12
+            font.pixelSize: Theme.body
         }
 
         ListView {
@@ -508,8 +508,8 @@ BarButton {
                 Rectangle {
                     visible: net.asking === entry.n
                     width: parent.width
-                    height: visible ? 36 : 0
-                    radius: 8
+                    height: visible ? Theme.row : 0
+                    radius: Theme.corner
                     color: Theme.slot
 
                     TextInput {
@@ -522,7 +522,7 @@ BarButton {
                         echoMode: TextInput.Password
                         color: Theme.text
                         font.family: Theme.font
-                        font.pixelSize: 13
+                        font.pixelSize: Theme.body
                         clip: true
                         onAccepted: join.go()
                         Keys.onEscapePressed: event => {
@@ -557,8 +557,8 @@ BarButton {
                         text: "Connect"
                         color: psk.text === "" ? Theme.dim : joinArea.containsMouse ? Theme.text : Theme.accent
                         font.family: Theme.font
-                        font.pixelSize: 12
-                        font.weight: Font.DemiBold
+                        font.pixelSize: Theme.body
+                        font.weight: Font.Medium
 
                         MouseArea {
                             id: joinArea

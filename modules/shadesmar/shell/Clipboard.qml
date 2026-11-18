@@ -90,8 +90,8 @@ BarButton {
 
         Rectangle {
             width: parent.width
-            height: 34
-            radius: 8
+            height: Theme.row
+            radius: Theme.corner
             color: Theme.slot
 
             TextInput {
@@ -105,7 +105,7 @@ BarButton {
                 onTextChanged: cb.filter = text
                 color: Theme.text
                 font.family: Theme.font
-                font.pixelSize: 13
+                font.pixelSize: Theme.body
                 clip: true
 
                 Text {
@@ -140,7 +140,7 @@ BarButton {
             text: cb.entries.length === 0 ? "Nothing copied yet" : "No match"
             color: Theme.dim
             font.family: Theme.font
-            font.pixelSize: 12
+            font.pixelSize: Theme.body
         }
 
         ListView {

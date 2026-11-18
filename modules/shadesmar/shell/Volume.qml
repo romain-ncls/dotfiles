@@ -77,6 +77,16 @@ BarButton {
         from: volume
         name: "volume"
 
+        // as the other popups: what's playing to, its level, the sound on
+        PopupHero {
+            icon: volume.icon
+            title: volume.sink ? volume.name(volume.sink) : "No output"
+            caption: volume.muted ? "Muted" : `${volume.percent}%`
+            toggle: volume.sink !== null && volume.sink.audio !== null
+            checked: !volume.muted
+            onToggled: volume.sink.audio.muted = !volume.sink.audio.muted
+        }
+
         SectionLabel {
             text: "Output"
         }

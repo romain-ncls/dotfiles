@@ -56,25 +56,72 @@ Singleton {
     readonly property color baseColor: palette.base
     readonly property color textColor: palette.text
 
-    // Nalthis's glass in Plasma: the window background (the pane) at 80 %,
-    // blurred behind (Hyprland), a 10 % outline in the text's color
-    readonly property real glass: 0.80
-    readonly property color bar: alpha(paneColor, glass)
-    readonly property color popup: alpha(paneColor, glass) // the bar's popups
-    // the bar: the new tab's islands' glass (modules/new-tab), the base, at
-    // 83 % rather than their 66 %, for reading
-    readonly property color island: alpha(baseColor, 0.83)
+    // The rules every part of the shell follows (docs/hyprland.md, "The
+    // shell's rules"): Apple's, GNOME's and Windows' guidelines, Linear's
+    // motion.
+
+    // Glass: one material, the base (the bar's, the new tab's islands',
+    // Ghostty's), blurred behind (Hyprland), thicker where there's reading:
+    // the bar and the OSD, glanced at; popups, toasts, the launcher, the
+    // year, pickers, read. Their edge: a 10 % line in the text's color.
+    readonly property color glance: alpha(baseColor, 0.83)
+    readonly property color reading: alpha(baseColor, 0.90)
     readonly property color outline: alpha(textColor, 0.10)
     readonly property color shade: alpha(frameColor, 0.88) // behind the overview
+
     readonly property color text: palette.text
     readonly property color dim: palette.text2
     readonly property color accent: palette.accentText // marks, fills, sliders
     readonly property color accentText: palette.frame // text on the accent
-    readonly property color slot: palette.overlay // hover, tracks, empty desktops
-    readonly property color warn: palette.red
+    readonly property color slot: palette.overlay // tracks, fields, switches off, empty desktops
+    readonly property color warn: palette.red // never alone: with a word or an icon
 
+    // States: the text's color over whatever is under, so on any glass
+    readonly property color hover: alpha(textColor, 0.08)
+    readonly property color selected: alpha(textColor, 0.12) // open, picked
+    readonly property color pressed: alpha(textColor, 0.16)
+    // a button's face (Cancel, a tile), and under the pointer; the main
+    // one is the accent, lighter under the pointer
+    readonly property color face: alpha(textColor, 0.10)
+    readonly property color faceHover: alpha(textColor, 0.16)
+
+    // Type: five sizes, macOS's (caption, body, title), in Regular, Medium
+    // (titles, what's on; Noto Sans has no SemiBold: DemiBold is Medium)
+    // and Bold for a count or today. Its digits are all as wide.
     readonly property string font: "Noto Sans"
-    readonly property int radius: 10
+    readonly property int small: 11 // captions, section names, second lines
+    readonly property int body: 13 // the bar, rows, buttons
+    readonly property int title: 15 // popups' and views' titles
+    readonly property int large: 22 // big numbers, the launcher's field
+    readonly property int display: 40 // the clock popup's time
+
+    // Space: a 4 px grid (2, 4, 6, 8, 12, 16, 24). A surface's padding, and
+    // its rows: one line, two (or a switch).
+    readonly property int pad: 12
+    readonly property int row: 32
+    readonly property int row2: 40
+
+    // Corners, concentric: a surface's is its rows' and its padding's. A
+    // capsule (height / 2) for switches, sliders, badges.
+    readonly property int corner: 8 // controls, rows, the bar's items
+    readonly property int surfaceCorner: corner + pad // popups, toasts, menus
+    readonly property int overlayCorner: 24 // the launcher, the year, pickers
+
+    // Motion (Ease.qml): quick, from where it comes, never on what's done
+    // by the keys or a hundred times a day. Three lengths: a hover going,
+    // an exit, a small change; a popup, a toast, a move; a big view.
+    // `speed` scales them all: 0, no motion at all.
+    readonly property real speed: 1
+    readonly property int fast: 150 * speed
+    readonly property int normal: 200 * speed
+    readonly property int slow: 300 * speed
+    // ease-out, strong (Hyprland's easeOutQuint): what comes, the default
+    readonly property var out: [0.23, 1, 0.32, 1, 1, 1]
+    // Material's standard: what moves from one place to another
+    readonly property var move: [0.2, 0, 0, 1, 1, 1]
+    // ease-out-quad (Linear's): what fades
+    readonly property var fade: [0.25, 0.46, 0.45, 0.94, 1, 1]
+
     readonly property int barHeight: 40
     readonly property int icon: 18
 }

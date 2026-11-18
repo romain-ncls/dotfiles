@@ -81,7 +81,7 @@ BarButton {
             text: "No notifications"
             color: Theme.dim
             font.family: Theme.font
-            font.pixelSize: 12
+            font.pixelSize: Theme.body
         }
 
         // up to 100: it scrolls past the height of half a screen
@@ -149,7 +149,7 @@ BarButton {
                                 text: group.items.length < 2 ? "" : group.open ? "Show less" : `${group.items.length - 1} more from ${group.items[0].app}`
                                 color: fold.containsMouse ? Theme.text : Theme.dim
                                 font.family: Theme.font
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.small
 
                                 MouseArea {
                                     id: fold
@@ -170,7 +170,7 @@ BarButton {
                                 text: "Clear"
                                 color: clearing.containsMouse ? Theme.text : Theme.dim
                                 font.family: Theme.font
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.small
 
                                 MouseArea {
                                     id: clearing

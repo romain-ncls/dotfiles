@@ -20,8 +20,8 @@ Item {
         text: section.text.toUpperCase()
         color: Theme.dim
         font.family: Theme.font
-        font.pixelSize: 10
-        font.weight: Font.DemiBold
+        font.pixelSize: Theme.small
+        font.weight: Font.Medium
         font.letterSpacing: 1
     }
 
@@ -34,7 +34,7 @@ Item {
         text: section.action
         color: link.containsMouse ? Theme.accent : Theme.dim
         font.family: Theme.font
-        font.pixelSize: 11
+        font.pixelSize: Theme.small
 
         MouseArea {
             id: link

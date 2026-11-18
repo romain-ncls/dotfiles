@@ -200,8 +200,9 @@ Scope {
         Rectangle {
             id: panel
 
-            readonly property int pad: 18
-            readonly property int gap: 10
+            // concentric: the months' heads' corners, inside the panel's
+            readonly property int pad: Theme.overlayCorner - Theme.corner
+            readonly property int gap: Theme.pad
             readonly property real column: (width - 2 * pad - 5 * gap) / 6
             // 31 lines between the head, the months' names and the foot
             readonly property int row: Math.max(18, Math.floor((height - 2 * pad - head.height - 34 - foot.height - 12) / 31))
@@ -209,8 +210,8 @@ Scope {
             anchors.centerIn: parent
             width: Math.min(parent.width - 64, 1760)
             height: Math.min(parent.height - 64, 1040)
-            radius: Theme.radius + 4
-            color: Theme.popup
+            radius: Theme.overlayCorner
+            color: Theme.reading
             border.width: 1
             border.color: Theme.outline
 
@@ -253,7 +254,7 @@ Scope {
 
                 Row {
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 14
+                    spacing: 16
 
                     Text {
                         id: yearText
@@ -261,8 +262,8 @@ Scope {
                         text: calendar.year
                         color: Theme.text
                         font.family: Theme.font
-                        font.pixelSize: 28
-                        font.weight: Font.DemiBold
+                        font.pixelSize: Theme.large
+                        font.weight: Font.Medium
                     }
 
                     Text {
@@ -270,7 +271,7 @@ Scope {
                         text: `${calendar.capital(calendar.locale.standaloneMonthName(calendar.half * 6, Locale.LongFormat))} – ${calendar.capital(calendar.locale.standaloneMonthName(calendar.half * 6 + 5, Locale.LongFormat))}`
                         color: Theme.dim
                         font.family: Theme.font
-                        font.pixelSize: 15
+                        font.pixelSize: Theme.title
                     }
                 }
 
@@ -285,7 +286,7 @@ Scope {
                         text: "Aujourd'hui"
                         color: todayLink.containsMouse ? Theme.accent : Theme.dim
                         font.family: Theme.font
-                        font.pixelSize: 13
+                        font.pixelSize: Theme.body
 
                         MouseArea {
                             id: todayLink
@@ -340,7 +341,7 @@ Scope {
                         Rectangle {
                             width: parent.width
                             height: 28
-                            radius: 6
+                            radius: Theme.corner
                             color: Theme.accent
 
                             Text {
@@ -348,7 +349,7 @@ Scope {
                                 text: calendar.locale.standaloneMonthName(month.number, Locale.LongFormat).toUpperCase()
                                 color: Theme.accentText
                                 font.family: Theme.font
-                                font.pixelSize: 13
+                                font.pixelSize: Theme.body
                                 font.weight: Font.Bold
                                 font.letterSpacing: 1
                             }
@@ -378,7 +379,7 @@ Scope {
                                 width: month.width
                                 height: panel.row
                                 radius: 4
-                                color: off ? Theme.warn : weekday === 0 ? Theme.alpha(Theme.textColor, 0.10) : weekday === 6 ? Theme.alpha(Theme.textColor, 0.05) : hover.containsMouse ? Theme.alpha(Theme.textColor, 0.04) : "transparent"
+                                color: off ? Theme.warn : weekday === 0 ? Theme.alpha(Theme.textColor, 0.10) : weekday === 6 ? Theme.alpha(Theme.textColor, 0.05) : hover.containsMouse ? Theme.hover : "transparent"
                                 border.width: today ? 2 : 0
                                 border.color: Theme.accent
 
@@ -389,7 +390,7 @@ Scope {
                                     text: calendar.locale.dayName(line.weekday, Locale.NarrowFormat)
                                     color: line.off ? line.ink : Theme.dim
                                     font.family: Theme.font
-                                    font.pixelSize: 12
+                                    font.pixelSize: Theme.small
                                 }
 
                                 Text {
@@ -400,7 +401,7 @@ Scope {
                                     text: line.date.getDate()
                                     color: line.ink
                                     font.family: Theme.font
-                                    font.pixelSize: 13
+                                    font.pixelSize: Theme.body
                                     font.weight: Font.Bold
                                 }
 
@@ -412,7 +413,7 @@ Scope {
                                     elide: Text.ElideRight
                                     color: line.ink
                                     font.family: Theme.font
-                                    font.pixelSize: 13
+                                    font.pixelSize: Theme.body
                                     font.weight: line.info.kind !== "" ? Font.Bold : Font.Normal
                                 }
 
@@ -425,9 +426,9 @@ Scope {
                                     text: line.change !== "" ? line.change : line.weekday === 1 ? Almanac.pad(Almanac.isoWeek(line.date)) : ""
                                     color: line.change !== "" ? (line.off ? line.ink : Theme.accent) : line.off ? line.ink : Theme.dim
                                     font.family: Theme.font
-                                    font.pixelSize: 11
+                                    font.pixelSize: Theme.small
                                     font.italic: line.change === ""
-                                    font.weight: line.change !== "" ? Font.DemiBold : Font.Normal
+                                    font.weight: line.change !== "" ? Font.Medium : Font.Normal
                                 }
 
                                 // the school holidays: a stripe a zone
@@ -505,7 +506,7 @@ Scope {
                     }
                     color: Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 13
+                    font.pixelSize: Theme.body
                 }
 
                 Row {
@@ -513,7 +514,7 @@ Scope {
 
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 14
+                    spacing: 16
 
                     Row {
                         spacing: 6
@@ -529,7 +530,7 @@ Scope {
                             text: "Jour férié"
                             color: Theme.dim
                             font.family: Theme.font
-                            font.pixelSize: 12
+                            font.pixelSize: Theme.small
                         }
                     }
 
@@ -551,7 +552,7 @@ Scope {
                                 text: `Zone ${modelData}`
                                 color: Theme.dim
                                 font.family: Theme.font
-                                font.pixelSize: 12
+                                font.pixelSize: Theme.small
                             }
                         }
                     }

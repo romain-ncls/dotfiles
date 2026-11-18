@@ -55,8 +55,8 @@ Row {
 
             Rectangle {
                 anchors.fill: parent
-                radius: 8
-                color: area.containsMouse ? Theme.slot : "transparent"
+                radius: Theme.corner
+                color: area.containsMouse ? Theme.hover : "transparent"
             }
 
             IconImage {

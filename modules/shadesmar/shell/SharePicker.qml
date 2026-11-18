@@ -250,14 +250,16 @@ Scope {
             id: box
 
             readonly property int columns: 4
-            readonly property real inner: width - 40
+            // concentric: the tiles' corners, inside the box's
+            readonly property int pad: Theme.overlayCorner - Theme.corner
+            readonly property real inner: width - 2 * pad
             readonly property real tileWidth: (inner - (columns - 1) * 12) / columns
 
             anchors.centerIn: parent
             width: Math.min(920, parent.width - 96)
-            height: Math.min(body.implicitHeight + 32, parent.height - 120)
-            radius: Theme.radius + 4
-            color: Theme.popup
+            height: Math.min(body.implicitHeight + 2 * pad, parent.height - 120)
+            radius: Theme.overlayCorner
+            color: Theme.reading
             border.width: 1
             border.color: Theme.outline
 
@@ -268,8 +270,8 @@ Scope {
             Column {
                 id: body
 
-                x: 20
-                y: 16
+                x: box.pad
+                y: box.pad
                 width: box.inner
                 spacing: 16
 
@@ -293,15 +295,15 @@ Scope {
                             text: "Screen Sharing Requested"
                             color: Theme.text
                             font.family: Theme.font
-                            font.pixelSize: 15
-                            font.weight: Font.DemiBold
+                            font.pixelSize: Theme.title
+                            font.weight: Font.Medium
                         }
 
                         Text {
                             text: "Choose what the app may see"
                             color: Theme.dim
                             font.family: Theme.font
-                            font.pixelSize: 12
+                            font.pixelSize: Theme.small
                         }
                     }
 
@@ -310,7 +312,7 @@ Scope {
                         anchors.verticalCenter: parent.verticalCenter
                         width: 220
                         height: 32
-                        radius: 8
+                        radius: Theme.corner
                         color: Theme.slot
 
                         TextInput {
@@ -326,7 +328,7 @@ Scope {
                             color: Theme.text
                             selectionColor: Theme.accent
                             font.family: Theme.font
-                            font.pixelSize: 13
+                            font.pixelSize: Theme.body
 
                             Text {
                                 visible: input.text === ""
@@ -448,7 +450,7 @@ Scope {
                                     elide: Text.ElideRight
                                     color: place.lit ? Theme.text : Theme.dim
                                     font.family: Theme.font
-                                    font.pixelSize: 12
+                                    font.pixelSize: Theme.small
                                 }
                             }
 
@@ -473,8 +475,8 @@ Scope {
                         anchors.fill: parent
                         anchors.leftMargin: -8
                         anchors.rightMargin: -8
-                        radius: 6
-                        color: fold.containsMouse ? Theme.slot : "transparent"
+                        radius: Theme.corner
+                        color: fold.containsMouse ? Theme.hover : "transparent"
                     }
 
                     Text {
@@ -483,7 +485,7 @@ Scope {
                         rotation: picker.unfolded ? 90 : 0
                         color: Theme.dim
                         font.family: Theme.font
-                        font.pixelSize: 18
+                        font.pixelSize: Theme.title
 
                         Behavior on rotation {
                             NumberAnimation {
@@ -498,7 +500,7 @@ Scope {
                         text: "A window or a region"
                         color: Theme.text
                         font.family: Theme.font
-                        font.pixelSize: 13
+                        font.pixelSize: Theme.body
                     }
 
                     Text {
@@ -507,7 +509,7 @@ Scope {
                         text: picker.windows.length === 1 ? "1 window" : `${picker.windows.length} windows`
                         color: Theme.dim
                         font.family: Theme.font
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.small
                     }
 
                     MouseArea {
@@ -557,7 +559,7 @@ Scope {
                             text: "No window matches"
                             color: Theme.dim
                             font.family: Theme.font
-                            font.pixelSize: 13
+                            font.pixelSize: Theme.body
                         }
                     }
                 }
@@ -572,8 +574,8 @@ Scope {
                         anchors.right: parent.right
                         width: Math.max(72, cancel.implicitWidth + 24)
                         height: 28
-                        radius: 6
-                        color: cancelArea.containsMouse ? Qt.lighter(Theme.slot, 1.2) : Theme.slot
+                        radius: Theme.corner
+                        color: cancelArea.containsMouse ? Theme.faceHover : Theme.face
 
                         Text {
                             id: cancel
@@ -582,7 +584,7 @@ Scope {
                             text: "Cancel"
                             color: Theme.text
                             font.family: Theme.font
-                            font.pixelSize: 12
+                            font.pixelSize: Theme.body
                         }
 
                         MouseArea {
@@ -627,7 +629,7 @@ Scope {
 
             width: parent.width
             height: Math.round(width * 0.625)
-            radius: 8
+            radius: Theme.corner
             color: tile.lit ? Theme.slot : Theme.alpha(Theme.slot, 0.45)
 
             Thumbnail {
@@ -714,7 +716,7 @@ Scope {
                 elide: Text.ElideRight
                 color: tile.lit ? Theme.text : Theme.dim
                 font.family: Theme.font
-                font.pixelSize: 12
+                font.pixelSize: Theme.small
             }
         }
 

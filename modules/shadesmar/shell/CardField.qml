@@ -14,11 +14,11 @@ FocusScope {
     signal accepted
 
     width: parent ? parent.width : 0
-    height: 36
+    height: Theme.row
 
     Rectangle {
         anchors.fill: parent
-        radius: 6
+        radius: Theme.corner
         color: Theme.slot
     }
 
@@ -38,7 +38,7 @@ FocusScope {
         }
         color: Theme.text
         font.family: Theme.font
-        font.pixelSize: 13
+        font.pixelSize: Theme.body
         onAccepted: field.accepted()
 
         Text {

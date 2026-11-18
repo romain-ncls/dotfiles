@@ -153,8 +153,8 @@ Scope {
             y: Math.round(Math.max(8, menu.atY + height + 8 > parent.height ? menu.atY - height : menu.atY))
             width: 340
             height: Math.ceil(column.implicitHeight)
-            radius: Theme.radius + 4
-            color: Theme.popup
+            radius: Theme.surfaceCorner
+            color: Theme.reading
             border.width: 1
             border.color: Theme.outline
 
@@ -172,8 +172,9 @@ Scope {
                 to: "*"
                 NumberAnimation {
                     properties: "opacity,scale"
-                    duration: 120
-                    easing.type: Easing.OutCubic
+                    duration: Theme.fast
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: Theme.out
                 }
             }
 
@@ -212,11 +213,11 @@ Scope {
                 width: parent.width
 
                 Column {
-                    x: 12
-                    width: parent.width - 24
-                    topPadding: 14
+                    x: Theme.pad
+                    width: parent.width - 2 * Theme.pad
+                    topPadding: Theme.pad
                     bottomPadding: 8
-                    spacing: 12
+                    spacing: Theme.pad
 
                     // what it is
                     Column {
@@ -232,8 +233,8 @@ Scope {
                             elide: Text.ElideRight
                             color: Theme.text
                             font.family: Theme.font
-                            font.pixelSize: 15
-                            font.weight: Font.DemiBold
+                            font.pixelSize: Theme.title
+                            font.weight: Font.Medium
                         }
                         Text {
                             visible: text !== ""
@@ -244,7 +245,7 @@ Scope {
                             elide: Text.ElideRight
                             color: Theme.dim
                             font.family: Theme.font
-                            font.pixelSize: 12
+                            font.pixelSize: Theme.small
                         }
                     }
 
@@ -263,7 +264,7 @@ Scope {
                             elide: Text.ElideRight
                             color: Theme.dim
                             font.family: Theme.font
-                            font.pixelSize: 11
+                            font.pixelSize: Theme.small
                         }
                         Text {
                             width: parent.width
@@ -271,7 +272,7 @@ Scope {
                             elide: Text.ElideRight
                             color: Theme.dim
                             font.family: Theme.font
-                            font.pixelSize: 11
+                            font.pixelSize: Theme.small
                         }
                     }
 
@@ -316,8 +317,8 @@ Scope {
 
                                 width: (buttons.width - buttons.spacing * (menu.offline ? 0 : 2)) / (menu.offline ? 1 : 3)
                                 height: 56
-                                radius: 10
-                                color: lit ? Theme.alpha(Theme.accent, 0.16) : press.containsMouse && enabled ? Theme.alpha(Theme.text, 0.14) : Theme.alpha(Theme.text, 0.07)
+                                radius: Theme.corner
+                                color: lit ? Theme.alpha(Theme.accent, 0.16) : press.containsMouse && enabled ? Theme.faceHover : Theme.face
                                 opacity: enabled || lit ? 1 : 0.5
 
                                 Column {
@@ -340,8 +341,8 @@ Scope {
                                         text: menu.doing === button.modelData.verb ? "…" : button.modelData.text
                                         color: button.lit ? Theme.accent : Theme.text
                                         font.family: Theme.font
-                                        font.pixelSize: 12
-                                        font.weight: button.lit ? Font.DemiBold : Font.Normal
+                                        font.pixelSize: Theme.body
+                                        font.weight: button.lit ? Font.Medium : Font.Normal
                                     }
                                 }
 

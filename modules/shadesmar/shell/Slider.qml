@@ -16,7 +16,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: parent.width
         height: 6
-        radius: 3
+        radius: height / 2
         color: Theme.slot
 
         Rectangle {
@@ -32,7 +32,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: 14
         height: 14
-        radius: 7
+        radius: height / 2
         color: Theme.text
     }
 

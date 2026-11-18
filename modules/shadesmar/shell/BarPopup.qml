@@ -31,7 +31,7 @@ PopupWindow {
     implicitWidth: popupWidth
     // the screen less the bar and a margin
     readonly property real room: (bar.screen ? bar.screen.height : 1080) - Theme.barHeight - 48
-    implicitHeight: Math.min(body.implicitHeight, room) + 24
+    implicitHeight: Math.min(body.implicitHeight, room) + 2 * Theme.pad
     color: "transparent"
 
     // Clicks elsewhere close it, but not on the bar: a click on its items
@@ -57,18 +57,18 @@ PopupWindow {
 
         Rectangle {
             anchors.fill: parent
-            radius: Theme.radius
-            color: Theme.popup
+            radius: Theme.surfaceCorner
+            color: Theme.reading
             border.width: 1
             border.color: Theme.outline
 
             // taller than the screen leaves room for, it scrolls (its long
             // lists scroll themselves first)
             Flickable {
-                x: 12
-                y: 12
-                width: parent.width - 24
-                height: parent.height - 24
+                x: Theme.pad
+                y: Theme.pad
+                width: parent.width - 2 * Theme.pad
+                height: parent.height - 2 * Theme.pad
                 contentHeight: body.implicitHeight
                 interactive: contentHeight > height
                 clip: contentHeight > height
@@ -77,7 +77,7 @@ PopupWindow {
                 Column {
                     id: body
 
-                    width: popup.popupWidth - 24
+                    width: popup.popupWidth - 2 * Theme.pad
                     spacing: 6
                 }
             }

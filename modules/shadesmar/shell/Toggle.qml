@@ -11,7 +11,7 @@ Rectangle {
 
     width: 36
     height: 20
-    radius: 10
+    radius: height / 2
     color: checked ? Theme.accent : Theme.slot
 
     Rectangle {
@@ -19,12 +19,12 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         width: 14
         height: 14
-        radius: 7
+        radius: height / 2
         color: Theme.text
 
         Behavior on x {
-            NumberAnimation {
-                duration: 100
+            Ease {
+                duration: Theme.fast
             }
         }
     }

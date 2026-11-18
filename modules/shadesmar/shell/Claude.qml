@@ -125,7 +125,7 @@ BarButton {
                         text: win.modelData.name
                         color: Theme.dim
                         font.family: Theme.font
-                        font.pixelSize: 13
+                        font.pixelSize: Theme.body
                     }
 
                     Ring {
@@ -140,7 +140,7 @@ BarButton {
                         text: win.modelData.w.started ? `${Math.round(win.modelData.w.used)}%` : "not started"
                         color: win.full ? Theme.warn : win.modelData.w.started ? Theme.text : Theme.dim
                         font.family: Theme.font
-                        font.pixelSize: 13
+                        font.pixelSize: Theme.body
                     }
                 }
             }
@@ -173,7 +173,7 @@ BarButton {
                 text: limit.title
                 color: Theme.text
                 font.family: Theme.font
-                font.pixelSize: 13
+                font.pixelSize: Theme.body
             }
 
             Text {
@@ -181,8 +181,8 @@ BarButton {
                 text: limit.amount
                 color: limit.w && limit.w.used >= 90 ? Theme.warn : Theme.text
                 font.family: Theme.font
-                font.pixelSize: 13
-                font.weight: Font.DemiBold
+                font.pixelSize: Theme.body
+                font.weight: Font.Medium
             }
         }
 
@@ -202,7 +202,7 @@ BarButton {
                 text: limit.detail
                 color: Theme.dim
                 font.family: Theme.font
-                font.pixelSize: 11
+                font.pixelSize: Theme.small
             }
 
             Text {
@@ -210,7 +210,7 @@ BarButton {
                 text: !limit.w ? "" : !limit.w.started ? "not started" : limit.w.resets > 0 ? `resets in ${claude.span(limit.w.resets - claude.now)}` : ""
                 color: Theme.dim
                 font.family: Theme.font
-                font.pixelSize: 11
+                font.pixelSize: Theme.small
             }
         }
     }

@@ -60,7 +60,7 @@ Item {
             width: face.width - 16 * (index + 1)
             height: radius * 2
             radius: face.radius
-            color: Theme.bar
+            color: Theme.reading
             border.width: 1
             border.color: Theme.outline
         }
@@ -70,9 +70,9 @@ Item {
         id: face
 
         width: parent.width
-        height: content.implicitHeight + 24
-        radius: 10
-        color: Theme.bar
+        height: content.implicitHeight + 2 * Theme.pad
+        radius: Theme.surfaceCorner
+        color: Theme.reading
         border.width: card.entry.critical ? 2 : 1
         border.color: card.entry.critical ? Theme.warn : Theme.outline
 
@@ -90,10 +90,10 @@ Item {
         Row {
             id: content
 
-            x: 12
-            y: 12
-            width: parent.width - 24
-            spacing: 12
+            x: Theme.pad
+            y: Theme.pad
+            width: parent.width - 2 * Theme.pad
+            spacing: Theme.pad
 
             // the notification's image (a contact's picture), else the app's
             // icon; the image may be gone with the app's notification
@@ -135,7 +135,7 @@ Item {
                         elide: Text.ElideRight
                         color: Theme.dim
                         font.family: Theme.font
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.small
                     }
 
                     // how many more behind it
@@ -148,7 +148,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         width: count.implicitWidth + 10
                         height: 15
-                        radius: 7.5
+                        radius: height / 2
                         color: Theme.slot
 
                         Text {
@@ -158,7 +158,7 @@ Item {
                             text: `+${card.more}`
                             color: Theme.text
                             font.family: Theme.font
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.small
                         }
                     }
 
@@ -166,7 +166,7 @@ Item {
                         anchors.right: parent.right
                         text: "✕"
                         color: close.containsMouse ? Theme.text : Theme.dim
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.small
 
                         MouseArea {
                             id: close
@@ -187,8 +187,8 @@ Item {
                     elide: Text.ElideRight
                     color: Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 14
-                    font.weight: Font.DemiBold
+                    font.pixelSize: Theme.body
+                    font.weight: Font.Medium
                 }
 
                 Text {
@@ -202,7 +202,7 @@ Item {
                     color: Theme.text
                     linkColor: Theme.accent
                     font.family: Theme.font
-                    font.pixelSize: 13
+                    font.pixelSize: Theme.body
                     onLinkActivated: link => Qt.openUrlExternally(link)
                 }
 
@@ -249,9 +249,9 @@ Item {
                             required property var modelData
 
                             width: label.implicitWidth + 20
-                            height: 26
-                            radius: 6
-                            color: button.containsMouse ? Theme.accent : Theme.slot
+                            height: 28
+                            radius: Theme.corner
+                            color: button.containsMouse ? Theme.faceHover : Theme.face
 
                             Text {
                                 id: label
@@ -260,7 +260,7 @@ Item {
                                 text: parent.modelData.text
                                 color: Theme.text
                                 font.family: Theme.font
-                                font.pixelSize: 12
+                                font.pixelSize: Theme.body
                             }
 
                             MouseArea {
