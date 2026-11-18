@@ -14,6 +14,12 @@ Shape {
     property int size: 18
 
     readonly property real radius: (size - thickness) / 2
+    // the arc, following the value
+    property real drawn: value
+    Behavior on drawn {
+        enabled: Theme.speed > 0
+        Follow {}
+    }
 
     implicitWidth: size
     implicitHeight: size
@@ -35,7 +41,7 @@ Shape {
     }
 
     ShapePath {
-        strokeColor: ring.value > 0 ? ring.color : "transparent"
+        strokeColor: ring.drawn > 0.001 ? ring.color : "transparent"
         strokeWidth: ring.thickness
         fillColor: "transparent"
         capStyle: ShapePath.RoundCap
@@ -47,7 +53,7 @@ Shape {
             radiusY: ring.radius
             startAngle: -90
             // a little is still seen
-            sweepAngle: Math.max(8, 360 * Math.min(1, ring.value))
+            sweepAngle: Math.max(8, 360 * Math.min(1, ring.drawn))
         }
     }
 }

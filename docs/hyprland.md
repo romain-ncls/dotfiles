@@ -228,9 +228,25 @@ rejects (`bezier` or `spring`).
     uses a day do: 150 ms (a hover going, exits), 200 ms (popups, toasts,
     moves), 300 ms (the overview, the grid); the curves Hyprland's
     easeOutQuint, Material's standard for moves, ease-out-quad for fades;
-    `Theme.speed` scales them, 0 for none. Hyprland doesn't animate
-    layers (looknfeel.lua): the shell moves its own; menus appear at once
-    and fade out in 150 ms, as a Mac's.
+    `Theme.speed` scales them, 0 for none. Glass is faded by Hyprland
+    only, whole surfaces (looknfeel.lua: layers in and out in 150 ms, no
+    slide): faded by the shell, the blur behind stays whole under the
+    fading glass, then goes at once (Hyprland blurs under anything past
+    20 % opaque). The shell moves and grows its own; menus and the bar's
+    popups appear at once and fade out, as a Mac's (Hyprland fades no
+    layer's popup in).
+  - what moves (Theme.qml's Ease, Fade, Follow): a hover comes at once
+    and goes in 150 ms (Linear's), pressed a step darker, a button's face
+    giving to 0.97 (Emil Kowalski's); a popup grows from 96 % at its
+    item's foot (swapped for another, it doesn't); values glide on a
+    spring that keeps its speed when the value moves again (the rings,
+    the meters, sliders not held, the OSD's level once it's up); the
+    desktops' light slides to the one shown; an app's toasts slide in
+    from the screen's edge, out quicker, the others closing up after; the
+    bell's count pops; the calendar's days come from the side the month
+    goes to; the year grows from 97 % in 300 ms; the launcher just
+    appears (the keys). A popup's content stays as it was while Hyprland
+    fades it out (its last frame).
 
 ## Development
 

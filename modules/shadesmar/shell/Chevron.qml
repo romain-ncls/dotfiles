@@ -20,7 +20,8 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: Theme.corner
-        color: press.containsMouse ? Theme.hover : "transparent"
+        color: press.pressed ? Theme.pressed : press.containsMouse ? Theme.hover : Theme.none
+        Fade on color {}
     }
 
     Glyph {

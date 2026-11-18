@@ -17,6 +17,10 @@ PanelWindow {
     required property var recorder
     property var yearView: null // YearCalendar.qml, from the clock's popup
     property string open: ""
+    // what was open just before, until the change is through: a popup
+    // swapped for another comes and goes at once (BarPopup.qml)
+    property string was: ""
+    onOpenChanged: Qt.callLater(() => bar.was = bar.open)
     readonly property int gap: Theme.floating ? 8 : 0
 
     anchors {

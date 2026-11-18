@@ -37,7 +37,8 @@ Rectangle {
     width: parent ? parent.width : 320
     height: Math.max(thumbnail !== "" ? 56 : subtitle !== "" ? Theme.row2 : Theme.row, texts.implicitHeight + 6)
     radius: Theme.corner
-    color: selected ? Theme.selected : area.containsMouse ? Theme.hover : "transparent"
+    color: area.pressed ? Theme.pressed : selected ? Theme.selected : area.containsMouse ? Theme.hover : Theme.none
+    Fade on color {}
 
     IconImage {
         id: glyph

@@ -53,11 +53,11 @@ Scope {
     readonly property var history: entries.filter(e => !e.popup)
     readonly property int unread: history.filter(e => e.time > seenAt).length
     // by app: the bell's list, all of them (the app with the newest
-    // first); the popups' stacks (the newest app's at the bottom)
+    // first); the popups' stacks (the same: the newest app's at the bottom)
     readonly property var listedBy: by(entries)
     readonly property var groups: order(entries).map(g => ({ key: g }))
     readonly property var popupsBy: by(entries.filter(e => e.popup))
-    readonly property var stacks: order(entries.filter(e => e.popup)).reverse().map(g => ({ key: g }))
+    readonly property var stacks: order(entries.filter(e => e.popup)).map(g => ({ key: g }))
 
     // apps whose notifications aren't kept (their app names)
     readonly property var brief: ["LumineCapture"]
@@ -487,6 +487,11 @@ Scope {
         }
     }
 
+    // The popups' window: the screen's height (less the bar), its stacks at
+    // its foot, so they can come and go (Theme.qml's motion): an app's stack
+    // slides in from the screen's edge, out of it quicker, the others
+    // closing up; the pointer only reaches the cards (`mask`). Hyprland
+    // fades the window in with the first and out with the last.
     PanelWindow {
         screen: notifications.screen
         visible: notifications.stacks.length > 0
@@ -496,43 +501,99 @@ Scope {
                 notifications.hovered = false
         }
         anchors {
+            top: true
             bottom: true
             right: true
         }
         margins {
+            top: 8
             bottom: 8
-            right: 8
         }
         exclusiveZone: 0
-        implicitWidth: 380
-        implicitHeight: column.implicitHeight
+        implicitWidth: 380 + 8
         color: "transparent"
+        mask: Region {
+            item: cards
+        }
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "shadesmar-notifications"
 
-        Column {
-            id: column
+        // where the cards are, for the pointer
+        Item {
+            id: cards
 
+            anchors.bottom: parent.bottom
             width: parent.width
-            spacing: 8
+            height: Math.min(parent.height, list.contentHeight)
 
             HoverHandler {
                 onHoveredChanged: notifications.hovered = hovered
             }
+        }
 
-            // kept while the list changes: their hover, their pictures
-            Repeater {
-                model: ScriptModel {
-                    values: notifications.stacks
-                    objectProp: "key"
+        // the newest app's at the bottom, the list's first; kept while the
+        // list changes: their hover, their pictures
+        ListView {
+            id: list
+
+            anchors.fill: parent
+            anchors.rightMargin: 8
+            verticalLayoutDirection: ListView.BottomToTop
+            spacing: 8
+            interactive: false
+            model: ScriptModel {
+                values: notifications.stacks
+                objectProp: "key"
+            }
+
+            delegate: NotificationStack {
+                required property var modelData
+
+                host: notifications
+                group: modelData.key
+                width: ListView.view.width
+            }
+
+            add: Transition {
+                Ease {
+                    property: "x"
+                    from: list.width + 8
+                    to: 0
                 }
-
-                NotificationStack {
-                    required property var modelData
-
-                    host: notifications
-                    group: modelData.key
-                    width: column.width
+            }
+            remove: Transition {
+                Ease {
+                    property: "x"
+                    to: list.width + 8
+                    duration: Theme.fast
+                    easing.bezierCurve: Theme.fade
+                }
+            }
+            addDisplaced: Transition {
+                Ease {
+                    property: "y"
+                    easing.bezierCurve: Theme.move
+                }
+                // a stack caught midway in, put back in its place
+                Ease {
+                    property: "x"
+                    to: 0
+                }
+            }
+            // closing up once the one leaving is mostly out of the way
+            removeDisplaced: Transition {
+                SequentialAnimation {
+                    PauseAnimation {
+                        duration: Theme.fast / 2
+                    }
+                    Ease {
+                        property: "y"
+                        easing.bezierCurve: Theme.move
+                    }
+                }
+                Ease {
+                    property: "x"
+                    to: 0
                 }
             }
         }

@@ -158,23 +158,20 @@ Scope {
             border.width: 1
             border.color: Theme.outline
 
-            opacity: 0
-            scale: 0.97
+            // growing a little from where it was asked; Hyprland fades it
+            // in and out, the blur behind with it (looknfeel.lua)
+            scale: 0.96
             transformOrigin: menu.atY + height + 8 > parent.height ? Item.Bottom : Item.Top
             states: State {
                 when: window.visible
                 PropertyChanges {
-                    card.opacity: 1
                     card.scale: 1
                 }
             }
             transitions: Transition {
                 to: "*"
-                NumberAnimation {
-                    properties: "opacity,scale"
-                    duration: Theme.fast
-                    easing.type: Easing.BezierSpline
-                    easing.bezierCurve: Theme.out
+                Ease {
+                    properties: "scale"
                 }
             }
 
@@ -319,6 +316,14 @@ Scope {
                                 height: 56
                                 radius: Theme.corner
                                 color: lit ? Theme.alpha(Theme.accent, 0.16) : press.containsMouse && enabled ? Theme.faceHover : Theme.face
+                                Fade on color {}
+                                // pressed, it gives a little (Emil Kowalski's 0.97)
+                                scale: press.pressed ? 0.97 : 1
+                                Behavior on scale {
+                                    Ease {
+                                        duration: Theme.fast
+                                    }
+                                }
                                 opacity: enabled || lit ? 1 : 0.5
 
                                 Column {

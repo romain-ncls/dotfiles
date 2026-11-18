@@ -28,6 +28,9 @@ Scope {
         home()
         hovered = null
         shown = true
+        // a big view: it grows a little into place (Hyprland fades it in)
+        panel.scale = 0.97
+        grow.restart()
         school.want(year)
     }
     function close() {
@@ -203,6 +206,15 @@ Scope {
             // concentric: the months' heads' corners, inside the panel's
             readonly property int pad: Theme.overlayCorner - Theme.corner
             readonly property int gap: Theme.pad
+
+            Ease {
+                id: grow
+
+                target: panel
+                property: "scale"
+                to: 1
+                duration: Theme.slow
+            }
             readonly property real column: (width - 2 * pad - 5 * gap) / 6
             // 31 lines between the head, the months' names and the foot
             readonly property int row: Math.max(18, Math.floor((height - 2 * pad - head.height - 34 - foot.height - 12) / 31))

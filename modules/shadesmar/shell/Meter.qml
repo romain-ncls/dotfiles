@@ -9,6 +9,12 @@ Item {
     property real value: 0
     property real pace: -1
     property real high: 0.9
+    // the fill, following the value
+    property real drawn: value
+    Behavior on drawn {
+        enabled: Theme.speed > 0
+        Follow {}
+    }
 
     implicitHeight: 6
 
@@ -19,7 +25,7 @@ Item {
 
         Rectangle {
             // a little is still seen
-            width: meter.value > 0 ? Math.max(height, parent.width * Math.min(1, meter.value)) : 0
+            width: meter.drawn > 0.001 ? Math.max(height, parent.width * Math.min(1, meter.drawn)) : 0
             height: parent.height
             radius: parent.radius
             color: meter.value >= meter.high ? Theme.warn : Theme.accent
