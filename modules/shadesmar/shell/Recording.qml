@@ -13,21 +13,21 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: 8
-        color: area.containsMouse ? Theme.slot : "transparent"
+        radius: Theme.corner
+        color: area.containsMouse ? Theme.hover : "transparent"
     }
 
     Row {
         id: row
 
         anchors.centerIn: parent
-        spacing: 7
+        spacing: 6
 
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             width: 10
             height: 10
-            radius: 5
+            radius: height / 2
             color: Theme.warn
             opacity: dot.recorder.state === "stopping" ? 0.4 : 1
         }
@@ -37,7 +37,7 @@ Item {
             text: `${Math.floor(dot.recorder.seconds / 60)}:${String(dot.recorder.seconds % 60).padStart(2, "0")}`
             color: Theme.text
             font.family: Theme.font
-            font.pixelSize: 13
+            font.pixelSize: Theme.body
             font.features: {
                 "tnum": 1
             }

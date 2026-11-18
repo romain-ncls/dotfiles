@@ -48,7 +48,7 @@ PanelWindow {
     }
     exclusiveZone: 0
     implicitWidth: 360
-    implicitHeight: body.implicitHeight + 10 + buttons.height + 24
+    implicitHeight: body.implicitHeight + buttons.height + 3 * Theme.pad
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "shadesmar-card"
@@ -63,8 +63,8 @@ PanelWindow {
 
     Rectangle {
         anchors.fill: parent
-        radius: Theme.radius
-        color: Theme.popup
+        radius: Theme.surfaceCorner
+        color: Theme.reading
         border.width: 1
         border.color: Theme.outline
     }
@@ -78,10 +78,10 @@ PanelWindow {
         Column {
             id: body
 
-            x: 16
-            y: 12
-            width: parent.width - 32
-            spacing: 10
+            x: Theme.pad
+            y: Theme.pad
+            width: parent.width - 2 * Theme.pad
+            spacing: Theme.pad
 
             Item {
                 width: parent.width
@@ -109,8 +109,8 @@ PanelWindow {
                         elide: Text.ElideRight
                         color: Theme.text
                         font.family: Theme.font
-                        font.pixelSize: 13
-                        font.weight: Font.DemiBold
+                        font.pixelSize: Theme.body
+                        font.weight: Font.Medium
                     }
 
                     Text {
@@ -119,7 +119,7 @@ PanelWindow {
                         wrapMode: Text.Wrap
                         color: Theme.dim
                         font.family: Theme.font
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.small
                     }
                 }
             }
@@ -129,7 +129,7 @@ PanelWindow {
             id: buttons
 
             anchors.right: body.right
-            y: body.y + body.height + 10
+            y: body.y + body.height + Theme.pad
             spacing: 6
 
             CardButton {
@@ -159,8 +159,8 @@ PanelWindow {
 
         width: Math.max(72, label.implicitWidth + 24)
         height: 28
-        radius: 6
-        color: accent ? (area.containsMouse ? Qt.lighter(Theme.accent, 1.1) : Theme.accent) : (area.containsMouse ? Qt.lighter(Theme.slot, 1.2) : Theme.slot)
+        radius: Theme.corner
+        color: accent ? (area.containsMouse ? Qt.lighter(Theme.accent, 1.1) : Theme.accent) : (area.containsMouse ? Theme.faceHover : Theme.face)
 
         Text {
             id: label
@@ -169,8 +169,8 @@ PanelWindow {
             text: button.text
             color: button.accent ? Theme.accentText : Theme.text
             font.family: Theme.font
-            font.pixelSize: 12
-            font.weight: button.accent ? Font.DemiBold : Font.Normal
+            font.pixelSize: Theme.body
+            font.weight: button.accent ? Font.Medium : Font.Normal
         }
 
         MouseArea {

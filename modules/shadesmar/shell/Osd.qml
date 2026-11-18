@@ -116,7 +116,7 @@ Scope {
         Rectangle {
             anchors.fill: parent
             radius: height / 2
-            color: Theme.bar
+            color: Theme.glance
             border.width: 1
             border.color: Theme.outline
 
@@ -124,7 +124,7 @@ Scope {
                 id: glyph
 
                 anchors.left: parent.left
-                anchors.leftMargin: 18
+                anchors.leftMargin: 16
                 anchors.verticalCenter: parent.verticalCenter
                 implicitSize: 24
                 source: Quickshell.iconPath(osd.icon, "dialog-information")
@@ -134,9 +134,9 @@ Scope {
             Item {
                 visible: osd.value >= 0
                 anchors.left: glyph.right
-                anchors.leftMargin: 14
+                anchors.leftMargin: 12
                 anchors.right: parent.right
-                anchors.rightMargin: 18
+                anchors.rightMargin: 16
                 anchors.verticalCenter: parent.verticalCenter
                 height: parent.height
 
@@ -149,7 +149,7 @@ Scope {
                     text: osd.label
                     color: Theme.dim
                     font.family: Theme.font
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.small
                 }
 
                 Rectangle {
@@ -161,7 +161,7 @@ Scope {
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.verticalCenterOffset: player.visible ? 6 : 0
                     height: 6
-                    radius: 3
+                    radius: height / 2
                     color: Theme.slot
 
                     Rectangle {
@@ -188,7 +188,7 @@ Scope {
                     text: osd.value
                     color: Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 13
+                    font.pixelSize: Theme.body
                 }
             }
 
@@ -196,15 +196,15 @@ Scope {
             Text {
                 visible: osd.value < 0
                 anchors.left: glyph.right
-                anchors.leftMargin: 14
+                anchors.leftMargin: 12
                 anchors.right: parent.right
-                anchors.rightMargin: 18
+                anchors.rightMargin: 16
                 anchors.verticalCenter: parent.verticalCenter
                 text: osd.label
                 elide: Text.ElideRight
                 color: Theme.text
                 font.family: Theme.font
-                font.pixelSize: 13
+                font.pixelSize: Theme.body
             }
         }
     }

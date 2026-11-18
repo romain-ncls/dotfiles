@@ -35,9 +35,9 @@ Rectangle {
     readonly property string source: iconSource !== "" ? iconSource : icon !== "" ? Quickshell.iconPath(icon, "image-missing") : ""
 
     width: parent ? parent.width : 320
-    height: Math.max(thumbnail !== "" ? 56 : 36, texts.implicitHeight + 14)
-    radius: 8
-    color: area.containsMouse || selected ? Theme.slot : "transparent"
+    height: Math.max(thumbnail !== "" ? 56 : subtitle !== "" ? Theme.row2 : Theme.row, texts.implicitHeight + 6)
+    radius: Theme.corner
+    color: selected ? Theme.selected : area.containsMouse ? Theme.hover : "transparent"
 
     IconImage {
         id: glyph
@@ -99,8 +99,8 @@ Rectangle {
             elide: Text.ElideRight
             color: row.active ? Theme.accent : row.dim ? Theme.dim : Theme.text
             font.family: Theme.font
-            font.pixelSize: 13
-            font.weight: row.active ? Font.DemiBold : Font.Normal
+            font.pixelSize: Theme.body
+            font.weight: row.active ? Font.Medium : Font.Normal
         }
 
         Text {
@@ -112,7 +112,7 @@ Rectangle {
             elide: Text.ElideRight
             color: Theme.dim
             font.family: Theme.font
-            font.pixelSize: 11
+            font.pixelSize: Theme.small
         }
     }
 
@@ -141,7 +141,7 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             width: 6
             height: 6
-            radius: 3
+            radius: height / 2
             color: Theme.accent
         }
 
@@ -166,7 +166,7 @@ Rectangle {
             text: row.trailing
             color: Theme.dim
             font.family: Theme.font
-            font.pixelSize: 11
+            font.pixelSize: Theme.small
         }
 
         Text {
@@ -177,7 +177,7 @@ Rectangle {
             visible: row.removable && (area.containsMouse || cross.containsMouse)
             text: row.removeLabel !== "" ? row.removeLabel : "✕"
             color: cross.containsMouse ? (row.removeLabel !== "" ? Theme.warn : Theme.text) : Theme.dim
-            font.pixelSize: row.removeLabel !== "" ? 11 : 12
+            font.pixelSize: Theme.small
             font.family: Theme.font
 
             MouseArea {

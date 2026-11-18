@@ -13,14 +13,14 @@ Item {
     signal clicked
 
     width: parent ? parent.width : 320
-    height: 36
+    height: Theme.row
 
     Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         width: 36
-        height: 32
-        radius: 8
-        color: area.containsMouse ? Theme.slot : "transparent"
+        height: Theme.row
+        radius: Theme.corner
+        color: area.containsMouse ? Theme.hover : "transparent"
 
         Glyph {
             anchors.centerIn: parent
@@ -52,7 +52,7 @@ Item {
         text: Math.round(level.value * 100) + "%"
         color: level.off ? Theme.dim : Theme.text
         font.family: Theme.font
-        font.pixelSize: 12
+        font.pixelSize: Theme.body
         font.features: {
             "tnum": 1
         }

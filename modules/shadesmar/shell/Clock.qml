@@ -34,8 +34,8 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: 8
-        color: area.containsMouse || popup.shown ? Theme.slot : "transparent"
+        radius: Theme.corner
+        color: popup.shown ? Theme.selected : area.containsMouse ? Theme.hover : "transparent"
     }
 
     Column {
@@ -48,8 +48,8 @@ Item {
             text: Qt.formatDateTime(clock.date, "HH:mm")
             color: Theme.text
             font.family: Theme.font
-            font.pixelSize: 14
-            font.weight: Font.DemiBold
+            font.pixelSize: Theme.body
+            font.weight: Font.Medium
         }
 
         Text {
@@ -57,7 +57,7 @@ Item {
             text: Qt.formatDateTime(clock.date, "dd/MM/yyyy")
             color: Theme.dim
             font.family: Theme.font
-            font.pixelSize: 11
+            font.pixelSize: Theme.small
         }
     }
 
@@ -111,8 +111,8 @@ Item {
                     text: Qt.formatDateTime(clock.date, "HH:mm")
                     color: Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 40
-                    font.weight: Font.DemiBold
+                    font.pixelSize: Theme.display
+                    font.weight: Font.Medium
                 }
 
                 Text {
@@ -120,8 +120,8 @@ Item {
                     text: Qt.formatDateTime(clock.date, ":ss")
                     color: Theme.dim
                     font.family: Theme.font
-                    font.pixelSize: 20
-                    font.weight: Font.DemiBold
+                    font.pixelSize: Theme.large
+                    font.weight: Font.Medium
                 }
             }
 
@@ -133,7 +133,7 @@ Item {
                 text: root.capital(clock.date.toLocaleDateString(root.locale, "dddd d MMMM yyyy"))
                 color: today.containsMouse ? Theme.accent : Theme.text
                 font.family: Theme.font
-                font.pixelSize: 13
+                font.pixelSize: Theme.body
 
                 MouseArea {
                     id: today
@@ -160,8 +160,8 @@ Item {
                 }
                 color: Theme.dim
                 font.family: Theme.font
-                font.pixelSize: 10
-                font.weight: Font.DemiBold
+                font.pixelSize: Theme.small
+                font.weight: Font.Medium
                 font.letterSpacing: 1
             }
 
@@ -262,8 +262,8 @@ Item {
                     text: `${root.capital(root.locale.standaloneMonthName(popup.month, Locale.LongFormat))} ${popup.year}`
                     color: title.containsMouse ? Theme.accent : Theme.text
                     font.family: Theme.font
-                    font.pixelSize: 14
-                    font.weight: Font.DemiBold
+                    font.pixelSize: Theme.title
+                    font.weight: Font.Medium
 
                     MouseArea {
                         id: title
@@ -307,8 +307,8 @@ Item {
                         text: root.capital(root.locale.dayName((calendar.first + index) % 7, Locale.ShortFormat).replace(".", "").slice(0, 2))
                         color: Theme.dim
                         font.family: Theme.font
-                        font.pixelSize: 11
-                        font.weight: Font.DemiBold
+                        font.pixelSize: Theme.small
+                        font.weight: Font.Medium
                     }
                 }
 
@@ -336,7 +336,7 @@ Item {
                             anchors.centerIn: parent
                             width: 30
                             height: 30
-                            radius: 15
+                            radius: height / 2
                             color: cell.off ? Theme.warn : Theme.accent
                         }
 
@@ -346,7 +346,7 @@ Item {
                             color: cell.isToday ? Theme.accentText : cell.off ? Theme.warn : cell.column === 0 || cell.weekend ? Theme.dim : Theme.text
                             opacity: cell.column === 0 ? 0.7 : cell.inMonth ? 1 : 0.35
                             font.family: Theme.font
-                            font.pixelSize: cell.column === 0 ? 10 : 13
+                            font.pixelSize: cell.column === 0 ? Theme.small : Theme.body
                             font.weight: cell.isToday || cell.off ? Font.Bold : Font.Normal
                         }
                     }
@@ -393,7 +393,7 @@ Item {
                 Row {
                     required property var modelData
 
-                    spacing: 10
+                    spacing: 12
 
                     Text {
                         width: calendar.cell - 4
@@ -401,7 +401,7 @@ Item {
                         text: modelData.day
                         color: modelData.off ? Theme.warn : Theme.dim
                         font.family: Theme.font
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.small
                         font.weight: Font.Bold
                     }
 
@@ -409,7 +409,7 @@ Item {
                         text: modelData.name
                         color: modelData.off ? Theme.text : Theme.dim
                         font.family: Theme.font
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.small
                     }
                 }
             }

@@ -19,8 +19,8 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: 8
-        color: press.containsMouse ? Theme.slot : "transparent"
+        radius: Theme.corner
+        color: press.containsMouse ? Theme.hover : "transparent"
     }
 
     Glyph {

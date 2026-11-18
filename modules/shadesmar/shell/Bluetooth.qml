@@ -196,8 +196,8 @@ BarButton {
             textFormat: Text.StyledText
             color: Theme.text
             font.family: Theme.font
-            font.pixelSize: 26
-            font.weight: Font.DemiBold
+            font.pixelSize: Theme.large
+            font.weight: Font.Medium
             font.letterSpacing: 3
         }
 
@@ -290,7 +290,7 @@ BarButton {
             text: bt.adapter && bt.adapter.discovering ? "Looking for devices…" : "Scan to find a device to pair"
             color: Theme.dim
             font.family: Theme.font
-            font.pixelSize: 12
+            font.pixelSize: Theme.body
         }
 
         // found ones scroll past a few

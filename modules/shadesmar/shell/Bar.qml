@@ -38,8 +38,9 @@ PanelWindow {
     // top edge when docked
     Rectangle {
         anchors.fill: parent
-        radius: Theme.floating ? Theme.radius : 0
-        color: Theme.island
+        // its items' corners, concentric: they're 4 px in
+        radius: Theme.floating ? Theme.corner + 4 : 0
+        color: Theme.glance
         border.width: Theme.floating ? 1 : 0
         border.color: Theme.outline
     }

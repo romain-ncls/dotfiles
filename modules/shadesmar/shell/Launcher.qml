@@ -153,9 +153,9 @@ Scope {
             anchors.horizontalCenter: parent.horizontalCenter
             y: parent.height / 4
             width: 560
-            height: list.y + list.height + 10
-            radius: Theme.radius + 4
-            color: Theme.popup
+            height: list.y + list.height + list.x
+            radius: Theme.overlayCorner
+            color: Theme.reading
             border.width: 1
             border.color: Theme.outline
 
@@ -167,10 +167,10 @@ Scope {
             TextInput {
                 id: input
 
-                x: 20
+                x: list.x + 10
                 y: 16
-                width: parent.width - 40
-                height: 28
+                width: parent.width - 2 * x
+                height: 32
                 focus: launcher.shown
                 text: launcher.query
                 onTextChanged: launcher.query = text
@@ -178,7 +178,7 @@ Scope {
                 color: Theme.text
                 selectionColor: Theme.accent
                 font.family: Theme.font
-                font.pixelSize: 18
+                font.pixelSize: Theme.large
                 clip: true
 
                 Text {
@@ -218,9 +218,10 @@ Scope {
             Column {
                 id: list
 
-                x: 10
+                // concentric: the rows' corners, inside the box's
+                x: Theme.overlayCorner - Theme.corner
                 y: input.y + input.height + 12
-                width: parent.width - 20
+                width: parent.width - 2 * x
 
                 Repeater {
                     model: launcher.rows
@@ -234,8 +235,8 @@ Scope {
 
                         width: list.width
                         height: 44
-                        radius: 8
-                        color: launcher.selected === index ? Theme.slot : "transparent"
+                        radius: Theme.corner
+                        color: launcher.selected === index ? Theme.selected : "transparent"
 
                         IconImage {
                             id: glyph
@@ -256,7 +257,7 @@ Scope {
                             text: row.isCommand ? `Run “${launcher.query.trim()}”` : row.entry.name
                             color: Theme.text
                             font.family: Theme.font
-                            font.pixelSize: 14
+                            font.pixelSize: Theme.body
                         }
 
                         Text {
@@ -269,7 +270,7 @@ Scope {
                             elide: Text.ElideRight
                             color: Theme.dim
                             font.family: Theme.font
-                            font.pixelSize: 12
+                            font.pixelSize: Theme.small
                         }
 
                         MouseArea {

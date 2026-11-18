@@ -41,8 +41,8 @@ Item {
             elide: Text.ElideRight
             color: Theme.text
             font.family: Theme.font
-            font.pixelSize: 15
-            font.weight: Font.DemiBold
+            font.pixelSize: Theme.title
+            font.weight: Font.Medium
         }
 
         Text {
@@ -52,8 +52,8 @@ Item {
             elide: Text.ElideRight
             color: hero.warn ? Theme.warn : Theme.dim
             font.family: Theme.font
-            font.pixelSize: 10
-            font.weight: Font.DemiBold
+            font.pixelSize: Theme.small
+            font.weight: Font.Medium
             font.letterSpacing: 1
         }
     }

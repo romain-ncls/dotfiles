@@ -8,7 +8,7 @@ Shape {
 
     property real value: 0
     property color color: Theme.accent
-    // seen on the bar and on its items' hover alike (that's Theme.slot)
+    // seen on the bar and on its items' hover alike (Theme.hover, under it)
     property color track: Theme.alpha(Theme.textColor, 0.18)
     property real thickness: 3
     property int size: 18

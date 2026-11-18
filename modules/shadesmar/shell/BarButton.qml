@@ -27,8 +27,8 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: 8
-        color: area.containsMouse || button.bar.open === button.popup ? Theme.slot : "transparent"
+        radius: Theme.corner
+        color: button.bar.open === button.popup ? Theme.selected : area.containsMouse ? Theme.hover : "transparent"
     }
 
     Row {
@@ -50,7 +50,7 @@ Item {
             text: button.label
             color: button.labelColor
             font.family: Theme.font
-            font.pixelSize: 13
+            font.pixelSize: Theme.body
         }
 
         Loader {
@@ -68,7 +68,7 @@ Item {
         anchors.top: parent.top
         width: Math.max(16, count.implicitWidth + 8)
         height: 16
-        radius: 8
+        radius: height / 2
         color: Theme.accent
 
         Text {
@@ -78,7 +78,7 @@ Item {
             text: button.badge
             color: Theme.accentText
             font.family: Theme.font
-            font.pixelSize: 10
+            font.pixelSize: Theme.small
             font.weight: Font.Bold
         }
     }

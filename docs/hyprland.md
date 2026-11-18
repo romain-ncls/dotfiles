@@ -204,6 +204,33 @@ rejects (`bezier` or `spring`).
 - **hypridle stays** (9 Nov 2026), not replaced by the shell's idle
   monitor: it locks on idle and before sleep from outside shadesmar, so a
   crash of the shell doesn't stop the locking.
+- **The shell's rules** (18 Nov 2026), in Theme.qml, every part of
+  shadesmar drawing from them; from Apple's guidelines (macOS's type,
+  concentric corners, thicker glass for reading), GNOME's and Windows',
+  Linear's motion and Emil Kowalski's notes on it:
+  - five sizes of Noto Sans, macOS's: 11 (captions, section names), 13
+    (the bar, rows, buttons), 15 (titles), 22 (big numbers, the
+    launcher's field), 40 (the clock's time); Regular, Medium, Bold for a
+    count. Noto Sans has no SemiBold (Qt's DemiBold is its Medium), and its
+    digits are all as wide: numbers don't shift.
+  - a 4 px grid; surfaces padded 12, rows 32 high (40 with two lines);
+  - corners concentric, a surface's being its rows' plus its padding: 8
+    (controls, rows, the bar's items), 20 (popups, toasts), 24 (the
+    launcher, the year, the pickers, padded 16), capsules for switches,
+    sliders, badges and the OSD;
+  - one glass, the base, at 83 % where it's glanced at (the bar, the OSD)
+    and 90 % where it's read (the rest); states as the text's color over
+    it, 8 % under the pointer, 12 % open or picked, 16 % pressed; a
+    button's face at 10 % (16 % under the pointer), the main one the
+    accent; red never alone, always with a word or an icon;
+  - motion under 300 ms, eased out (never in), exits quicker than
+    entrances, from where it comes, none on what the keys or a hundred
+    uses a day do: 150 ms (a hover going, exits), 200 ms (popups, toasts,
+    moves), 300 ms (the overview, the grid); the curves Hyprland's
+    easeOutQuint, Material's standard for moves, ease-out-quad for fades;
+    `Theme.speed` scales them, 0 for none. Hyprland doesn't animate
+    layers (looknfeel.lua): the shell moves its own; menus appear at once
+    and fade out in 150 ms, as a Mac's.
 
 ## Development
 
@@ -334,12 +361,12 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    default, as close to maximized as it gets: no gaps, no borders, square
    tiled windows (floating ones keep 10 px corners in both layouts), the bar
    docked; floating on Meta+G (gaps, 10 px corners, the bar floating), kept
-   across logins. The bar's popups, notifications, the OSD and the
-   launcher in Nalthis's glass from Plasma: the pane at 80 %, blurred
-   behind, a 10 % outline in the text's color (the page's 92 % of the
-   frame, dropped); the bar and Ghostty in the glass of Brave's new tab's
-   islands (2026-11-16): the base at 83 % (Ghostty's 86 %: it blends in
-   linear light), the blur six by three passes, livelier (contrast 1,
+   across logins. The shell and Ghostty in the glass of Brave's new tab's
+   islands (2026-11-16), blurred behind, a 10 % outline in the text's
+   color: the base, at 83 % for the bar and the OSD, 90 % where there's
+   reading (18 Nov 2026: the shell's rules, above; before, Nalthis's glass
+   from Plasma, the pane at 80 %), Ghostty's 86 % (it blends in linear
+   light); the blur six by three passes, livelier (contrast 1,
    vibrancy 0.3 at 0.7 darkness; lumar.lua). Noto Sans; Ghostty in Fira
    Code, no title bar, the page's terminal colors on the base (on the pane
    before, as Konsole's Nalthis background) and the second text color. The
@@ -552,7 +579,7 @@ later (yazi, btop, lazygit…).
       few frames), at the windows' places as hyprctl gives them, in
       Hyprland's order, corners and shadow, so the first frame is the
       screen as it was (checked pixel by pixel, headless); the bar's strip
-      stays the bar. Hyprland's fade is off for that layer (looknfeel.lua).
+      stays the bar. Hyprland doesn't animate layers (looknfeel.lua).
       A pick goes through Hyprland's dispatcher (a Wayland activation is
       followed by a refocus of the window under the pointer, which wins
       when the pointer just moved to click), once Hyprland has let the
