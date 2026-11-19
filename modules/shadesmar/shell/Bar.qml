@@ -58,6 +58,69 @@ PanelWindow {
         color: Theme.outline
     }
 
+    // The light under the pointer, one for the bar: it goes from item to
+    // item with the pointer (waiting a moment in the gaps between them),
+    // sinks with the item pressed, and leaves the open one its own
+    // (BarItem.qml). Come from off the bar, it's there at once.
+    property Item lit: null
+    function point(item, on) {
+        if (on) {
+            linger.stop()
+            bar.lit = item
+        } else if (bar.lit === item) {
+            linger.restart()
+        }
+    }
+    Timer {
+        id: linger
+
+        interval: 120
+        onTriggered: bar.lit = null
+    }
+    onLitChanged: light.place()
+    Connections {
+        target: bar.lit
+
+        function onXChanged() {
+            light.place()
+        }
+        function onWidthChanged() {
+            light.place()
+        }
+    }
+
+    Rectangle {
+        id: light
+
+        property Item at: null
+        property bool glides: false
+
+        function place() {
+            light.glides = light.at !== null
+            light.at = bar.lit
+            if (!bar.lit)
+                return
+            const p = bar.lit.mapToItem(light.parent, 0, 0)
+            light.x = p.x
+            light.y = p.y
+            light.width = bar.lit.width
+            light.height = bar.lit.height
+        }
+
+        radius: Theme.corner
+        scale: bar.lit ? bar.lit.sunk : 1
+        color: !bar.lit || bar.lit.open ? Theme.none : bar.lit.pressed ? Theme.pressed : Theme.hover
+        Fade on color {}
+        Behavior on x {
+            enabled: light.glides && Theme.speed > 0
+            Follow {}
+        }
+        Behavior on width {
+            enabled: light.glides && Theme.speed > 0
+            Follow {}
+        }
+    }
+
     IpcHandler {
         target: "bar"
 
@@ -83,6 +146,7 @@ PanelWindow {
         }
 
         Recording {
+            bar: bar
             recorder: bar.recorder
         }
 

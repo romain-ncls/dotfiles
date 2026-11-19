@@ -109,20 +109,23 @@ BarButton {
             leftPadding: 2
             spacing: 14
 
+            // the same two, kept (their rings glide, their numbers roll)
             Repeater {
-                model: [{ name: "5h", w: claude.session }, { name: "7d", w: claude.week }].filter(x => x.w)
+                model: ["5h", "7d"]
 
                 Row {
                     id: win
 
-                    required property var modelData
-                    readonly property bool full: modelData.w.used >= 90
+                    required property string modelData
+                    readonly property var w: modelData === "5h" ? claude.session : claude.week
+                    readonly property bool full: w !== null && w.used >= 90
 
+                    visible: w !== null
                     spacing: 6
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: win.modelData.name
+                        text: win.modelData
                         color: Theme.dim
                         font.family: Theme.font
                         font.pixelSize: Theme.body
@@ -131,16 +134,14 @@ BarButton {
                     Ring {
                         anchors.verticalCenter: parent.verticalCenter
                         size: Theme.icon
-                        value: win.modelData.w.used / 100
+                        value: win.w ? win.w.used / 100 : 0
                         color: win.full ? Theme.warn : Theme.accent
                     }
 
-                    Text {
+                    Digits {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: win.modelData.w.started ? `${Math.round(win.modelData.w.used)}%` : "not started"
-                        color: win.full ? Theme.warn : win.modelData.w.started ? Theme.text : Theme.dim
-                        font.family: Theme.font
-                        font.pixelSize: Theme.body
+                        text: win.w && win.w.started ? `${Math.round(win.w.used)}%` : "not started"
+                        color: win.full ? Theme.warn : win.w && win.w.started ? Theme.text : Theme.dim
                     }
                 }
             }

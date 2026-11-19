@@ -180,17 +180,21 @@ Scope {
                     }
                 }
 
-                Text {
+                Item {
                     id: number
 
                     anchors.right: parent.right
                     anchors.verticalCenter: track.verticalCenter
                     width: 36
-                    horizontalAlignment: Text.AlignRight
-                    text: osd.value
-                    color: Theme.text
-                    font.family: Theme.font
-                    font.pixelSize: Theme.body
+                    height: figure.implicitHeight
+
+                    Digits {
+                        id: figure
+
+                        anchors.right: parent.right
+                        text: osd.value
+                        still: !osd.gliding
+                    }
                 }
             }
 

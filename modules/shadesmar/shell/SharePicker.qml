@@ -578,13 +578,9 @@ Scope {
                         radius: Theme.corner
                         color: cancelArea.containsMouse ? Theme.faceHover : Theme.face
                         Fade on color {}
-                        // pressed, it gives a little (Emil Kowalski's 0.97)
-                        scale: cancelArea.pressed ? 0.97 : 1
-                        Behavior on scale {
-                            Ease {
-                                duration: Theme.fast
-                            }
-                        }
+                        // pressed, it sinks, and comes back past its size (Squish.qml)
+                        scale: cancelArea.pressed ? Theme.sunk(width) : 1
+                        Squish on scale {}
 
                         Text {
                             id: cancel

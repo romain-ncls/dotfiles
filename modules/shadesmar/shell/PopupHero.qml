@@ -1,6 +1,7 @@
 // A popup's head, as Omarchy's panels have it: what it's about, big (an
 // icon, a name), a word under it in capitals (CONNECTED), red when
-// something's wrong (`warn`); a switch on the right (`toggle`).
+// something's wrong (`warn`); a switch on the right (`toggle`). Its icon
+// changing (off, on) pops in.
 import QtQuick
 import Quickshell
 
@@ -25,6 +26,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         size: 30
         icon: hero.icon
+        pops: true
         source: hero.iconSource !== "" ? hero.iconSource : hero.icon !== "" ? Quickshell.iconPath(hero.icon, "image-missing") : ""
         color: hero.warn ? Theme.warn : Theme.text
     }

@@ -1,13 +1,13 @@
-// An item of the bar: an icon, maybe a label and a count. A click opens its
-// popup (or closes it); a middle click and the wheel are the item's.
+// An item of the bar (BarItem.qml): an icon, maybe a label and a count. A
+// click opens its popup (or closes it); a middle click and the wheel are
+// the item's. A new icon pops in, the label's numbers roll (Digits.qml), a
+// count going up pops and swings the icon (the bell).
 import QtQuick
 import Quickshell
-import Quickshell.Widgets
 
-Item {
+BarItem {
     id: button
 
-    required property var bar
     required property string popup
     property string icon: ""
     // or a picture of ours (icons/), and its color
@@ -23,14 +23,15 @@ Item {
     signal scrolled(int delta)
 
     implicitWidth: row.implicitWidth + 14
-    implicitHeight: Theme.barHeight - 8
-
-    Rectangle {
-        anchors.fill: parent
-        radius: Theme.corner
-        color: area.pressed ? Theme.pressed : button.bar.open === button.popup ? Theme.selected : area.containsMouse ? Theme.hover : Theme.none
-        Fade on color {}
+    open: bar.open === popup
+    buttons: Qt.LeftButton | Qt.MiddleButton
+    onClicked: event => {
+        if (event.button === Qt.MiddleButton)
+            button.middleClicked()
+        else
+            button.bar.open = button.bar.open === button.popup ? "" : button.popup
     }
+    onWheeled: event => button.scrolled(event.angleDelta.y)
 
     Row {
         id: row
@@ -39,19 +40,20 @@ Item {
         spacing: 6
 
         Glyph {
+            id: glyph
+
             anchors.verticalCenter: parent.verticalCenter
             icon: button.icon
             source: button.iconSource !== "" ? button.iconSource : button.icon !== "" ? Quickshell.iconPath(button.icon, "image-missing") : ""
             color: button.iconColor
+            pops: true
         }
 
-        Text {
+        Digits {
             visible: button.label !== ""
             anchors.verticalCenter: parent.verticalCenter
             text: button.label
             color: button.labelColor
-            font.family: Theme.font
-            font.pixelSize: Theme.body
         }
 
         Loader {
@@ -63,11 +65,12 @@ Item {
         }
     }
 
-    // one more: the count pops, a little bigger, then settles
     property int counted: 0
     onBadgeChanged: {
-        if (badge > counted)
+        if (badge > counted) {
             pop.restart()
+            glyph.swing()
+        }
         counted = badge
     }
 
@@ -110,20 +113,5 @@ Item {
             font.pixelSize: Theme.small
             font.weight: Font.Bold
         }
-    }
-
-    MouseArea {
-        id: area
-
-        anchors.fill: parent
-        hoverEnabled: true
-        acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-        onClicked: event => {
-            if (event.button === Qt.MiddleButton)
-                button.middleClicked()
-            else
-                button.bar.open = button.bar.open === button.popup ? "" : button.popup
-        }
-        onWheel: event => button.scrolled(event.angleDelta.y)
     }
 }

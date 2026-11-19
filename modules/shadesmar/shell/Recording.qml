@@ -2,21 +2,14 @@
 // the bar; a click stops.
 import QtQuick
 
-Item {
+BarItem {
     id: dot
 
     required property var recorder
 
     visible: recorder.busy
     implicitWidth: row.implicitWidth + 14
-    implicitHeight: Theme.barHeight - 8
-
-    Rectangle {
-        anchors.fill: parent
-        radius: Theme.corner
-        color: area.pressed ? Theme.pressed : area.containsMouse ? Theme.hover : Theme.none
-        Fade on color {}
-    }
+    onClicked: dot.recorder.stop()
 
     Row {
         id: row
@@ -33,23 +26,9 @@ Item {
             opacity: dot.recorder.state === "stopping" ? 0.4 : 1
         }
 
-        Text {
+        Digits {
             anchors.verticalCenter: parent.verticalCenter
             text: `${Math.floor(dot.recorder.seconds / 60)}:${String(dot.recorder.seconds % 60).padStart(2, "0")}`
-            color: Theme.text
-            font.family: Theme.font
-            font.pixelSize: Theme.body
-            font.features: {
-                "tnum": 1
-            }
         }
-    }
-
-    MouseArea {
-        id: area
-
-        anchors.fill: parent
-        hoverEnabled: true
-        onClicked: dot.recorder.stop()
     }
 }

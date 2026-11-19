@@ -82,8 +82,12 @@ Item {
         color: Theme.reading
         border.width: card.entry.critical ? 2 : 1
         border.color: card.entry.critical ? Theme.warn : Theme.outline
+        scale: hit.pressed ? Theme.sunk(width) : 1
+        Squish on scale {}
 
         MouseArea {
+            id: hit
+
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
             onClicked: event => {
@@ -260,13 +264,9 @@ Item {
                             radius: Theme.corner
                             color: button.containsMouse ? Theme.faceHover : Theme.face
                             Fade on color {}
-                            // pressed, it gives a little (Emil Kowalski's 0.97)
-                            scale: button.pressed ? 0.97 : 1
-                            Behavior on scale {
-                                Ease {
-                                    duration: Theme.fast
-                                }
-                            }
+                            // pressed, it sinks, and comes back past its size (Squish.qml)
+                            scale: button.pressed ? Theme.sunk(width) : 1
+                            Squish on scale {}
 
                             Text {
                                 id: label

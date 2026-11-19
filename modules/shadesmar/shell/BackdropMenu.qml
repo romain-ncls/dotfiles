@@ -317,13 +317,9 @@ Scope {
                                 radius: Theme.corner
                                 color: lit ? Theme.alpha(Theme.accent, 0.16) : press.containsMouse && enabled ? Theme.faceHover : Theme.face
                                 Fade on color {}
-                                // pressed, it gives a little (Emil Kowalski's 0.97)
-                                scale: press.pressed ? 0.97 : 1
-                                Behavior on scale {
-                                    Ease {
-                                        duration: Theme.fast
-                                    }
-                                }
+                                // pressed, it sinks, and comes back past its size (Squish.qml)
+                                scale: press.pressed ? Theme.sunk(width) : 1
+                                Squish on scale {}
                                 opacity: enabled || lit ? 1 : 0.5
 
                                 Column {
