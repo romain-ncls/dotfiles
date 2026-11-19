@@ -1,5 +1,6 @@
-// A level: its icon (a click on it mutes), its slider, its value. `off`:
-// muted, dimmed.
+// A level, a row of a plate (Section.qml): its icon in a chip, lit while
+// it's on, a button (a click mutes); its slider; its value, rolling.
+// `off`: muted, the chip unlit.
 import QtQuick
 
 Item {
@@ -13,20 +14,28 @@ Item {
     signal clicked
 
     width: parent ? parent.width : 320
-    height: Theme.row
+    height: Theme.row2
 
-    Rectangle {
+    Item {
+        id: button
+
+        x: 6
         anchors.verticalCenter: parent.verticalCenter
-        width: 36
-        height: Theme.row
-        radius: Theme.corner
-        color: area.pressed ? Theme.pressed : area.containsMouse ? Theme.hover : Theme.none
-        Fade on color {}
+        width: Theme.chip
+        height: Theme.chip
+        scale: area.pressed ? Theme.sunk(width) : 1
+        Squish on scale {}
 
-        Glyph {
-            anchors.centerIn: parent
+        IconChip {
             icon: level.icon
-            color: level.off ? Theme.dim : Theme.text
+            lit: !level.off
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            radius: width / 2
+            color: area.pressed ? Theme.pressed : area.containsMouse ? Theme.hover : Theme.none
+            Fade on color {}
         }
 
         MouseArea {
@@ -39,23 +48,18 @@ Item {
     }
 
     Slider {
-        x: 46
-        width: parent.width - x - 50
+        x: button.x + button.width + 12
+        width: parent.width - x - 54
         anchors.verticalCenter: parent.verticalCenter
         value: level.value
         onMoved: v => level.moved(v)
     }
 
-    Text {
+    Digits {
         anchors.right: parent.right
-        anchors.rightMargin: 4
+        anchors.rightMargin: 10
         anchors.verticalCenter: parent.verticalCenter
         text: Math.round(level.value * 100) + "%"
         color: level.off ? Theme.dim : Theme.text
-        font.family: Theme.font
-        font.pixelSize: Theme.body
-        font.features: {
-            "tnum": 1
-        }
     }
 }

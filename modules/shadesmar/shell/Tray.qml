@@ -70,7 +70,8 @@ Row {
                 id: raw
 
                 anchors.centerIn: parent
-                implicitSize: Theme.icon
+                // ours (Lucide's 2 px lines on 24) at the theme's 20 px drawing
+                implicitSize: tray.ours[button.modelData.id] ? 20 : Theme.icon
                 source: tray.glyph(button.modelData)
                 visible: false
             }

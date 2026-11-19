@@ -14,8 +14,7 @@ BarButton {
 
     popup: "clipboard"
     // a check for a moment, once a pick is copied
-    icon: copied.running ? "" : "klipper"
-    iconSource: copied.running ? Qt.resolvedUrl("icons/check.svg") : ""
+    icon: copied.running ? "checkmark" : "klipper"
 
     Timer {
         id: copied
@@ -99,15 +98,27 @@ BarButton {
 
         Rectangle {
             width: parent.width
-            height: Theme.row
-            radius: Theme.corner
-            color: Theme.slot
+            height: 36
+            radius: Theme.plateCorner
+            color: Theme.plate
+            border.width: 1
+            border.color: search.activeFocus ? Theme.alpha(Theme.accent, 0.6) : Theme.outline
+
+            Glyph {
+                id: lens
+
+                x: 12
+                anchors.verticalCenter: parent.verticalCenter
+                size: 16
+                icon: "edit-find"
+                color: Theme.dim
+            }
 
             TextInput {
                 id: search
 
-                x: 10
-                width: parent.width - 20
+                x: lens.x + lens.width + 8
+                width: parent.width - x - 12
                 anchors.verticalCenter: parent.verticalCenter
                 focus: popup.shown
                 text: cb.filter
@@ -131,62 +142,67 @@ BarButton {
             }
         }
 
-        SectionLabel {
-            visible: cb.entries.length > 0
-            text: "History"
-            action: "Clear"
+        Section {
+            title: "History"
+            action: cb.entries.length > 0 ? "Clear" : ""
             onActed: {
                 Quickshell.execDetached(["sh", "-c", `cliphist wipe; rm -rf "${cb.pictures}"`])
                 cb.entries = []
             }
-        }
 
-        Text {
-            visible: cb.matching.length === 0
-            x: 4
-            height: 30
-            verticalAlignment: Text.AlignVCenter
-            text: cb.entries.length === 0 ? "Nothing copied yet" : "No match"
-            color: Theme.dim
-            font.family: Theme.font
-            font.pixelSize: Theme.body
-        }
+            Text {
+                visible: cb.matching.length === 0
+                x: 10
+                height: Theme.row
+                verticalAlignment: Text.AlignVCenter
+                text: cb.entries.length === 0 ? "Nothing copied yet" : "No match"
+                color: Theme.dim
+                font.family: Theme.font
+                font.pixelSize: Theme.body
+            }
 
-        ListView {
-            id: rows
+            ListView {
+                id: rows
 
-            visible: cb.matching.length > 0
-            width: parent.width
-            height: Math.min(contentHeight, (cb.bar.screen ? cb.bar.screen.height : 1080) / 2)
-            clip: true
-            boundsBehavior: Flickable.StopAtBounds
-            model: cb.matching
-            currentIndex: cb.current
-            onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
+                visible: cb.matching.length > 0
+                width: parent.width
+                height: Math.min(contentHeight, (cb.bar.screen ? cb.bar.screen.height : 1080) / 2)
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                model: cb.matching
+                currentIndex: cb.current
+                onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
 
-            delegate: ListRow {
-                id: row
+                delegate: ListRow {
+                    id: row
 
-                required property var modelData
-                required property int index
-                readonly property var e: modelData
-                readonly property string file: e.image ? `${cb.pictures}/${e.id}.${e.image.type}` : ""
-                property bool decoded: false
+                    required property var modelData
+                    required property int index
+                    readonly property var e: modelData
+                    readonly property string file: e.image ? `${cb.pictures}/${e.id}.${e.image.type}` : ""
+                    property bool decoded: false
 
-                width: rows.width
-                thumbnail: decoded ? "file://" + file : ""
-                icon: e.image && !decoded ? "image-x-generic" : ""
-                title: e.image ? "Image" : e.text
-                subtitle: e.image ? `${e.image.type.toUpperCase()} · ${e.image.width} × ${e.image.height} · ${e.image.size}` : ""
-                selected: index === cb.current
-                removable: true
-                onClicked: cb.copy(e)
-                onRemoved: cb.forget(e)
+                    width: rows.width
+                    thumbnail: decoded ? "file://" + file : ""
+                    icon: e.image && !decoded ? "image-x-generic" : ""
+                    title: e.image ? "Image" : e.text
+                    subtitle: e.image ? `${e.image.type.toUpperCase()} · ${e.image.width} × ${e.image.height} · ${e.image.size}` : ""
+                    selected: index === cb.current
+                    removable: true
+                    onClicked: cb.copy(e)
+                    onRemoved: cb.forget(e)
 
-                Process {
-                    running: row.file !== ""
-                    command: ["sh", "-c", "mkdir -p \"${2%/*}\" && { [ -s \"$2\" ] || { printf '%s' \"$1\" | cliphist decode > \"$2.part\" && mv \"$2.part\" \"$2\"; }; }", "sh", row.e.line, row.file]
-                    onExited: code => row.decoded = code === 0
+                    Process {
+                        running: row.file !== ""
+                        command: ["sh", "-c", "mkdir -p \"${2%/*}\" && { [ -s \"$2\" ] || { printf '%s' \"$1\" | cliphist decode > \"$2.part\" && mv \"$2.part\" \"$2\"; }; }", "sh", row.e.line, row.file]
+                        onExited: code => row.decoded = code === 0
+                    }
+                }
+
+                ScrollHint {
+                    anchors.fill: parent
+                    target: rows
+                    color: Theme.plateGlass
                 }
             }
         }

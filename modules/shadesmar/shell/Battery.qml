@@ -129,69 +129,72 @@ BarButton {
             title: `${battery.percent}%`
             caption: battery.status + (battery.device && battery.device.healthSupported ? ` · health ${Math.round(battery.device.healthPercentage)}%` : "")
             warn: battery.low
+            lit: battery.charging
         }
 
-        SectionLabel {
-            text: "Power profile"
-        }
+        // the profile: one of three, side by side
+        Section {
+            id: profiles
 
-        Repeater {
-            model: [
-                { profile: PowerProfile.PowerSaver, name: "Power saver", icon: "leaf" },
-                { profile: PowerProfile.Balanced, name: "Balanced", icon: "scale" },
-                { profile: PowerProfile.Performance, name: "Performance", icon: "gauge" }
+            readonly property var choices: [
+                { profile: PowerProfile.PowerSaver, label: "Saver", icon: Qt.resolvedUrl("icons/leaf.svg") },
+                { profile: PowerProfile.Balanced, label: "Balanced", icon: Qt.resolvedUrl("icons/scale.svg") },
+                { profile: PowerProfile.Performance, label: "Performance", icon: Qt.resolvedUrl("icons/gauge.svg") }
             ].filter(p => p.profile !== PowerProfile.Performance || PowerProfiles.hasPerformanceProfile)
 
-            ListRow {
-                required property var modelData
+            title: "Power profile"
 
-                lineIcon: Qt.resolvedUrl(`icons/${modelData.icon}.svg`)
-                title: modelData.name
-                active: PowerProfiles.profile === modelData.profile
-                onClicked: PowerProfiles.profile = modelData.profile
+            Segmented {
+                width: parent.width
+                color: "transparent"
+                inset: 0
+                options: profiles.choices
+                current: options.findIndex(p => p.profile === PowerProfiles.profile)
+                onPicked: i => PowerProfiles.profile = options[i].profile
             }
         }
 
-        SectionLabel {
+        Section {
             visible: battery.brightness >= 0
-            text: "Brightness"
-        }
+            title: "Brightness"
 
-        SliderRow {
-            visible: battery.brightness >= 0
-            icon: "brightness-high-symbolic"
-            value: battery.brightness
-            onMoved: v => {
-                // at least 1 %: 0 turns the panel off
-                const p = Math.max(1, Math.round(v * 100))
-                battery.brightness = p / 100
-                Quickshell.execDetached(["brightnessctl", "-q", "set", p + "%"])
+            SliderRow {
+                icon: "brightness-high-symbolic"
+                value: battery.brightness
+                onMoved: v => {
+                    // at least 1 %: 0 turns the panel off
+                    const p = Math.max(1, Math.round(v * 100))
+                    battery.brightness = p / 100
+                    Quickshell.execDetached(["brightnessctl", "-q", "set", p + "%"])
+                }
             }
         }
 
-        SectionLabel {
+        Section {
             visible: battery.headset !== null || battery.others.length > 0
-            text: "Devices"
-        }
-
-        ListRow {
-            visible: battery.headset !== null
-            icon: "audio-headset-symbolic"
-            title: "Alienware Pro headset"
-            subtitle: battery.headset && battery.headset.charging ? "Charging" : ""
-            trailing: battery.headset ? `${battery.headset.level}%` : ""
-        }
-
-        Repeater {
-            model: battery.others
+            title: "Devices"
 
             ListRow {
-                required property var modelData
+                visible: battery.headset !== null
+                chip: true
+                icon: "audio-headset-symbolic"
+                title: "Alienware Pro headset"
+                subtitle: battery.headset && battery.headset.charging ? "Charging" : ""
+                trailing: battery.headset ? `${battery.headset.level}%` : ""
+            }
 
-                icon: battery.kindIcon(modelData.type, modelData.model)
-                title: modelData.model || "Device"
-                subtitle: modelData.state === UPowerDeviceState.Charging ? "Charging" : ""
-                trailing: `${Math.round(modelData.percentage * 100)}%`
+            Repeater {
+                model: battery.others
+
+                ListRow {
+                    required property var modelData
+
+                    chip: true
+                    icon: battery.kindIcon(modelData.type, modelData.model)
+                    title: modelData.model || "Device"
+                    subtitle: modelData.state === UPowerDeviceState.Charging ? "Charging" : ""
+                    trailing: `${Math.round(modelData.percentage * 100)}%`
+                }
             }
         }
     }

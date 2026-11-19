@@ -1,6 +1,7 @@
 // A row of a popup's list: an icon (or a picture, `thumbnail`), a title and
 // a line under it, a word on the right; the title lit when it's the active
-// one, the row when it's the one the keys are on (`selected`). A click does
+// one, the row when it's the one the keys are on (`selected`); with `chip`,
+// its icon in a circle (IconChip.qml), the circle lit instead. A click does
 // it; with `removable`, a cross on hover removes it; `marked`, a dot before
 // the word (new).
 import QtQuick
@@ -26,6 +27,9 @@ Rectangle {
     property bool dim: false
     property bool marked: false
     property bool busy: false
+    // its icon in a circle (IconChip.qml), lit while it's the active one;
+    // its title then stays in the text's color
+    property bool chip: false
     property bool removable: false
     // what the cross says instead (Forget)
     property string removeLabel: ""
@@ -36,7 +40,7 @@ Rectangle {
     readonly property string source: iconSource !== "" ? iconSource : icon !== "" ? Quickshell.iconPath(icon, "image-missing") : ""
 
     width: parent ? parent.width : 320
-    height: Math.max(thumbnail !== "" ? 56 : subtitle !== "" ? Theme.row2 : Theme.row, texts.implicitHeight + 6)
+    height: Math.max(thumbnail !== "" ? 56 : chip || subtitle !== "" ? Theme.row2 : Theme.row, texts.implicitHeight + 6)
     radius: Theme.corner
     color: area.pressed ? Theme.pressed : selected ? Theme.selected : area.containsMouse ? Theme.hover : Theme.none
     Fade on color {}
@@ -46,7 +50,7 @@ Rectangle {
     IconImage {
         id: glyph
 
-        visible: row.thumbnail === "" && row.lineIcon === "" && row.source !== ""
+        visible: !row.chip && row.thumbnail === "" && row.lineIcon === "" && row.source !== ""
         x: 8
         anchors.verticalCenter: parent.verticalCenter
         implicitSize: 22
@@ -56,12 +60,23 @@ Rectangle {
     Glyph {
         id: line
 
-        visible: row.thumbnail === "" && row.lineIcon !== ""
+        visible: !row.chip && row.thumbnail === "" && row.lineIcon !== ""
         x: 10
         anchors.verticalCenter: parent.verticalCenter
         size: 18
         source: row.lineIcon
         color: row.active ? Theme.accent : Theme.text
+    }
+
+    IconChip {
+        id: chip
+
+        visible: row.chip
+        x: 6
+        anchors.verticalCenter: parent.verticalCenter
+        icon: row.lineIcon !== "" ? "" : row.icon
+        source: row.lineIcon !== "" ? row.lineIcon : row.iconSource
+        lit: row.active
     }
 
     // a picture: in a 72 × 44 box, its whole
@@ -92,7 +107,7 @@ Rectangle {
     Column {
         id: texts
 
-        x: picture.visible ? 88 : glyph.visible || line.visible ? 40 : 10
+        x: picture.visible ? 88 : chip.visible ? 44 : glyph.visible || line.visible ? 40 : 10
         anchors.verticalCenter: parent.verticalCenter
         width: row.width - x - right.width - 18
         spacing: 1
@@ -101,7 +116,7 @@ Rectangle {
             width: parent.width
             text: row.title
             elide: Text.ElideRight
-            color: row.active ? Theme.accent : row.dim ? Theme.dim : Theme.text
+            color: row.active && !row.chip ? Theme.accent : row.dim ? Theme.dim : Theme.text
             font.family: Theme.font
             font.pixelSize: Theme.body
             font.weight: row.active ? Font.Medium : Font.Normal

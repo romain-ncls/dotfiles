@@ -41,16 +41,11 @@ BarButton {
     popup: "network"
     icon: wired ? "network-wired-symbolic" : current ? signalIcon(current, false) : wifi && Networking.wifiEnabled ? "network-wireless-disconnected-symbolic" : "network-disconnect-symbolic"
 
-    // the networks: the one in use and the known ones, then the others, by
-    // signal; each section's name on its first
-    readonly property var rows: {
-        if (!wifi)
-            return []
-        const all = wifi.networks.values.filter(n => n.name !== "").sort((a, b) => (b.connected - a.connected) || (strength(b) - strength(a)))
-        const known = all.filter(n => n.known || n.connected)
-        const other = all.filter(n => !n.known && !n.connected).slice(0, 20)
-        return [...known.map((n, i) => ({ net: n, section: i === 0 ? "Known networks" : "" })), ...other.map((n, i) => ({ net: n, section: i === 0 ? "Other networks" : "" }))]
-    }
+    // the networks in reach: the one in use and the known ones, then up to
+    // 20 others, by signal
+    readonly property var all: wifi ? wifi.networks.values.filter(n => n.name !== "").sort((a, b) => (b.connected - a.connected) || (strength(b) - strength(a))) : []
+    readonly property var known: all.filter(n => n.known || n.connected)
+    readonly property var others: all.filter(n => !n.known && !n.connected).slice(0, 20)
 
     // the network whose password is asked, the one last given one, and
     // what failed, by name
@@ -333,6 +328,7 @@ BarButton {
             title: net.wired ? "Wired" : net.current ? net.current.name : "Offline"
             caption: net.portal ? "Sign-in required" : net.limited ? "Limited access" : net.device ? (net.device === net.wifi && net.info.band ? `Connected · ${net.info.band}` : "Connected") : net.wifi && !Networking.wifiEnabled ? "Wi-Fi off" : "No network"
             warn: net.limited
+            lit: net.device !== null
             toggle: net.wifi !== null
             checked: Networking.wifiEnabled
             onToggled: Networking.wifiEnabled = !Networking.wifiEnabled
@@ -371,83 +367,88 @@ BarButton {
             }
         }
 
-        // its details, two by two; a click copies an address
-        Grid {
+        // its details, two by two, folded; a click copies an address
+        Section {
             visible: net.device !== null
-            width: parent.width
-            columns: 2
-            columnSpacing: 20
-            rowSpacing: 3
-            topPadding: 2
-            bottomPadding: 4
+            title: "Details"
+            folds: true
+            open: false
 
-            Repeater {
-                model: !net.device ? [] : [
-                    { label: "IP address", value: net.info.ip, copy: true },
-                    { label: "Gateway", value: net.info.gateway, copy: true },
-                    { label: "Receiving", value: net.rate(net.rx) },
-                    { label: "Sending", value: net.rate(net.tx) },
-                    ...(net.device === net.wifi ? [
-                        { label: "Signal", value: net.info.signal ? `${net.info.signal} %` : "" },
-                        { label: "Band", value: net.info.band ? `${net.info.band} · ch ${net.info.channel}` : "" },
-                        { label: "Speed", value: net.info.rate }
-                    ] : [
-                        { label: "Speed", value: net.wired.linkSpeed > 0 ? (net.wired.linkSpeed >= 1000 ? `${net.wired.linkSpeed / 1000} Gb/s` : `${net.wired.linkSpeed} Mb/s`) : "" },
-                        { label: "Interface", value: net.wired.name }
-                    ])
-                ]
+            Grid {
+                width: parent.width
+                columns: 2
+                columnSpacing: 16
+                rowSpacing: 4
+                padding: 6
 
-                Item {
-                    id: cell
+                Repeater {
+                    model: !net.device ? [] : [
+                        { label: "IP address", value: net.info.ip, copy: true },
+                        { label: "Gateway", value: net.info.gateway, copy: true },
+                        { label: "Receiving", value: net.rate(net.rx) },
+                        { label: "Sending", value: net.rate(net.tx) },
+                        ...(net.device === net.wifi ? [
+                            { label: "Signal", value: net.info.signal ? `${net.info.signal} %` : "" },
+                            { label: "Band", value: net.info.band ? `${net.info.band} · ch ${net.info.channel}` : "" },
+                            { label: "Speed", value: net.info.rate }
+                        ] : [
+                            { label: "Speed", value: net.wired.linkSpeed > 0 ? (net.wired.linkSpeed >= 1000 ? `${net.wired.linkSpeed / 1000} Gb/s` : `${net.wired.linkSpeed} Mb/s`) : "" },
+                            { label: "Interface", value: net.wired.name }
+                        ])
+                    ]
 
-                    required property var modelData
-                    property bool copied: false
+                    Item {
+                        id: cell
 
-                    width: (parent.width - 20) / 2
-                    height: 18
+                        required property var modelData
+                        property bool copied: false
 
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        x: 4
-                        text: cell.modelData.label
-                        color: Theme.dim
-                        font.family: Theme.font
-                        font.pixelSize: Theme.small
-                    }
+                        width: (parent.width - 2 * 6 - 16) / 2
+                        height: 20
 
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.right: parent.right
-                        anchors.rightMargin: 4
-                        text: cell.copied ? "Copied" : cell.modelData.value || "—"
-                        color: cell.copied ? Theme.accent : copyArea.containsMouse ? Theme.accent : Theme.text
-                        font.family: Theme.font
-                        font.pixelSize: Theme.small
-                        font.features: {
-                            "tnum": 1
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            x: 4
+                            text: cell.modelData.label
+                            color: Theme.dim
+                            font.family: Theme.font
+                            font.pixelSize: Theme.small
                         }
 
-                        MouseArea {
-                            id: copyArea
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.right: parent.right
+                            anchors.rightMargin: 4
+                            text: cell.copied ? "Copied" : cell.modelData.value || "—"
+                            color: cell.copied ? Theme.accent : copyArea.containsMouse ? Theme.accent : Theme.text
+                            font.family: Theme.font
+                            font.pixelSize: Theme.small
+                            font.features: {
+                                "tnum": 1
+                            }
 
-                            enabled: cell.modelData.copy === true && !!cell.modelData.value
-                            anchors.fill: parent
-                            anchors.margins: -3
-                            hoverEnabled: true
-                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                            onClicked: {
-                                Quickshell.execDetached(["wl-copy", cell.modelData.value])
-                                cell.copied = true
-                                uncopy.restart()
+                            MouseArea {
+                                id: copyArea
+
+                                enabled: cell.modelData.copy === true && !!cell.modelData.value
+                                anchors.fill: parent
+                                anchors.margins: -3
+                                hoverEnabled: true
+                                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                onClicked: {
+                                    Quickshell.execDetached(["wl-copy", cell.modelData.value])
+                                    cell.copied = true
+                                    uncopy.restart()
+                                }
                             }
                         }
-                    }
 
-                    Timer {
-                        id: uncopy
+                        Timer {
+                            id: uncopy
 
-                        interval: 900
-                        onTriggered: cell.copied = false
+                            interval: 900
+                            onTriggered: cell.copied = false
+                        }
                     }
                 }
             }
@@ -455,8 +456,8 @@ BarButton {
 
         // the Wi-Fi's networks
         Text {
-            visible: net.wifi !== null && Networking.wifiEnabled && net.rows.length === 0
-            x: 4
+            visible: net.wifi !== null && Networking.wifiEnabled && net.all.length === 0
+            x: 10
             height: 30
             verticalAlignment: Text.AlignVCenter
             text: net.scanning ? "Looking for networks…" : "No network in reach"
@@ -465,149 +466,74 @@ BarButton {
             font.pixelSize: Theme.body
         }
 
-        ListView {
-            id: networks
+        // the known ones, then the others, folded while one is in use; past
+        // 360 px, they scroll
+        Scroller {
+            visible: net.wifi !== null && Networking.wifiEnabled && net.all.length > 0
+            maxHeight: 360
 
-            visible: net.wifi !== null && Networking.wifiEnabled && net.rows.length > 0
-            width: parent.width
-            height: Math.min(contentHeight, 330)
-            clip: true
-            interactive: contentHeight > height
-            boundsBehavior: Flickable.StopAtBounds
-            model: net.rows
+            Section {
+                visible: net.known.length > 0
+                title: "Known networks"
+                action: net.scanning ? "Scanning…" : "Rescan"
+                onActed: net.rescan()
 
-            delegate: Column {
-                id: entry
+                Repeater {
+                    model: net.known
 
-                required property var modelData
-                required property int index
-                readonly property var n: modelData.net
-
-                width: networks.width
-
-                SectionLabel {
-                    visible: entry.modelData.section !== ""
-                    text: entry.modelData.section
-                    action: entry.index === 0 ? (net.scanning ? "Scanning…" : "Rescan") : ""
-                    onActed: net.rescan()
-                }
-
-                ListRow {
-                    icon: net.signalIcon(entry.n, false)
-                    trailingIcon: net.secured(entry.n) ? Qt.resolvedUrl("icons/lock.svg") : ""
-                    title: entry.n.name
-                    active: entry.n.connected
-                    subtitle: net.status(entry.n)
-                    busy: entry.n.state === ConnectionState.Connecting || entry.n.state === ConnectionState.Disconnecting
-                    removable: entry.n.known && !entry.n.connected
-                    removeLabel: "Forget"
-                    onClicked: net.pick(entry.n)
-                    onRemoved: entry.n.forget()
-                }
-
-                // a new secured network's password, under it
-                Rectangle {
-                    visible: net.asking === entry.n
-                    width: parent.width
-                    height: visible ? Theme.row : 0
-                    radius: Theme.corner
-                    color: Theme.slot
-
-                    TextInput {
-                        id: psk
-
-                        x: 12
-                        width: parent.width - 24 - join.width
-                        anchors.verticalCenter: parent.verticalCenter
-                        focus: net.asking === entry.n
-                        echoMode: TextInput.Password
-                        color: Theme.text
-                        font.family: Theme.font
-                        font.pixelSize: Theme.body
-                        clip: true
-                        onAccepted: join.go()
-                        Keys.onEscapePressed: event => {
-                            net.asking = null
-                            text = ""
-                        }
-
-                        Text {
-                            visible: psk.text === ""
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: "Password"
-                            color: Theme.dim
-                            font: psk.font
-                        }
-                    }
-
-                    Text {
-                        id: join
-
-                        function go() {
-                            if (psk.text === "")
-                                return
-                            net.tried = entry.n.name
-                            entry.n.connectWithPsk(psk.text)
-                            psk.text = ""
-                            net.asking = null
-                        }
-
-                        anchors.right: parent.right
-                        anchors.rightMargin: 12
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "Connect"
-                        color: psk.text === "" ? Theme.dim : joinArea.containsMouse ? Theme.text : Theme.accent
-                        font.family: Theme.font
-                        font.pixelSize: Theme.body
-                        font.weight: Font.Medium
-
-                        MouseArea {
-                            id: joinArea
-
-                            anchors.fill: parent
-                            anchors.margins: -6
-                            hoverEnabled: true
-                            onClicked: join.go()
-                        }
+                    NetworkRow {
+                        host: net
                     }
                 }
+            }
 
-                Connections {
-                    target: entry.n
+            Item {
+                visible: net.known.length > 0 && net.others.length > 0
+                width: 1
+                height: 8
+            }
 
-                    function onConnectionFailed(reason) {
-                        if (reason === ConnectionFailReason.NoSecrets) {
-                            net.fail(entry.n, net.tried === entry.n.name ? "Wrong password" : "")
-                            net.asking = entry.n
-                        } else {
-                            net.fail(entry.n, "Couldn't connect")
-                        }
-                        net.tried = ""
+            Section {
+                visible: net.others.length > 0
+                title: "Other networks"
+                action: net.known.length > 0 ? "" : net.scanning ? "Scanning…" : "Rescan"
+                onActed: net.rescan()
+                folds: true
+                open: net.device === null
+                count: net.others.length
+
+                Repeater {
+                    model: net.others
+
+                    NetworkRow {
+                        host: net
                     }
                 }
             }
         }
 
-        SectionLabel {
+        Section {
             visible: net.vpns.length > 0
-            text: "VPN"
-        }
+            title: "VPN"
 
-        Repeater {
-            model: net.vpns
+            Repeater {
+                model: net.vpns
 
-            ListRow {
-                required property var modelData
+                ListRow {
+                    required property var modelData
 
-                icon: "network-vpn-symbolic"
-                title: modelData.name
-                active: modelData.active
-                subtitle: modelData.active ? "Connected" : ""
-                onClicked: {
-                    Quickshell.execDetached(["nmcli", "connection", modelData.active ? "down" : "up", "uuid", modelData.uuid])
-                    listVpns.running = true
+                    chip: true
+                    icon: "network-vpn-symbolic"
+                    title: modelData.name
+                    active: modelData.active
+                    subtitle: modelData.active ? "Connected" : ""
+                    onClicked: {
+                        Quickshell.execDetached(["nmcli", "connection", modelData.active ? "down" : "up", "uuid", modelData.uuid])
+                        listVpns.running = true
+                    }
                 }
             }
         }
     }
+
 }

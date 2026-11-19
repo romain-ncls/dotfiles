@@ -215,9 +215,26 @@ rejects (`bezier` or `spring`).
     digits are all as wide: numbers don't shift.
   - a 4 px grid; surfaces padded 12, rows 32 high (40 with two lines);
   - corners concentric, a surface's being its rows' plus its padding: 8
-    (controls, rows, the bar's items), 20 (popups, toasts), 24 (the
-    launcher, the year, the pickers, padded 16), capsules for switches,
-    sliders, badges and the OSD;
+    (controls, rows, the bar's items), 12 (a popup's plates, rows 4 px
+    in), 20 (popups, plates 8 px in; toasts), 24 (the launcher, the year,
+    the pickers, padded 16), capsules for switches, sliders, badges and the
+    OSD;
+  - popups as Control Center's modules and iOS's grouped lists (19 Nov
+    2026: "the popup style can be vastly improved"): a head with the
+    icon in a circle, lit in the accent while it's on (connected, sound
+    on, popups shown), its name and a line under it, its switch; then
+    groups, each its name in small capitals over a plate (the text's color
+    at 5 %), its rows' icons in circles too, the active one's lit (the
+    network in use, the output, a connected device); a choice of three is
+    a segmented control (the power profile), the light sliding to the one
+    picked; what's long folds (the network's details, the networks not
+    known while one is in use, a chevron turning) or scrolls (its edge
+    fading where there's more, a thin bar a moment as it opens and while it
+    moves); the bell's notifications are the toasts' cards, stacked by app
+    as on screen, a stack's count unfolding it;
+  - the bar's icons nalthis's 22 px status ones (a 20 px drawing, 1.5 px
+    lines, as Plasma's panel): asked at 18, the 16 px drawing was blown
+    up, thick and blurred ("a bit too bold"); Claude's, its own mark;
   - one glass, the base, at 83 % where it's glanced at (the bar, the OSD)
     and 90 % where it's read (the rest); states as the text's color over
     it, 8 % under the pointer, 12 % open or picked, 16 % pressed; a
@@ -260,7 +277,11 @@ rejects (`bezier` or `spring`).
     while held (iOS's), the track's color following; the clipboard's icon
     is a check for 1.2 s after a copy; the bell rocks as a toast lands in
     it, its count popping; a row under way (Connecting…, Pairing…) has a
-    spinner.
+    spinner. Every control answers the pointer too: a switch's knob grows
+    and its track lightens, a slider's knob grows and its fill brightens.
+  - the bell keeps less (19 Nov 2026: "maybe we keep too much?"): the
+    last 30, 5 by app, of the last 12 hours, 4 once seen (it was the
+    last 100 of the day).
 
 ## Development
 

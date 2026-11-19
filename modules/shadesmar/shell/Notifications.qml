@@ -8,9 +8,10 @@
 // the app's own buttons, but not the copy, on screen for its time, then in
 // the history, where a click shows the app's window instead. The history
 // lasts across the shell's restarts (a file in its state folder, under the
-// home folder only its owner reads): the last 100 of the last day, without
-// what an app marked transient, without pictures. The apps in `brief` (a
-// screenshot taken) are only on screen, as transient ones.
+// home folder only its owner reads): the last 30, 5 by app, of the last 12
+// hours (4 once seen), without what an app marked transient, without
+// pictures. The apps in `brief` (a screenshot taken) are only on screen, as
+// transient ones.
 //
 // An app's popups stack, its newest in front (NotificationStack.qml); the
 // same notification again counts ("×2") instead. Their time (5 s when the
@@ -61,8 +62,10 @@ Scope {
 
     // apps whose notifications aren't kept (their app names)
     readonly property var brief: ["LumineCapture"]
-    readonly property int keep: 100
-    readonly property real keepFor: 24 * 3600 * 1000
+    readonly property int keep: 30
+    readonly property int keepByApp: 5
+    readonly property real keepUnseen: 12 * 3600 * 1000
+    readonly property real keepSeen: 4 * 3600 * 1000
     property int serial: 0
 
     function by(list) {
@@ -278,16 +281,21 @@ Scope {
         save()
     }
 
-    // The last 100 of the last day, besides those on screen.
+    // Besides those on screen: the last 30, 5 by app, of the last 12 hours,
+    // 4 once seen (the bell opened since).
     function prune(list) {
         const now = Date.now()
         const out = []
+        const byApp = {}
         let count = 0
         for (const e of list) {
-            if (e.popup || (count < keep && now - e.time < keepFor)) {
+            const n = byApp[e.group] ?? 0
+            if (e.popup || (count < keep && n < keepByApp && now - e.time < (e.time <= seenAt ? keepSeen : keepUnseen))) {
                 out.push(e)
-                if (!e.popup)
+                if (!e.popup) {
                     count++
+                    byApp[e.group] = n + 1
+                }
             } else if (live[e.key]) {
                 live[e.key].dismiss()
             }

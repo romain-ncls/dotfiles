@@ -61,7 +61,13 @@ BarButton {
     // started (`always`); a spend limit only behind a gateway that sets one.
     function window(key, length, always) {
         const w = limits ? limits[key] : null
-        const idle = { started: false, used: 0, resets: 0, pace: -1, length: length }
+        const idle = {
+            started: false,
+            used: 0,
+            resets: 0,
+            pace: -1,
+            length: length
+        }
         if (!w || typeof w.used_percentage !== "number")
             return limits && always ? idle : null
         const resets = w.resets_at || 0
@@ -133,7 +139,7 @@ BarButton {
 
                     Ring {
                         anchors.verticalCenter: parent.verticalCenter
-                        size: Theme.icon
+                        size: 18
                         value: win.w ? win.w.used / 100 : 0
                         color: win.full ? Theme.warn : Theme.accent
                     }
@@ -158,14 +164,14 @@ BarButton {
         property string amount: w ? `${Math.round(w.used)}%` : ""
 
         width: parent ? parent.width : 300
-        leftPadding: 4
-        rightPadding: 4
-        topPadding: 4
-        bottomPadding: 6
+        leftPadding: 10
+        rightPadding: 10
+        topPadding: 8
+        bottomPadding: 10
         spacing: 6
 
         Item {
-            width: limit.width - 8
+            width: limit.width - 20
             height: name.implicitHeight
 
             Text {
@@ -188,13 +194,13 @@ BarButton {
         }
 
         Meter {
-            width: limit.width - 8
+            width: limit.width - 20
             value: limit.w ? limit.w.used / 100 : 0
             pace: limit.w ? limit.w.pace : -1
         }
 
         Item {
-            width: limit.width - 8
+            width: limit.width - 20
             height: left.implicitHeight
 
             Text {
@@ -248,6 +254,8 @@ BarButton {
                 id: reload
 
                 anchors.right: parent.right
+                anchors.rightMargin: 4
+                anchors.verticalCenter: parent.verticalCenter
                 icon: "refresh-cw"
                 onClicked: {
                     reload.turn()
@@ -257,32 +265,32 @@ BarButton {
             }
         }
 
-        SectionLabel {
-            text: "Limits"
-        }
+        Section {
+            title: "Limits"
 
-        Limit {
-            visible: claude.session !== null
-            title: "Session"
-            detail: "5-hour window"
-            w: claude.session
-        }
+            Limit {
+                visible: claude.session !== null
+                title: "Session"
+                detail: "5-hour window"
+                w: claude.session
+            }
 
-        Limit {
-            visible: claude.week !== null
-            title: "Week"
-            detail: "7-day window, all models"
-            w: claude.week
-        }
+            Limit {
+                visible: claude.week !== null
+                title: "Week"
+                detail: "7-day window, all models"
+                w: claude.week
+            }
 
-        Limit {
-            visible: claude.spend !== null
-            title: "Spend"
-            detail: claude.limits && claude.limits.spend_limit && claude.limits.spend_limit.period ? claude.limits.spend_limit.period : "spend limit"
-            w: claude.spend
-            amount: {
-                const s = claude.limits ? claude.limits.spend_limit : null
-                return s && typeof s.used_usd === "number" && typeof s.limit_usd === "number" ? `$${Math.round(s.used_usd)} of $${Math.round(s.limit_usd)}` : w ? `${Math.round(w.used)}%` : ""
+            Limit {
+                visible: claude.spend !== null
+                title: "Spend"
+                detail: claude.limits && claude.limits.spend_limit && claude.limits.spend_limit.period ? claude.limits.spend_limit.period : "spend limit"
+                w: claude.spend
+                amount: {
+                    const s = claude.limits ? claude.limits.spend_limit : null
+                    return s && typeof s.used_usd === "number" && typeof s.limit_usd === "number" ? `$${Math.round(s.used_usd)} of $${Math.round(s.limit_usd)}` : w ? `${Math.round(w.used)}%` : ""
+                }
             }
         }
     }

@@ -1,6 +1,7 @@
 // A switch: on in the accent's color. A click toggles it (`toggled`; the
-// owner sets `checked`). Held, its knob stretches toward where it'll go,
-// as iOS's; it slides there and the track's color follows.
+// owner sets `checked`). Under the pointer its knob grows and its track
+// lightens; held, the knob stretches toward where it'll go, as iOS's; it
+// slides there and the track's color follows.
 import QtQuick
 
 Rectangle {
@@ -24,11 +25,23 @@ Rectangle {
         }
     }
 
+    // the pointer on it: the text's color over the track, as on a row
     Rectangle {
-        x: toggle.checked ? parent.width - width - 3 : 3
+        anchors.fill: parent
+        radius: parent.radius
+        color: area.containsMouse ? Theme.hover : Theme.none
+        Fade on color {}
+    }
+
+    Rectangle {
+        id: knob
+
+        readonly property real gap: (toggle.height - height) / 2
+
+        x: toggle.checked ? toggle.width - width - gap : gap
         anchors.verticalCenter: parent.verticalCenter
-        width: area.pressed ? 19 : 14
-        height: 14
+        height: area.containsMouse || area.pressed ? 16 : 14
+        width: area.pressed ? height + 5 : height
         radius: height / 2
         color: Theme.text
 
@@ -42,6 +55,12 @@ Rectangle {
                 duration: Theme.fast
             }
         }
+        Behavior on height {
+            enabled: Theme.speed > 0
+            Ease {
+                duration: Theme.fast
+            }
+        }
     }
 
     MouseArea {
@@ -49,6 +68,7 @@ Rectangle {
 
         anchors.fill: parent
         anchors.margins: -4
+        hoverEnabled: true
         onClicked: toggle.toggled()
     }
 }
