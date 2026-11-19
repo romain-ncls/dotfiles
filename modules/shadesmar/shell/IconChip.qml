@@ -1,6 +1,7 @@
 // An icon in a circle (a row's, a popup's head's), as Control Center's: lit
 // (on, connected, in use), the accent's circle with the icon dark on it;
-// else a faint one. Its icon changing pops in (Glyph.qml).
+// else a faint one; while something's under way (`pulsing`: connecting),
+// the accent comes and goes in it. Its icon changing pops in (Glyph.qml).
 import QtQuick
 import Quickshell
 
@@ -12,6 +13,7 @@ Rectangle {
     property string source: ""
     property bool lit: false
     property bool warn: false
+    property bool pulsing: false
     property int size: Theme.chip
     property int glyph: 16
 
@@ -26,6 +28,35 @@ Rectangle {
             duration: Theme.normal
             easing.type: Easing.BezierSpline
             easing.bezierCurve: Theme.fade
+        }
+    }
+
+    Rectangle {
+        id: pulse
+
+        anchors.fill: parent
+        radius: width / 2
+        color: Theme.accent
+        opacity: 0
+
+        SequentialAnimation on opacity {
+            running: chip.pulsing && !chip.lit && Theme.speed > 0
+            loops: Animation.Infinite
+            onRunningChanged: {
+                if (!running)
+                    pulse.opacity = 0
+            }
+
+            NumberAnimation {
+                to: 0.55
+                duration: 600
+                easing.type: Easing.InOutSine
+            }
+            NumberAnimation {
+                to: 0.1
+                duration: 600
+                easing.type: Easing.InOutSine
+            }
         }
     }
 

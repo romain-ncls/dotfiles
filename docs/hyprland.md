@@ -229,12 +229,15 @@ rejects (`bezier` or `spring`).
     a segmented control (the power profile), the light sliding to the one
     picked; what's long folds (the network's details, the networks not
     known while one is in use, a chevron turning) or scrolls (its edge
-    fading where there's more, a thin bar a moment as it opens and while it
-    moves); the bell's notifications are the toasts' cards, stacked by app
-    as on screen, a stack's count unfolding it;
-  - the bar's icons nalthis's 22 px status ones (a 20 px drawing, 1.5 px
-    lines, as Plasma's panel): asked at 18, the 16 px drawing was blown
-    up, thick and blurred ("a bit too bold"); Claude's, its own mark;
+    fading where there's more, gone at once at the end; a thin bar a moment
+    as it opens and while it moves); the bell's notifications are the
+    toasts' cards, stacked by app as on screen, a stack's count unfolding
+    it;
+  - the bar's icons nalthis's 16 px ones, drawn for that size (1.5 px lines
+    on whole pixels, GNOME's top bar's size): asked at 18, the 16 px
+    drawing was blown up, thick and blurred ("a bit too bold"); the 22 px
+    ones (a 20 px drawing, Plasma's panel's) were big beside the text;
+    the tray's known apps in nalthis's too; Claude's, its own mark;
   - one glass, the base, at 83 % where it's glanced at (the bar, the OSD)
     and 90 % where it's read (the rest); states as the text's color over
     it, 8 % under the pointer, 12 % open or picked, 16 % pressed; a
@@ -276,9 +279,14 @@ rejects (`bezier` or `spring`).
     the clock, the OSD); a switch's knob stretches toward where it'll go
     while held (iOS's), the track's color following; the clipboard's icon
     is a check for 1.2 s after a copy; the bell rocks as a toast lands in
-    it, its count popping; a row under way (Connecting…, Pairing…) has a
-    spinner. Every control answers the pointer too: a switch's knob grows
-    and its track lightens, a slider's knob grows and its fill brightens.
+    it, its count popping; a row under way (Connecting…, Pairing…, a VPN
+    going up) has a spinner and its icon's circle pulsing; one that failed
+    (a VPN, a Wi-Fi network, a Bluetooth device that fell back) says so in
+    red, its circle red too, and shakes once, as a wrong password. Every
+    control answers the pointer too: a soft halo round a switch's or a
+    slider's knob (Material's), a slider's fill brightening; a switch on
+    has its knob dark on the accent (white on the light blue was hard to
+    see).
   - the bell keeps less (19 Nov 2026: "maybe we keep too much?"): the
     last 30, 5 by app, of the last 12 hours, 4 once seen (it was the
     last 100 of the day).

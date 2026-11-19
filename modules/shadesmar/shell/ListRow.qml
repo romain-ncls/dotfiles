@@ -27,6 +27,11 @@ Rectangle {
     property bool dim: false
     property bool marked: false
     property bool busy: false
+    property bool warn: false
+    onWarnChanged: {
+        if (warn && Theme.speed > 0)
+            shake.restart()
+    }
     // its icon in a circle (IconChip.qml), lit while it's the active one;
     // its title then stays in the text's color
     property bool chip: false
@@ -46,6 +51,43 @@ Rectangle {
     Fade on color {}
     scale: area.pressed ? Theme.sunk(width) : 1
     Squish on scale {}
+
+    // failing: side to side, smaller each time (a wrong password's)
+    transform: Translate {
+        id: nudge
+    }
+    SequentialAnimation {
+        id: shake
+
+        NumberAnimation {
+            target: nudge
+            property: "x"
+            to: -6
+            duration: 50
+            easing.type: Easing.OutQuad
+        }
+        NumberAnimation {
+            target: nudge
+            property: "x"
+            to: 5
+            duration: 80
+            easing.type: Easing.InOutQuad
+        }
+        NumberAnimation {
+            target: nudge
+            property: "x"
+            to: -3
+            duration: 70
+            easing.type: Easing.InOutQuad
+        }
+        NumberAnimation {
+            target: nudge
+            property: "x"
+            to: 0
+            duration: 60
+            easing.type: Easing.OutQuad
+        }
+    }
 
     IconImage {
         id: glyph
@@ -77,6 +119,8 @@ Rectangle {
         icon: row.lineIcon !== "" ? "" : row.icon
         source: row.lineIcon !== "" ? row.lineIcon : row.iconSource
         lit: row.active
+        warn: row.warn
+        pulsing: row.busy
     }
 
     // a picture: in a 72 × 44 box, its whole
@@ -129,7 +173,7 @@ Rectangle {
             wrapMode: Text.Wrap
             maximumLineCount: row.subtitleLines
             elide: Text.ElideRight
-            color: Theme.dim
+            color: row.warn ? Theme.warn : Theme.dim
             font.family: Theme.font
             font.pixelSize: Theme.small
         }

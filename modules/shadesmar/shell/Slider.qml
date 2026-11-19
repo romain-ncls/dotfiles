@@ -1,8 +1,8 @@
 // A slider from 0 to 1: dragged, clicked or scrolled; moved(value) as it
 // goes (the owner sets `value` from what it controls). Changed from
-// elsewhere (the wheel, the keys), it glides there; under the pointer its
-// knob grows and its fill brightens; held, it's under the pointer, its
-// knob bigger still.
+// elsewhere (the wheel, the keys), it glides there; under the pointer a
+// soft halo rounds its knob (as the switches') and its fill brightens;
+// held, it's under the pointer, its knob bigger.
 import QtQuick
 
 Item {
@@ -42,9 +42,34 @@ Item {
     }
 
     Rectangle {
+        anchors.centerIn: knob
+        width: 28
+        height: 28
+        radius: width / 2
+        color: Theme.alpha(Theme.accent, 0.25)
+        opacity: area.pressed ? 1 : area.containsMouse ? 0.7 : 0
+        scale: area.containsMouse || area.pressed ? 1 : 0.6
+
+        Behavior on opacity {
+            enabled: Theme.speed > 0
+            NumberAnimation {
+                duration: Theme.fast
+            }
+        }
+        Behavior on scale {
+            enabled: Theme.speed > 0
+            Ease {
+                duration: Theme.fast
+            }
+        }
+    }
+
+    Rectangle {
+        id: knob
+
         x: (slider.width - width) * slider.drawn
         anchors.verticalCenter: parent.verticalCenter
-        width: area.pressed ? 18 : area.containsMouse ? 16 : 14
+        width: area.pressed ? 18 : 14
         height: width
         radius: height / 2
         color: Theme.text

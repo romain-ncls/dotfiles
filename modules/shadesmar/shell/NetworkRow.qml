@@ -21,6 +21,7 @@ Column {
         active: entry.n.connected
         subtitle: entry.host.status(entry.n)
         busy: entry.n.state === ConnectionState.Connecting || entry.n.state === ConnectionState.Disconnecting
+        warn: (entry.host.failed[entry.n.name] ?? "") !== ""
         removable: entry.n.known && !entry.n.connected
         removeLabel: "Forget"
         onClicked: entry.host.pick(entry.n)
