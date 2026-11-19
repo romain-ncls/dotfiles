@@ -235,18 +235,32 @@ rejects (`bezier` or `spring`).
     20 % opaque). The shell moves and grows its own; menus and the bar's
     popups appear at once and fade out, as a Mac's (Hyprland fades no
     layer's popup in).
-  - what moves (Theme.qml's Ease, Fade, Follow): a hover comes at once
-    and goes in 150 ms (Linear's), pressed a step darker, a button's face
-    giving to 0.97 (Emil Kowalski's); a popup grows from 96 % at its
-    item's foot (swapped for another, it doesn't); values glide on a
-    spring that keeps its speed when the value moves again (the rings,
-    the meters, sliders not held, the OSD's level once it's up); the
-    desktops' light slides to the one shown; an app's toasts slide in
-    from the screen's edge, out quicker, the others closing up after; the
-    bell's count pops; the calendar's days come from the side the month
-    goes to; the year grows from 97 % in 300 ms; the launcher just
-    appears (the keys). A popup's content stays as it was while Hyprland
-    fades it out (its last frame).
+  - what moves (Theme.qml's Ease, Fade, Follow, Squish, Stretch,
+    Digits): a hover comes at once and goes in 150 ms (Linear's), pressed
+    a step darker; on the bar, one light goes from item to item with the
+    pointer (Vercel's tabs), waiting 120 ms in the gaps between them; a
+    popup grows from 96 % at its item's foot (swapped for another, it
+    doesn't); values glide on a spring that keeps its speed when the value
+    moves again (the rings, the meters, sliders not held, the OSD's level
+    once it's up); the desktops' light goes to the one shown front edge
+    first, stretching on the way; an app's toasts slide in from the
+    screen's edge, out quicker, the others closing up after; the calendar's
+    days come from the side the month goes to; the year grows from 97 % in
+    300 ms; the launcher just appears (the keys). A popup's content stays
+    as it was while Hyprland fades it out (its last frame).
+  - what answers a click (19 Nov 2026: "more than a background change"):
+    whatever is pressed sinks, 2 px a side whatever its size (a chevron to
+    0.9, a row to 0.99), in 100 ms, and comes back past its size on
+    release (iOS's buttons), so a quick click is felt; a bar item's look
+    sinks, not the item, its popup opening from where it stays. Then what
+    changed says so: a new icon pops in from half its size (muted,
+    connected, charging, a volume level); numbers roll digit by digit,
+    up as they grow (iOS's numeric text: the bar's percentages, Claude's,
+    the clock, the OSD); a switch's knob stretches toward where it'll go
+    while held (iOS's), the track's color following; the clipboard's icon
+    is a check for 1.2 s after a copy; the bell rocks as a toast lands in
+    it, its count popping; a row under way (Connecting…, Pairing…) has a
+    spinner.
 
 ## Development
 

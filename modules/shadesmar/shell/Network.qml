@@ -498,6 +498,7 @@ BarButton {
                     title: entry.n.name
                     active: entry.n.connected
                     subtitle: net.status(entry.n)
+                    busy: entry.n.state === ConnectionState.Connecting || entry.n.state === ConnectionState.Disconnecting
                     removable: entry.n.known && !entry.n.connected
                     removeLabel: "Forget"
                     onClicked: net.pick(entry.n)

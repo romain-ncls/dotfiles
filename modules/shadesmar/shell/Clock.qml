@@ -12,15 +12,15 @@ import QtQuick
 import Quickshell
 import "Almanac.js" as Almanac
 
-Item {
+BarItem {
     id: root
 
-    required property var bar
     property var yearView: null // YearCalendar.qml
     readonly property var locale: Qt.locale((Quickshell.env("LC_TIME") || Quickshell.env("LANG") || "C").split(".")[0])
 
     implicitWidth: column.implicitWidth + 14
-    implicitHeight: Theme.barHeight - 8
+    open: popup.shown
+    onClicked: root.bar.open = popup.shown ? "" : "clock"
 
     SystemClock {
         id: clock
@@ -32,42 +32,23 @@ Item {
         return s.charAt(0).toUpperCase() + s.slice(1)
     }
 
-    Rectangle {
-        anchors.fill: parent
-        radius: Theme.corner
-        color: area.pressed ? Theme.pressed : popup.shown ? Theme.selected : area.containsMouse ? Theme.hover : Theme.none
-        Fade on color {}
-    }
-
     Column {
         id: column
 
         anchors.centerIn: parent
 
-        Text {
+        Digits {
             anchors.horizontalCenter: parent.horizontalCenter
             text: Qt.formatDateTime(clock.date, "HH:mm")
-            color: Theme.text
-            font.family: Theme.font
-            font.pixelSize: Theme.body
-            font.weight: Font.Medium
+            weight: Font.Medium
         }
 
-        Text {
+        Digits {
             anchors.horizontalCenter: parent.horizontalCenter
             text: Qt.formatDateTime(clock.date, "dd/MM/yyyy")
             color: Theme.dim
-            font.family: Theme.font
-            font.pixelSize: Theme.small
+            size: Theme.small
         }
-    }
-
-    MouseArea {
-        id: area
-
-        anchors.fill: parent
-        hoverEnabled: true
-        onClicked: root.bar.open = popup.shown ? "" : "clock"
     }
 
     BarPopup {

@@ -25,6 +25,7 @@ Rectangle {
     property bool selected: false
     property bool dim: false
     property bool marked: false
+    property bool busy: false
     property bool removable: false
     // what the cross says instead (Forget)
     property string removeLabel: ""
@@ -39,6 +40,8 @@ Rectangle {
     radius: Theme.corner
     color: area.pressed ? Theme.pressed : selected ? Theme.selected : area.containsMouse ? Theme.hover : Theme.none
     Fade on color {}
+    scale: area.pressed ? Theme.sunk(width) : 1
+    Squish on scale {}
 
     IconImage {
         id: glyph
@@ -132,7 +135,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.rightMargin: 8
         anchors.verticalCenter: parent.verticalCenter
-        width: Math.max(word.implicitWidth + (side.visible ? side.width + (word.implicitWidth > 0 ? 6 : 0) : 0), row.removable ? removal.implicitWidth : 0)
+        width: Math.max(word.implicitWidth + (side.visible ? side.width + (word.implicitWidth > 0 ? 6 : 0) : 0) + (spinner.visible ? spinner.width + 6 : 0), row.removable ? removal.implicitWidth : 0)
         height: 20
 
         Rectangle {
@@ -144,6 +147,14 @@ Rectangle {
             height: 6
             radius: height / 2
             color: Theme.accent
+        }
+
+        Spinner {
+            id: spinner
+
+            visible: row.busy && word.visible
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
         }
 
         Glyph {

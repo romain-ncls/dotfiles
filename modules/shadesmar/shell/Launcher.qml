@@ -237,6 +237,8 @@ Scope {
                         height: 44
                         radius: Theme.corner
                         color: launcher.selected === index ? Theme.selected : "transparent"
+                        scale: pick.pressed ? Theme.sunk(width) : 1
+                        Squish on scale {}
 
                         IconImage {
                             id: glyph
@@ -274,6 +276,8 @@ Scope {
                         }
 
                         MouseArea {
+                            id: pick
+
                             anchors.fill: parent
                             hoverEnabled: true
                             onEntered: launcher.selected = row.index

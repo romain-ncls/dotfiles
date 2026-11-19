@@ -1,6 +1,6 @@
 // A small button with a line icon of ours (icons/<icon>.svg): the clock's
 // month steps and year button, the year view's, Claude's reload (turn():
-// the icon goes round once, to say it was done).
+// the icon goes round once, to say it was done). A press sinks it.
 import QtQuick
 
 Item {
@@ -16,6 +16,8 @@ Item {
 
     width: 32
     height: 32
+    scale: press.pressed ? Theme.sunk(width) : 1
+    Squish on scale {}
 
     Rectangle {
         anchors.fill: parent

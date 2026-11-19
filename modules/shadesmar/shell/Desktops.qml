@@ -1,6 +1,7 @@
 // The four desktops of the grid (modules/hyprland/hypr/grid.lua), as a
-// 2×2 square: the one shown is lit, the light sliding there at a switch; a
-// click switches to another. Desktop d is workspace d on the left screen
+// 2×2 square: the one shown is lit, the light going there at a switch, its
+// front first and its back after, so it stretches on the way; a click
+// switches to another (the square pressed sinks). Desktop d is workspace d on the left screen
 // (or the laptop alone) and 4 + d on the right one.
 import QtQuick
 import Quickshell
@@ -53,8 +54,12 @@ Item {
                 height: desktops.cellHeight
                 radius: 3
                 color: Theme.slot
+                scale: cell.pressed ? Theme.sunk(width) : 1
+                Squish on scale {}
 
                 MouseArea {
+                    id: cell
+
                     anchors.fill: parent
                     onClicked: Quickshell.execDetached(["hyprctl", "eval", `package.loaded["grid"].go(${parent.desktop})`])
                 }
@@ -62,25 +67,37 @@ Item {
         }
     }
 
-    // the light, on the one shown
+    // the light, on the one shown (none, it waits on the first, unseen):
+    // its four edges, each going on its own, the one in front quicker
+    readonly property int column: (Math.max(1, current) - 1) % 2
+    readonly property int line: Math.floor((Math.max(1, current) - 1) / 2)
+    property real leftEdge: column * (cellWidth + gap)
+    property real topEdge: line * (cellHeight + gap)
+    property real rightEdge: column * (cellWidth + gap) + cellWidth
+    property real bottomEdge: line * (cellHeight + gap) + cellHeight
+
+    Stretch on leftEdge {
+        leading: true
+        from: desktops.leftEdge
+    }
+    Stretch on rightEdge {
+        from: desktops.rightEdge
+    }
+    Stretch on topEdge {
+        leading: true
+        from: desktops.topEdge
+    }
+    Stretch on bottomEdge {
+        from: desktops.bottomEdge
+    }
+
     Rectangle {
         visible: desktops.current >= 1
-        x: (desktops.current - 1) % 2 * (desktops.cellWidth + desktops.gap)
-        y: Math.floor((desktops.current - 1) / 2) * (desktops.cellHeight + desktops.gap)
-        width: desktops.cellWidth
-        height: desktops.cellHeight
+        x: desktops.leftEdge
+        y: desktops.topEdge
+        width: desktops.rightEdge - desktops.leftEdge
+        height: desktops.bottomEdge - desktops.topEdge
         radius: 3
         color: Theme.accent
-
-        Behavior on x {
-            Ease {
-                easing.bezierCurve: Theme.move
-            }
-        }
-        Behavior on y {
-            Ease {
-                easing.bezierCurve: Theme.move
-            }
-        }
     }
 }

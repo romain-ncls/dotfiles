@@ -13,7 +13,15 @@ BarButton {
     id: cb
 
     popup: "clipboard"
-    icon: "klipper"
+    // a check for a moment, once a pick is copied
+    icon: copied.running ? "" : "klipper"
+    iconSource: copied.running ? Qt.resolvedUrl("icons/check.svg") : ""
+
+    Timer {
+        id: copied
+
+        interval: 1200
+    }
 
     // cliphist's lines: "id<TAB>preview"; a picture's preview is
     // "[[ binary data 134 KiB png 300x500 ]]"
@@ -61,6 +69,7 @@ BarButton {
         if (!e)
             return
         run("printf '%s' \"$1\" | cliphist decode | wl-copy", e.line)
+        copied.restart()
         popup.close()
     }
     function forget(e) {

@@ -263,6 +263,7 @@ BarButton {
                 title: modelData.name
                 active: modelData.connected
                 subtitle: bt.state(modelData)
+                busy: modelData.state === BluetoothDeviceState.Connecting || modelData.state === BluetoothDeviceState.Disconnecting || modelData.pairing
                 removable: !modelData.connected
                 removeLabel: "Forget"
                 onClicked: {
@@ -310,6 +311,7 @@ BarButton {
                 icon: modelData.icon || "network-bluetooth-symbolic"
                 title: modelData.deviceName
                 subtitle: modelData.pairing ? "Pairing…" : "Click to pair"
+                busy: modelData.pairing
                 dim: true
                 onClicked: bt.pair(modelData)
             }

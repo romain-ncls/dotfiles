@@ -45,20 +45,26 @@ Row {
     Repeater {
         model: SystemTray.items.values
 
-        Item {
+        BarItem {
             id: button
 
             required property var modelData
 
+            bar: tray.window
             implicitWidth: Theme.icon + 14
-            implicitHeight: Theme.barHeight - 8
-
-            Rectangle {
-                anchors.fill: parent
-                radius: Theme.corner
-                color: area.pressed ? Theme.pressed : area.containsMouse ? Theme.hover : Theme.none
-                Fade on color {}
+            buttons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+            onClicked: event => {
+                const item = button.modelData
+                if (event.button === Qt.RightButton || (item.onlyMenu && item.hasMenu)) {
+                    const p = button.mapToItem(null, 0, 0)
+                    item.display(tray.window, p.x, p.y)
+                } else if (event.button === Qt.MiddleButton) {
+                    item.secondaryActivate()
+                } else {
+                    item.activate()
+                }
             }
+            onWheeled: wheel => button.modelData.scroll(wheel.angleDelta.y, false)
 
             IconImage {
                 id: raw
@@ -76,26 +82,6 @@ Row {
                 brightness: 1
                 colorization: 1
                 colorizationColor: button.modelData.status === Status.NeedsAttention ? Theme.accent : Theme.text
-            }
-
-            MouseArea {
-                id: area
-
-                anchors.fill: parent
-                hoverEnabled: true
-                acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-                onClicked: event => {
-                    const item = button.modelData
-                    if (event.button === Qt.RightButton || (item.onlyMenu && item.hasMenu)) {
-                        const p = button.mapToItem(null, 0, 0)
-                        item.display(tray.window, p.x, p.y)
-                    } else if (event.button === Qt.MiddleButton) {
-                        item.secondaryActivate()
-                    } else {
-                        item.activate()
-                    }
-                }
-                onWheel: wheel => button.modelData.scroll(wheel.angleDelta.y, false)
             }
         }
     }

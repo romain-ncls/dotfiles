@@ -108,17 +108,26 @@ Singleton {
     readonly property int surfaceCorner: corner + pad // popups, toasts, menus
     readonly property int overlayCorner: 24 // the launcher, the year, pickers
 
-    // Motion (Ease.qml, Fade.qml, Follow.qml): quick, from where it comes,
-    // never on what's done by the keys or a hundred times a day. Glass is
-    // faded by Hyprland only, whole surfaces (looknfeel.lua): the shell
-    // moves and grows; faded by it, the blur would stay whole under the
-    // fading glass. Three lengths: a hover going, an exit, a small change; a
-    // popup, a toast, a move; a big view. `speed` scales them all: 0, no
-    // motion at all.
+    // Motion (Ease.qml, Fade.qml, Follow.qml, Squish.qml, Stretch.qml,
+    // Digits.qml): quick, from where it comes, never on what's done by the
+    // keys or a hundred times a day; a click always answered (a press
+    // sinks, what changed pops, rolls or slides). Glass is faded by
+    // Hyprland only, whole surfaces (looknfeel.lua): the shell moves and
+    // grows; faded by it, the blur would stay whole under the fading glass.
+    // Three lengths: a hover going, an exit, a small change; a popup, a
+    // toast, a move; a big view. `speed` scales them all: 0, no motion at
+    // all.
     readonly property real speed: 1
     readonly property int fast: 150 * speed
     readonly property int normal: 200 * speed
     readonly property int slow: 300 * speed
+    // a press going in (Squish.qml): quicker than a click
+    readonly property int press: 100 * speed
+    // how far a press sinks a thing: 2 px a side, so the small ones more
+    // (a chevron to 0.9, a row to 0.99)
+    function sunk(size) {
+        return 1 - 4 / Math.max(40, size)
+    }
     // ease-out, strong (Hyprland's easeOutQuint): what comes, the default
     readonly property var out: [0.23, 1, 0.32, 1, 1, 1]
     // Material's standard: what moves from one place to another
