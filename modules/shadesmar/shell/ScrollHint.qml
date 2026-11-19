@@ -32,10 +32,13 @@ Item {
             }
         }
 
+        // coming, a moment; at the end, gone at once
         Behavior on opacity {
+            id: coming
+
             enabled: Theme.speed > 0
             NumberAnimation {
-                duration: Theme.fast
+                duration: coming.targetValue > 0.5 ? Theme.fast : 0
             }
         }
     }

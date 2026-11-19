@@ -149,8 +149,9 @@ Singleton {
     readonly property var fade: [0.25, 0.46, 0.45, 0.94, 1, 1]
 
     readonly property int barHeight: 40
-    // the bar's icons: nalthis's 22 px status icons, a 20 px drawing on whole
-    // pixels, 1.5 px lines, as Plasma's panel (asked at 18, its 16 px
-    // drawing was blown up, thick and blurred)
-    readonly property int icon: 22
+    // the bar's icons: nalthis's 16 px ones, drawn for that size, 1.5 px
+    // lines on whole pixels, as GNOME's top bar (asked at 18, the 16 px
+    // drawing was blown up, thick and blurred; its 22 px ones, a 20 px
+    // drawing, were big beside the text)
+    readonly property int icon: 16
 }

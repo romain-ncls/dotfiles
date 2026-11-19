@@ -4,9 +4,10 @@
 //
 // The apps' own icons are in their colors, beside the bar's line icons
 // (nalthis's, Lucide's): each shows as a line icon in the text's color
-// instead. Ours for the apps we know (icons/: Lucide's, as nalthis draws
-// them), else its own monochrome one (its theme's "-symbolic"), else its
-// picture as a silhouette (Discord's, whose shape says muted or deafened).
+// instead: for the apps we know, one of nalthis's (KDE Connect's phone,
+// Spotify's note: drawn as the bar's) or ours (icons/: Lucide's), else
+// its own monochrome one (its theme's "-symbolic"), else its picture as a
+// silhouette (Discord's, whose shape says muted or deafened).
 // One that asks for attention is in the accent's color.
 import QtQuick
 import QtQuick.Effects
@@ -20,14 +21,20 @@ Row {
     required property var window
     spacing: 6
 
-    // by the item's id
+    // by the item's id: a theme icon's name (nalthis draws it, as the
+    // bar's), else ours (icons/)
+    readonly property var themed: ({
+            "KDE Connect Indicator": "kdeconnect-tray",
+            "spotify-client": "folder-music"
+        })
     readonly property var ours: ({
-            "KDE Connect Indicator": "smartphone",
-            "Easy Effects": "sliders-vertical",
-            "spotify-client": "music"
+            "Easy Effects": "sliders-vertical"
         })
 
     function glyph(item) {
+        const named = themed[item.id]
+        if (named)
+            return Quickshell.iconPath(named)
         const mine = ours[item.id]
         if (mine)
             return Qt.resolvedUrl(`icons/${mine}.svg`)
@@ -70,8 +77,7 @@ Row {
                 id: raw
 
                 anchors.centerIn: parent
-                // ours (Lucide's 2 px lines on 24) at the theme's 20 px drawing
-                implicitSize: tray.ours[button.modelData.id] ? 20 : Theme.icon
+                implicitSize: Theme.icon
                 source: tray.glyph(button.modelData)
                 visible: false
             }

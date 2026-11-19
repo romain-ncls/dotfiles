@@ -139,7 +139,7 @@ BarButton {
 
                     Ring {
                         anchors.verticalCenter: parent.verticalCenter
-                        size: 18
+                        size: Theme.icon
                         value: win.w ? win.w.used / 100 : 0
                         color: win.full ? Theme.warn : Theme.accent
                     }

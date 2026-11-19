@@ -256,17 +256,41 @@ BarButton {
                 model: bt.adapter && bt.adapter.enabled ? bt.paired : []
 
                 ListRow {
+                    id: device
+
                     required property var modelData
+                    // a connection tried that fell back to nothing
+                    property bool trying: false
+                    property bool failed: false
+
+                    Connections {
+                        target: device.modelData
+
+                        function onStateChanged() {
+                            const s = device.modelData.state
+                            if (s === BluetoothDeviceState.Connecting) {
+                                device.trying = true
+                                device.failed = false
+                            } else if (s === BluetoothDeviceState.Connected) {
+                                device.trying = false
+                            } else if (s === BluetoothDeviceState.Disconnected && device.trying) {
+                                device.trying = false
+                                device.failed = true
+                            }
+                        }
+                    }
 
                     chip: true
                     icon: modelData.icon || "network-bluetooth-symbolic"
                     title: modelData.name
                     active: modelData.connected
-                    subtitle: bt.state(modelData)
+                    warn: failed
+                    subtitle: failed ? "Couldn't connect" : bt.state(modelData)
                     busy: modelData.state === BluetoothDeviceState.Connecting || modelData.state === BluetoothDeviceState.Disconnecting || modelData.pairing
                     removable: !modelData.connected
                     removeLabel: "Forget"
                     onClicked: {
+                        device.failed = false
                         if (modelData.connected)
                             modelData.disconnect()
                         else

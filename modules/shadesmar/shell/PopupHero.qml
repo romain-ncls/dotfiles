@@ -29,7 +29,7 @@ Item {
         x: 6
         anchors.verticalCenter: parent.verticalCenter
         size: Theme.headChip
-        glyph: Theme.icon
+        glyph: 22
         icon: hero.icon
         source: hero.iconSource
         lit: hero.lit

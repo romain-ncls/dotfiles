@@ -190,6 +190,34 @@ BarButton {
 
     // VPNs: name, uuid, active, from nmcli's terse output (colons escaped)
     property var vpns: []
+    // a VPN going up or down (one at a time: nmcli waits till it's done),
+    // and what failed, by uuid, till the popup closes
+    property var vpnFailed: ({})
+    function toggleVpn(v) {
+        if (vpnRun.running)
+            return
+        const f = Object.assign({}, vpnFailed)
+        delete f[v.uuid]
+        vpnFailed = f
+        vpnRun.uuid = v.uuid
+        vpnRun.up = !v.active
+        vpnRun.command = ["nmcli", "connection", v.active ? "down" : "up", "uuid", v.uuid]
+        vpnRun.running = true
+    }
+    Process {
+        id: vpnRun
+
+        property string uuid: ""
+        property bool up: true
+
+        onExited: code => {
+            if (code !== 0)
+                net.vpnFailed = Object.assign({}, net.vpnFailed, {
+                    [uuid]: up ? "Couldn't connect" : "Couldn't disconnect"
+                })
+            listVpns.running = true
+        }
+    }
 
     Process {
         id: listVpns
@@ -319,6 +347,7 @@ BarButton {
                 if (net.wifi)
                     net.wifi.scannerEnabled = false
                 net.asking = null
+                net.vpnFailed = ({})
             }
         }
 
@@ -521,16 +550,17 @@ BarButton {
 
                 ListRow {
                     required property var modelData
+                    readonly property bool going: vpnRun.running && vpnRun.uuid === modelData.uuid
+                    readonly property string failure: net.vpnFailed[modelData.uuid] ?? ""
 
                     chip: true
                     icon: "network-vpn-symbolic"
                     title: modelData.name
-                    active: modelData.active
-                    subtitle: modelData.active ? "Connected" : ""
-                    onClicked: {
-                        Quickshell.execDetached(["nmcli", "connection", modelData.active ? "down" : "up", "uuid", modelData.uuid])
-                        listVpns.running = true
-                    }
+                    active: modelData.active && !going
+                    busy: going
+                    warn: failure !== ""
+                    subtitle: going ? (vpnRun.up ? "Connecting…" : "Disconnecting…") : failure !== "" ? failure : modelData.active ? "Connected" : ""
+                    onClicked: net.toggleVpn(modelData)
                 }
             }
         }
