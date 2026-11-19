@@ -14,6 +14,18 @@ Item {
     required property string key
     // the others behind it, folded
     property int more: 0
+    // in the bell's list: on a plate, not glass; its time (`when`); new since
+    // the last look (`marked`)
+    property bool flat: false
+    property string when: ""
+    property bool marked: false
+    // the count on it clicked (the bell's list unfolds its stack)
+    signal unfold
+    // clicked, after its action ran (the bell's popup closes)
+    signal activated
+    // its face's height, for its stack (NotificationStack.qml)
+    readonly property real natural: face.height
+    readonly property int pad: flat ? 10 : Theme.pad
 
     // the copy, by its key: what the list has now; gone from it (a
     // transient one, leaving), the last it had, for its way out
@@ -52,23 +64,35 @@ Item {
                     run: () => host.invoke(entry, a)
                 })) : [])]
 
-    implicitHeight: face.height + (more > 1 ? 10 : more > 0 ? 5 : 0)
+    implicitHeight: face.height + 5 * Math.min(more, 2)
 
-    // the edges of the folded ones, under it
+    // the edges of the folded ones, under it: they slide out from under it
+    // as it folds, back under as it opens
     Repeater {
-        model: Math.min(card.more, 2)
+        model: 2
 
         Rectangle {
-            required property int index
+            id: edge
 
+            required property int index
+            property real out: card.more > index ? 1 : 0
+
+            Behavior on out {
+                enabled: Theme.speed > 0
+                Ease {
+                    easing.bezierCurve: Theme.move
+                }
+            }
+
+            visible: out > 0
             anchors.horizontalCenter: parent.horizontalCenter
-            y: face.height - radius + 5 * (index + 1)
+            y: face.height - radius + 5 * (index + 1) * out
             z: -1 - index
             width: face.width - 16 * (index + 1)
             height: radius * 2
             radius: face.radius
-            color: Theme.reading
-            border.width: 1
+            color: card.flat ? Theme.plateGlass : Theme.reading
+            border.width: card.flat ? 0 : 1
             border.color: Theme.outline
         }
     }
@@ -77,10 +101,10 @@ Item {
         id: face
 
         width: parent.width
-        height: content.implicitHeight + 2 * Theme.pad
-        radius: Theme.surfaceCorner
-        color: Theme.reading
-        border.width: card.entry.critical ? 2 : 1
+        height: content.implicitHeight + 2 * card.pad
+        radius: card.flat ? Theme.plateCorner : Theme.surfaceCorner
+        color: card.flat ? Theme.plateGlass : Theme.reading
+        border.width: card.entry.critical ? 2 : card.flat ? 0 : 1
         border.color: card.entry.critical ? Theme.warn : Theme.outline
         scale: hit.pressed ? Theme.sunk(width) : 1
         Squish on scale {}
@@ -91,8 +115,10 @@ Item {
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
             onClicked: event => {
-                if (event.button === Qt.LeftButton)
+                if (event.button === Qt.LeftButton) {
                     card.host.activate(card.entry)
+                    card.activated()
+                }
                 else
                     card.host.dismiss(card.entry)
             }
@@ -101,10 +127,10 @@ Item {
         Row {
             id: content
 
-            x: Theme.pad
-            y: Theme.pad
-            width: parent.width - 2 * Theme.pad
-            spacing: Theme.pad
+            x: card.pad
+            y: card.pad
+            width: parent.width - 2 * card.pad
+            spacing: card.pad
 
             // the notification's image (a contact's picture), else the app's
             // icon; the image may be gone with the app's notification
@@ -138,18 +164,34 @@ Item {
                     width: parent.width
                     height: app.implicitHeight
 
-                    Text {
+                    // its app, how many times, when; a dot if it's new
+                    Row {
                         id: app
 
                         width: parent.width - 20 - (others.visible ? others.width + 8 : 0)
-                        text: card.entry.app + (card.entry.count > 1 ? `  ×${card.entry.count}` : "")
-                        elide: Text.ElideRight
-                        color: Theme.dim
-                        font.family: Theme.font
-                        font.pixelSize: Theme.small
+                        spacing: 6
+
+                        Rectangle {
+                            visible: card.marked
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 6
+                            height: 6
+                            radius: 3
+                            color: Theme.accent
+                        }
+
+                        Text {
+                            width: Math.min(implicitWidth, app.width - (card.marked ? 12 : 0))
+                            text: [card.entry.app + (card.entry.count > 1 ? `  ×${card.entry.count}` : ""), card.when].filter(s => s !== "").join("  ·  ")
+                            elide: Text.ElideRight
+                            color: Theme.dim
+                            font.family: Theme.font
+                            font.pixelSize: Theme.small
+                        }
                     }
 
-                    // how many more behind it
+                    // how many more behind it; in the bell's list, a click
+                    // unfolds them
                     Rectangle {
                         id: others
 
@@ -157,10 +199,13 @@ Item {
                         anchors.right: parent.right
                         anchors.rightMargin: 22
                         anchors.verticalCenter: parent.verticalCenter
-                        width: count.implicitWidth + 10
-                        height: 15
+                        width: count.implicitWidth + 12
+                        height: 18
                         radius: height / 2
-                        color: Theme.slot
+                        color: card.flat && unfolding.containsMouse ? Theme.faceHover : Theme.face
+                        Fade on color {}
+                        scale: unfolding.pressed ? Theme.sunk(width) : 1
+                        Squish on scale {}
 
                         Text {
                             id: count
@@ -170,6 +215,17 @@ Item {
                             color: Theme.text
                             font.family: Theme.font
                             font.pixelSize: Theme.small
+                            font.weight: Font.Medium
+                        }
+
+                        MouseArea {
+                            id: unfolding
+
+                            enabled: card.flat
+                            anchors.fill: parent
+                            anchors.margins: -4
+                            hoverEnabled: true
+                            onClicked: card.unfold()
                         }
                     }
 

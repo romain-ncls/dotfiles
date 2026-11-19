@@ -248,72 +248,73 @@ BarButton {
             onToggled: bt.adapter.enabled = !bt.adapter.enabled
         }
 
-        SectionLabel {
+        Section {
             visible: bt.adapter !== null && bt.adapter.enabled && bt.paired.length > 0
-            text: "Paired devices"
-        }
+            title: "Paired devices"
 
-        Repeater {
-            model: bt.adapter && bt.adapter.enabled ? bt.paired : []
+            Repeater {
+                model: bt.adapter && bt.adapter.enabled ? bt.paired : []
 
-            ListRow {
-                required property var modelData
+                ListRow {
+                    required property var modelData
 
-                icon: modelData.icon || "network-bluetooth-symbolic"
-                title: modelData.name
-                active: modelData.connected
-                subtitle: bt.state(modelData)
-                busy: modelData.state === BluetoothDeviceState.Connecting || modelData.state === BluetoothDeviceState.Disconnecting || modelData.pairing
-                removable: !modelData.connected
-                removeLabel: "Forget"
-                onClicked: {
-                    if (modelData.connected)
-                        modelData.disconnect()
-                    else
-                        modelData.connect()
+                    chip: true
+                    icon: modelData.icon || "network-bluetooth-symbolic"
+                    title: modelData.name
+                    active: modelData.connected
+                    subtitle: bt.state(modelData)
+                    busy: modelData.state === BluetoothDeviceState.Connecting || modelData.state === BluetoothDeviceState.Disconnecting || modelData.pairing
+                    removable: !modelData.connected
+                    removeLabel: "Forget"
+                    onClicked: {
+                        if (modelData.connected)
+                            modelData.disconnect()
+                        else
+                            modelData.connect()
+                    }
+                    onRemoved: modelData.forget()
                 }
-                onRemoved: modelData.forget()
             }
         }
 
-        SectionLabel {
+        // found ones scroll past a few
+        Section {
             visible: bt.adapter !== null && bt.adapter.enabled
-            text: "Other devices"
+            title: "Other devices"
             action: bt.adapter && bt.adapter.discovering ? "Stop" : "Scan"
             onActed: bt.adapter.discovering = !bt.adapter.discovering
-        }
 
-        Text {
-            visible: bt.adapter !== null && bt.adapter.enabled && (!bt.adapter.discovering || bt.found.length === 0)
-            x: 4
-            height: 26
-            verticalAlignment: Text.AlignVCenter
-            text: bt.adapter && bt.adapter.discovering ? "Looking for devices…" : "Scan to find a device to pair"
-            color: Theme.dim
-            font.family: Theme.font
-            font.pixelSize: Theme.body
-        }
+            Text {
+                visible: bt.adapter !== null && bt.adapter.enabled && (!bt.adapter.discovering || bt.found.length === 0)
+                x: 10
+                height: Theme.row
+                verticalAlignment: Text.AlignVCenter
+                text: bt.adapter && bt.adapter.discovering ? "Looking for devices…" : "Scan to find a device to pair"
+                color: Theme.dim
+                font.family: Theme.font
+                font.pixelSize: Theme.body
+            }
 
-        // found ones scroll past a few
-        ListView {
-            visible: bt.adapter !== null && bt.adapter.enabled && bt.adapter.discovering && bt.found.length > 0
-            width: parent.width
-            height: Math.min(contentHeight, 260)
-            clip: true
-            interactive: contentHeight > height
-            boundsBehavior: Flickable.StopAtBounds
-            model: bt.adapter && bt.adapter.enabled && bt.adapter.discovering ? bt.found : []
+            Scroller {
+                visible: bt.adapter !== null && bt.adapter.enabled && bt.adapter.discovering && bt.found.length > 0
+                maxHeight: 260
+                color: Theme.plateGlass
 
-            delegate: ListRow {
-                required property var modelData
+                Repeater {
+                    model: bt.adapter && bt.adapter.enabled && bt.adapter.discovering ? bt.found : []
 
-                width: ListView.view.width
-                icon: modelData.icon || "network-bluetooth-symbolic"
-                title: modelData.deviceName
-                subtitle: modelData.pairing ? "Pairing…" : "Click to pair"
-                busy: modelData.pairing
-                dim: true
-                onClicked: bt.pair(modelData)
+                    ListRow {
+                        required property var modelData
+
+                        chip: true
+                        icon: modelData.icon || "network-bluetooth-symbolic"
+                        title: modelData.deviceName
+                        subtitle: modelData.pairing ? "Pairing…" : "Click to pair"
+                        busy: modelData.pairing
+                        dim: true
+                        onClicked: bt.pair(modelData)
+                    }
+                }
             }
         }
     }

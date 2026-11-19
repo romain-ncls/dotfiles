@@ -175,18 +175,19 @@ BarItem {
             }
         }
 
-        Rectangle {
-            width: parent.width
-            height: 1
-            color: Theme.outline
-        }
-
         Item {
             id: calendar
 
             width: parent.width
             height: head.height + grid.height + 6
             focus: true
+
+            // on a plate, as the other popups' groups
+            Rectangle {
+                anchors.fill: parent
+                radius: Theme.plateCorner
+                color: Theme.plate
+            }
 
             // the cells' width: the week's number and seven days
             readonly property real cell: Math.floor(width / 8)
@@ -375,60 +376,56 @@ BarItem {
 
         // the month's days off and feasts: its number (red for a day off)
         // and its name
-        Column {
-            id: events
-
-            readonly property var list: {
-                const out = []
-                const length = new Date(popup.year, popup.month + 1, 0).getDate()
-                for (let n = 1; n <= length; n++) {
-                    const info = Almanac.label(Almanac.day(popup.year, popup.month, n))
-                    if (info.kind === "holiday" || info.kind === "feast" && Almanac.FEASTS.indexOf(Almanac.key(Almanac.day(popup.year, popup.month, n))) < 0)
-                        out.push({ day: n, name: info.name, off: info.kind === "holiday" })
-                }
-                return out
-            }
-
-            visible: list.length > 0
+        Rectangle {
+            visible: events.list.length > 0
             width: parent.width
-            topPadding: 2
-            bottomPadding: 4
-            spacing: 2
+            height: events.height
+            radius: Theme.plateCorner
+            color: Theme.plate
 
-            Rectangle {
-                width: parent.width
-                height: 1
-                color: Theme.outline
-            }
+            Column {
+                id: events
 
-            Item {
-                width: 1
-                height: 4
-            }
-
-            Repeater {
-                model: events.list
-
-                Row {
-                    required property var modelData
-
-                    spacing: 12
-
-                    Text {
-                        width: calendar.cell - 4
-                        horizontalAlignment: Text.AlignRight
-                        text: modelData.day
-                        color: modelData.off ? Theme.warn : Theme.dim
-                        font.family: Theme.font
-                        font.pixelSize: Theme.small
-                        font.weight: Font.Bold
+                readonly property var list: {
+                    const out = []
+                    const length = new Date(popup.year, popup.month + 1, 0).getDate()
+                    for (let n = 1; n <= length; n++) {
+                        const info = Almanac.label(Almanac.day(popup.year, popup.month, n))
+                        if (info.kind === "holiday" || info.kind === "feast" && Almanac.FEASTS.indexOf(Almanac.key(Almanac.day(popup.year, popup.month, n))) < 0)
+                            out.push({ day: n, name: info.name, off: info.kind === "holiday" })
                     }
+                    return out
+                }
 
-                    Text {
-                        text: modelData.name
-                        color: modelData.off ? Theme.text : Theme.dim
-                        font.family: Theme.font
-                        font.pixelSize: Theme.small
+                width: parent.width
+                topPadding: 8
+                bottomPadding: 8
+                spacing: 2
+
+                Repeater {
+                    model: events.list
+
+                    Row {
+                        required property var modelData
+
+                        spacing: 12
+
+                        Text {
+                            width: calendar.cell - 4
+                            horizontalAlignment: Text.AlignRight
+                            text: modelData.day
+                            color: modelData.off ? Theme.warn : Theme.dim
+                            font.family: Theme.font
+                            font.pixelSize: Theme.small
+                            font.weight: Font.Bold
+                        }
+
+                        Text {
+                            text: modelData.name
+                            color: modelData.off ? Theme.text : Theme.dim
+                            font.family: Theme.font
+                            font.pixelSize: Theme.small
+                        }
                     }
                 }
             }

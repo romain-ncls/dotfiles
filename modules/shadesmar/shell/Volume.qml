@@ -87,70 +87,72 @@ BarButton {
             onToggled: volume.sink.audio.muted = !volume.sink.audio.muted
         }
 
-        SectionLabel {
-            text: "Output"
-        }
+        Section {
+            title: "Output"
 
-        SliderRow {
-            icon: volume.icon
-            value: volume.sink && volume.sink.audio ? volume.sink.audio.volume : 0
-            off: volume.muted
-            onClicked: {
-                if (volume.sink && volume.sink.audio)
-                    volume.sink.audio.muted = !volume.sink.audio.muted
+            SliderRow {
+                icon: volume.icon
+                value: volume.sink && volume.sink.audio ? volume.sink.audio.volume : 0
+                off: volume.muted
+                onClicked: {
+                    if (volume.sink && volume.sink.audio)
+                        volume.sink.audio.muted = !volume.sink.audio.muted
+                }
+                onMoved: v => {
+                    if (volume.sink && volume.sink.audio)
+                        volume.sink.audio.volume = v
+                }
             }
-            onMoved: v => {
-                if (volume.sink && volume.sink.audio)
-                    volume.sink.audio.volume = v
-            }
-        }
 
-        Repeater {
-            model: volume.sinks.length > 1 ? volume.sinks : []
+            Repeater {
+                model: volume.sinks.length > 1 ? volume.sinks : []
 
-            ListRow {
-                required property var modelData
+                ListRow {
+                    required property var modelData
 
-                icon: volume.effects(modelData) ? "" : volume.kindIcon(modelData, false)
-                lineIcon: volume.effects(modelData) ? Qt.resolvedUrl("icons/sliders-vertical.svg") : ""
-                title: volume.name(modelData)
-                subtitle: volume.detail(modelData)
-                active: modelData === volume.sink
-                onClicked: Pipewire.preferredDefaultAudioSink = modelData
-            }
-        }
-
-        SectionLabel {
-            text: "Microphone"
-        }
-
-        SliderRow {
-            readonly property bool micMuted: volume.source && volume.source.audio ? volume.source.audio.muted : false
-
-            icon: micMuted ? "microphone-sensitivity-muted" : "microphone-sensitivity-high"
-            value: volume.source && volume.source.audio ? volume.source.audio.volume : 0
-            off: micMuted
-            onClicked: {
-                if (volume.source && volume.source.audio)
-                    volume.source.audio.muted = !volume.source.audio.muted
-            }
-            onMoved: v => {
-                if (volume.source && volume.source.audio)
-                    volume.source.audio.volume = v
+                    chip: true
+                    icon: volume.effects(modelData) ? "" : volume.kindIcon(modelData, false)
+                    lineIcon: volume.effects(modelData) ? Qt.resolvedUrl("icons/sliders-vertical.svg") : ""
+                    title: volume.name(modelData)
+                    subtitle: volume.detail(modelData)
+                    active: modelData === volume.sink
+                    onClicked: Pipewire.preferredDefaultAudioSink = modelData
+                }
             }
         }
 
-        Repeater {
-            model: volume.sources.length > 1 ? volume.sources : []
+        Section {
+            title: "Microphone"
 
-            ListRow {
-                required property var modelData
+            SliderRow {
+                readonly property bool micMuted: volume.source && volume.source.audio ? volume.source.audio.muted : false
 
-                icon: volume.kindIcon(modelData, true)
-                title: volume.name(modelData)
-                subtitle: volume.detail(modelData)
-                active: modelData === volume.source
-                onClicked: Pipewire.preferredDefaultAudioSource = modelData
+                icon: micMuted ? "microphone-sensitivity-muted" : "microphone-sensitivity-high"
+                value: volume.source && volume.source.audio ? volume.source.audio.volume : 0
+                off: micMuted
+                onClicked: {
+                    if (volume.source && volume.source.audio)
+                        volume.source.audio.muted = !volume.source.audio.muted
+                }
+                onMoved: v => {
+                    if (volume.source && volume.source.audio)
+                        volume.source.audio.volume = v
+                }
+            }
+
+            Repeater {
+                model: volume.sources.length > 1 ? volume.sources : []
+
+                ListRow {
+                    required property var modelData
+
+                    chip: true
+                    icon: volume.kindIcon(modelData, true)
+                    title: volume.name(modelData)
+                    subtitle: volume.detail(modelData)
+                    active: modelData === volume.source
+                    onClicked: Pipewire.preferredDefaultAudioSource = modelData
+                }
             }
         }
     }

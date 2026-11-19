@@ -1,6 +1,7 @@
-// A popup's head, as Omarchy's panels have it: what it's about, big (an
-// icon, a name), a word under it in capitals (CONNECTED), red when
-// something's wrong (`warn`); a switch on the right (`toggle`). Its icon
+// A popup's head, as Control Center's modules: what it's about, its icon in
+// a circle, lit in the accent while it's on (`lit`: connected, playing,
+// popups shown), red when something's wrong (`warn`); its name, a line
+// under it (Connected · 5 GHz); a switch on the right (`toggle`). Its icon
 // changing (off, on) pops in.
 import QtQuick
 import Quickshell
@@ -15,27 +16,31 @@ Item {
     property bool warn: false
     property bool toggle: false
     property bool checked: false
+    property bool lit: toggle && checked
 
     signal toggled
 
     width: parent ? parent.width : 320
-    height: 50
+    height: 52
 
-    Glyph {
-        x: 4
+    IconChip {
+        id: chip
+
+        x: 6
         anchors.verticalCenter: parent.verticalCenter
-        size: 30
+        size: Theme.headChip
+        glyph: Theme.icon
         icon: hero.icon
-        pops: true
-        source: hero.iconSource !== "" ? hero.iconSource : hero.icon !== "" ? Quickshell.iconPath(hero.icon, "image-missing") : ""
-        color: hero.warn ? Theme.warn : Theme.text
+        source: hero.iconSource
+        lit: hero.lit
+        warn: hero.warn
     }
 
     Column {
-        x: 48
-        width: parent.width - x - (toggle.visible ? toggle.width + 12 : 0)
+        x: chip.x + chip.width + 12
+        width: parent.width - x - (toggle.visible ? toggle.width + 16 : 8)
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 2
+        spacing: 1
 
         Text {
             width: parent.width
@@ -50,13 +55,11 @@ Item {
         Text {
             visible: hero.caption !== ""
             width: parent.width
-            text: hero.caption.toUpperCase()
+            text: hero.caption
             elide: Text.ElideRight
             color: hero.warn ? Theme.warn : Theme.dim
             font.family: Theme.font
             font.pixelSize: Theme.small
-            font.weight: Font.Medium
-            font.letterSpacing: 1
         }
     }
 
@@ -65,7 +68,7 @@ Item {
 
         visible: hero.toggle
         anchors.right: parent.right
-        anchors.rightMargin: 4
+        anchors.rightMargin: 8
         anchors.verticalCenter: parent.verticalCenter
         checked: hero.checked
         onToggled: hero.toggled()

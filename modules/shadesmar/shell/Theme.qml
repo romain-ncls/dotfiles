@@ -85,6 +85,11 @@ Singleton {
     // one is the accent, lighter under the pointer
     readonly property color face: alpha(textColor, 0.10)
     readonly property color faceHover: alpha(textColor, 0.16)
+    // a popup's group of rows lies on a plate (Section.qml, iOS's grouped
+    // lists, Control Center's modules): the text's color, faint
+    readonly property color plate: alpha(textColor, 0.05)
+    // the two, as one color (ScrollHint.qml's fades over a plate)
+    readonly property color plateGlass: Qt.tint(reading, plate)
 
     // Type: five sizes, macOS's (caption, body, title), in Regular, Medium
     // (titles, what's on; Noto Sans has no SemiBold: DemiBold is Medium)
@@ -106,6 +111,14 @@ Singleton {
     // capsule (height / 2) for switches, sliders, badges.
     readonly property int corner: 8 // controls, rows, the bar's items
     readonly property int surfaceCorner: corner + pad // popups, toasts, menus
+    // a popup's plates: their rows 4 px in, and 8 px in the popup, so the
+    // three corners are concentric (8, 12, 20)
+    readonly property int inset: 4
+    readonly property int plateCorner: corner + inset
+    readonly property int popupPad: surfaceCorner - plateCorner
+    // an icon in a circle, a row's (IconChip.qml), a popup's head's
+    readonly property int chip: 28
+    readonly property int headChip: 36
     readonly property int overlayCorner: 24 // the launcher, the year, pickers
 
     // Motion (Ease.qml, Fade.qml, Follow.qml, Squish.qml, Stretch.qml,
@@ -136,5 +149,8 @@ Singleton {
     readonly property var fade: [0.25, 0.46, 0.45, 0.94, 1, 1]
 
     readonly property int barHeight: 40
-    readonly property int icon: 18
+    // the bar's icons: nalthis's 22 px status icons, a 20 px drawing on whole
+    // pixels, 1.5 px lines, as Plasma's panel (asked at 18, its 16 px
+    // drawing was blown up, thick and blurred)
+    readonly property int icon: 22
 }
