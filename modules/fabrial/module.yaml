@@ -2,9 +2,13 @@
 # chain), as a virtual mic that apps recording the headset are moved onto.
 # It replaces EasyEffects on the mic; EasyEffects stays in the media module,
 # installed but not started. Its PKGBUILD lives in its own repo.
+#
+# It follows fabrial's main: each apply rebuilds it when main has moved.
+# The running service keeps the old build until
+# `systemctl --user restart fabrial`, left to you so a call isn't cut.
 pkg:
   git: https://github.com/romain-ncls/fabrial.git
-  ref: 8cff24a25c24d1c30817871c28f29896e7d12a53
+  ref: main
   path: packaging/arch
 
 user-services:
