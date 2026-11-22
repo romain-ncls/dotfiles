@@ -18,6 +18,7 @@ modules:
   - docker
   - logi-smartshift
   - nvidia
+  - wake-on-lan
   - krdp
   - sshd
   - lodestar

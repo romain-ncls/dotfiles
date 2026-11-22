@@ -1,0 +1,70 @@
+# Local package: lodestar builds it when this folder changes. igc, the driver
+# of the Intel I225/I226, from the kernel's source with one patch
+# (allow-100-in-d3.patch) so a sleeping card keeps a link Wake-on-LAN can use:
+# docs/wake-on-lan.md. DKMS builds it for each kernel of _kver's series; for
+# another series it builds nothing and Arch's igc loads.
+# To follow a new series: set _kver to its latest release, run updpkgsums,
+# and check the patch still applies.
+pkgname=igc-wol-dkms
+_kver=7.3.4
+pkgver=$_kver
+pkgrel=2
+pkgdesc='igc (Intel I225/I226) keeping a 100 Mbit/s link asleep, for Wake-on-LAN (DKMS)'
+arch=(any)
+url='https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/net/ethernet/intel/igc'
+license=(GPL-2.0-only)
+depends=(dkms)
+_files=(Makefile igc.h igc_base.c igc_base.h igc_defines.h igc_diag.c igc_diag.h
+        igc_dump.c igc_ethtool.c igc_hw.h igc_i225.c igc_i225.h igc_leds.c igc_mac.c
+        igc_mac.h igc_main.c igc_nvm.c igc_nvm.h igc_phy.c igc_phy.h igc_ptp.c
+        igc_regs.h igc_tsn.c igc_tsn.h igc_xdp.c igc_xdp.h)
+source=(dkms.conf allow-100-in-d3.patch)
+for _f in "${_files[@]}"; do
+	source+=("igc-$_kver-$_f::https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/plain/drivers/net/ethernet/intel/igc/$_f?h=v$_kver")
+done
+sha256sums=('a04705096940ce84efe22c286721a62fe1010dfde78eaf1bcdead67212ae972d'
+            'd1a4c321cfda6f93ac22c354c019d74af399c41680942f11afcf2a1dace683a7'
+            '52fa84978a3c1303c1945e979dd79151b4ba504233a0b9860f8a21250362e6cd'
+            '9d25cba909649756528417dfcfa7ac7046d48e5f9d47852a9aa5941496470910'
+            '8f812f5fc8960717ad43682d0c00618633a331596fda0ba81a182dd41ebe09b4'
+            '131e3975c4549b88b0357aeffd8a2f28b5f7de845273cd27afdae447c23a94eb'
+            '685c087a1bc8f392c8374fef3d7e8fccf26dc7ac80f375163f5e74e1c871596a'
+            '591b373ef818a2d13a036c2131d0b44d7240352d01a7ebad02bfd16e11b435b3'
+            '839e685a1b621a39c63fbd91268a4f0254a41822120bda4b9af053b311ae573c'
+            '3199aa26b1b245f5d54b06a90b0e938018a10846957fc8df1c1a2f8726f36f02'
+            '632d8c4d8b23290ea2375ff34f96d694c045fd3ae1722d545d065518cf469ebc'
+            'e491d7dc4d1cf9017510484c262f266837a30d833998a0e0e27ed8be3fddb7e5'
+            '566e6b374a00982957e20e21d576b31b410f294cf0717ec31b0a28c005bdae06'
+            '5530f99f0413554dc789ed7d9fca27bf2b660896bc2d8db77e37c3f35ffb974a'
+            '07c6237bb760dba5c39ef6ed572045dc5d99347759856ac6f213e98fc2da44ed'
+            'ee1fe6ebac31ee4bf60d1b182c1c24dad844ecfe66b11d63a63fd08ce33f82e5'
+            'c0343e80285dd63b2d01177c27727da0ecfde336f4f9176b79f973f84bbad561'
+            '37b2b92b39c7acb09ae1702cfb975c2f76e35192db1165612584fe4aa5d909cd'
+            'abd76729263cf958cea72f67948d2ec964ebfd4f25644142cb68a97df6542b66'
+            'cf5434a26d39ef9758071bf0b39596e062cb293ee1506437366865aeb17095c6'
+            'd7b4134d93906a0d3d1694166930d1802359858322958b59f174805b4a846fc6'
+            'a11dfcb260dada345c4b0c5a4414a28647a9741437b098b302452e0d4cf7af93'
+            '4d547287d95de44deb9f9f127ba2b4af3bb21ca43c88df42d8491ea6a18a72bf'
+            '68ae816aea172fe45854db679758fef106c032757ba73af7691f0ee794da6609'
+            'b4864155bd5c84dd220a900156bdadca7dc99b2ca9b0ad8b5a2a8e4ad632fa5a'
+            '68ed2e15509c81005d47739c83cacecf325fc3a572a38c461bf0fd7d02e56759'
+            'e6596f123b7569298308ca73d2b75409e4fc483b5613e5cf3f1a2f791c883d5f'
+            '0aea61b77459979aa260e9fd69f4ebf5ea4f12ecd17ccc25135dcf04e0837521')
+
+prepare() {
+	mkdir -p igc
+	for _f in "${_files[@]}"; do
+		cp "igc-$_kver-$_f" "igc/$_f"
+	done
+	patch -d igc -p1 < allow-100-in-d3.patch
+}
+
+package() {
+	local series=${_kver%.*}
+	# DKMS reads /usr/src/<name>-<version>, split at the last hyphen: no
+	# hyphen in the version, so pkgver alone (as nvidia-open-dkms does).
+	local dest="$pkgdir/usr/src/igc-wol-$pkgver"
+	install -Dm644 -t "$dest" igc/*
+	sed -e "s/@VERSION@/$pkgver/" -e "s/@SERIES@/${series//./\\\\.}/" \
+		dkms.conf > "$dest/dkms.conf"
+}

@@ -1,0 +1,7 @@
+# Wake-on-LAN for an Intel I225/I226 card (igc). NetworkManager arms it, and
+# pkg/ installs igc patched so a sleeping card keeps a 100 Mbit/s link instead
+# of 10 Mbit/s only, which menadion's 2.5G Freebox port refuses
+# (docs/wake-on-lan.md). DKMS builds the patched igc for each kernel of the
+# series in pkg/PKGBUILD (_kver); on a newer series Arch's igc loads and
+# Wake-on-LAN stops until _kver is bumped. Drop pkg/ once Arch's kernel has
+# the fix.
