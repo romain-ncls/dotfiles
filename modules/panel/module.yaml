@@ -7,6 +7,7 @@
 # scripts/centred-popups) opens the launcher centered on the screen.
 packages:
   - qt6-tools # qdbus6
+  - jq # build-panel reads the screen from kscreen-doctor's JSON
 
 kde:
   kwinrc:

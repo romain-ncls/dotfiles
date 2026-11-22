@@ -6,6 +6,9 @@ modules:
   - dns
   - desktop
   - kde
+  - nalthis
+  - darkly
+  - panel
   - konsole
   - shell
   - kdeconnect
@@ -26,6 +29,7 @@ modules:
 vars:
   name: Romain Nicolas
   email: nicolasromain0@gmail.com
+  konsole_colors: Nalthis # modules/konsole; DarkOneNuanced without nalthis
 
 user:
   name: romain

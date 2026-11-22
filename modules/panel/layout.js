@@ -51,11 +51,16 @@ add("org.kde.plasma.icontasks", {
 add("org.kde.plasma.panelspacer");
 
 // Right
-add("org.kde.plasma.systemtray", { General: { hiddenItems: "Easy Effects" } });
+add("org.kde.plasma.systemtray", {
+    General: {
+        hiddenItems: "Easy Effects",
+        iconSpacing: 3, // 34 px per icon, the mockup's gaps (Plasma's default 2: 30 px)
+    },
+});
 add("org.kde.plasma.digitalclock", {
     Appearance: {
         autoFontAndSize: false, // (it fills the panel's height)
-        fontSize: 10,
+        fontSize: clockPoints, // from build-panel: 20 px on this screen (10 on wandersail's)
         fontWeight: 400,
     },
 });

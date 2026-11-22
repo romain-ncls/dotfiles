@@ -1,12 +1,29 @@
 #!/bin/sh
 # Rebuilds the bottom panel from layout.js, through plasmashell's scripting
 # API, then restarts plasmashell: a task manager built live shows its
-# launchers only after one. Only when layout.js changed since the last build
-# (its hash in ~/.local/state): rebuilding loses changes made by hand.
+# launchers only after one. Only when layout.js or the clock's size changed
+# since the last build (their hash in ~/.local/state): rebuilding loses
+# changes made by hand.
 set -eu
 cd "$(dirname "$0")"
+
+# The clock's size in points, for the panel's screen (the primary one).
+# Plasma's clock turns points into pixels with the screen's physical density
+# (Screen.pixelDensity, from the size its EDID gives), so 10 pt is 20 px on
+# wandersail's 16-inch screen but 6 px on a 55-inch TV. These points make
+# the time 20 px everywhere. The mode and its millimetres are both
+# unrotated, so rotation doesn't matter.
+points=$(kscreen-doctor -j 2>/dev/null | jq -r '
+	[.outputs[] | select(.enabled and .sizeMM.width > 0 and .sizeMM.height > 0)]
+	| if length == 0 then 10 else
+		min_by(.priority)
+		| ((.size.width / .scale / .sizeMM.width + .size.height / .scale / .sizeMM.height) / 2 * 25.4) as $dpi
+		| 20 * 72 / $dpi | round
+	end' 2>/dev/null) || points=10
+[ -n "$points" ] || points=10
+
 state=${XDG_STATE_HOME:-$HOME/.local/state}/panel
-hash=$(sha256sum layout.js | cut -d' ' -f1)
+hash=$( (cat layout.js; echo "clockPoints=$points") | sha256sum | cut -d' ' -f1)
 if [ "$(cat "$state/layout.sha256" 2>/dev/null)" = "$hash" ]; then
     exit 0
 fi
@@ -14,7 +31,8 @@ if ! qdbus6 org.kde.plasmashell /PlasmaShell >/dev/null 2>&1; then
     echo "build-panel: plasmashell isn't running; run lodestar apply again from Plasma" >&2
     exit 1
 fi
-qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$(cat layout.js)"
+qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "const clockPoints = $points;
+$(cat layout.js)"
 sleep 2 # plasmashell saves the new layout
 systemctl --user restart plasma-plasmashell.service
 mkdir -p "$state"

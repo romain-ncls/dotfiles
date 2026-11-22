@@ -420,7 +420,8 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 ## Nalthis theme (in progress)
 
 Our dark, rounded theme for Plasma 6.8, in `modules/nalthis/`, used by
-wandersail. Design page with the research and choices so far:
+both hosts (with the `panel` module's taskbar). Design page with the
+research and choices so far:
 https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
 
 - **Choices so far** (Oct 2026): Nocturne greys (hue 255, low tint), blue accent
@@ -580,6 +581,12 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
   every popup to its widget, with no option; the script centers popups of
   widgets in the panel's middle third). build-panel keeps layout.js's hash
   in ~/.local/state, so other changes to the module don't rebuild the panel.
+  The clock's size is computed there, for the panel's screen: Plasma turns
+  the clock's points into pixels with the screen's physical density (from
+  its EDID), so wandersail's 10 pt was 6 px on menadion's TV. build-panel
+  picks the points that make the time 20 px (wandersail's), and a new
+  screen rebuilds the panel at the next apply. Tray icons get 34 px each
+  (`iconSpacing: 3`, the mockup's gaps; Plasma's default left ~10 px).
 - **Testing never touches the session**: `dev/test.sh` runs an app in a
   headless KWin with its own D-Bus and a copy of the config. Galleries of
   every control: `dev/gallery/kirigami.sh` (QtQuick, run through test.sh)
