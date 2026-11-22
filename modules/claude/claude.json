@@ -8,6 +8,11 @@
         "mcr.microsoft.com/playwright/mcp"
       ],
       "env": {}
+    },
+    "hion": {
+      "type": "http",
+      "url": "https://hion.romainncls.dev/mcp",
+      "headersHelper": "sh ~/.claude/hion-mcp-headers.sh"
     }
   }
 }

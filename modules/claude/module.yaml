@@ -5,6 +5,13 @@ packages:
   - ollama
   - wl-clipboard # wl-paste: pasting a screenshot into Claude Code
 
+# hion (the user's streaming server, LAN/VPN only) is an MCP server too: its
+# bearer token comes from Bitwarden into a 0600 file, and a headersHelper
+# script sends it, so the token never sits in ~/.claude.json.
+files:
+  ~/.config/hion/api-token:
+    mode: 0600
+
 # MCP servers (user scope) live in ~/.claude.json, which Claude Code rewrites
 # all the time: merge only our keys. No unless-running: a session is nearly
 # always open, and Claude re-reads the file before each write, so the keys
