@@ -558,7 +558,11 @@ https://claude.ai/artifact/RWy7GszZyTmP19Q9hXr9sF (private).
   Dolphin's icon view keeps its own 64 px. Our folders are
   Scalable with adjoining size ranges (16: 12–18, 22: 19–23, 24: 24–27, 32:
   28–40), so in-between requests (Kirigami asks for 20) take our nearest
-  drawing, not a scalable Tela icon of the same name.
+  drawing, not a scalable Tela icon of the same name. The same folders are
+  listed again at scales 2 and 3 (`16@2x`…, links to the 1x ones), ahead of
+  Tela's: at 200% (menadion's TV) KDE looks in a theme's scaled folders first,
+  so without ours Tela's icons took the tray, and the rest came from our
+  folders at twice the size, the wrong drawing.
 - **Dolphin's places spacing stays KDE's**: kio's places view draws its
   icon 4 px into the row and the label 4 px after it, hard-coded; a style
   only paints the row (no theme, Breeze's forks included, changes it);

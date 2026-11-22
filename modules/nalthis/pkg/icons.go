@@ -59,6 +59,10 @@ var lineSizes = []lineSize{
 
 func (s lineSize) has(ctx string) bool { return s.contexts == nil || slices.Contains(s.contexts, ctx) }
 
+// lineScales are the screen scales our line folders are also listed for
+// (menadion's 4K TV runs at 2), as Tela's are.
+var lineScales = []int{2, 3}
+
 // iconContexts are the folders icons.txt's [sections] fill.
 var iconContexts = map[string]string{"actions": "Actions", "places": "Places", "devices": "Devices", "categories": "Categories", "status": "Status", "panel": "Status"}
 
@@ -88,7 +92,7 @@ func writeIconTheme(lucideDir, telaDir, dir string) error {
 	if err != nil {
 		return err
 	}
-	var dirs []string
+	var dirs, scaled []string
 	var sections []Group
 	for _, s := range lineSizes {
 		for _, ctx := range []string{"actions", "places", "devices", "categories", "status", "panel"} {
@@ -106,6 +110,25 @@ func writeIconTheme(lucideDir, telaDir, dir string) error {
 			sections = append(sections, Group{Name: sub, Keys: keys})
 			if err := os.MkdirAll(filepath.Join(dir, sub), 0o755); err != nil {
 				return err
+			}
+			// The same drawings for HiDPI screens, as Tela's 22@2x…: at a
+			// scale of 2 or 3, KDE looks first in a theme's scaled folders
+			// (at the logical size), then in the others at the size times
+			// the scale. Without ours, Tela's took every name it also has,
+			// and the rest came from our folders at twice the size (the
+			// tray's 20 px became the padded 32 px drawing). SVGs: the
+			// folders are links to the 1x ones.
+			for _, x := range lineScales {
+				name := fmt.Sprintf("%s@%dx", s.dir, x)
+				link := filepath.Join(dir, "line", name)
+				if _, err := os.Lstat(link); os.IsNotExist(err) {
+					if err := os.Symlink(s.dir, link); err != nil {
+						return err
+					}
+				}
+				sub := fmt.Sprintf("line/%s/%s", name, ctx)
+				scaled = append(scaled, sub)
+				sections = append(sections, Group{Name: sub, Keys: append(slices.Clone(keys), [2]string{"Scale", fmt.Sprint(x)})})
 			}
 		}
 	}
@@ -158,7 +181,6 @@ func writeIconTheme(lucideDir, telaDir, dir string) error {
 		{"Comment", "Tela's color icons, Lucide line icons for commands"},
 		{"Inherits", "breeze-dark,hicolor"},
 	}}
-	var scaled []string
 	for _, g := range tela {
 		if g.Name != "Icon Theme" {
 			g.Name = "tela/" + g.Name
