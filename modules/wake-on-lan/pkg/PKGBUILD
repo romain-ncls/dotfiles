@@ -8,7 +8,7 @@
 pkgname=igc-wol-dkms
 _kver=7.3.4
 pkgver=$_kver
-pkgrel=1
+pkgrel=2
 pkgdesc='igc (Intel I225/I226) keeping a 100 Mbit/s link asleep, for Wake-on-LAN (DKMS)'
 arch=(any)
 url='https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/net/ethernet/intel/igc'
@@ -61,8 +61,10 @@ prepare() {
 
 package() {
 	local series=${_kver%.*}
-	local dest="$pkgdir/usr/src/igc-wol-$pkgver-$pkgrel"
+	# DKMS reads /usr/src/<name>-<version>, split at the last hyphen: no
+	# hyphen in the version, so pkgver alone (as nvidia-open-dkms does).
+	local dest="$pkgdir/usr/src/igc-wol-$pkgver"
 	install -Dm644 -t "$dest" igc/*
-	sed -e "s/@VERSION@/$pkgver-$pkgrel/" -e "s/@SERIES@/${series//./\\\\.}/" \
+	sed -e "s/@VERSION@/$pkgver/" -e "s/@SERIES@/${series//./\\\\.}/" \
 		dkms.conf > "$dest/dkms.conf"
 }
