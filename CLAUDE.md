@@ -89,3 +89,5 @@ changed in System Settings since the last apply: `lodestar kde review --list`.
 - Never hand-edit `/boot/limine.conf`: edit `hosts/menadion/limine.conf`;
   lodestar merges it and re-enrolls the config hash.
 - Limine entry ids are `Arch-Linux.linux` and `Windows-11`; OS switching uses `bootctl set-oneshot`.
+- `igc` (the I225-V) is patched for Wake-on-LAN (`modules/wake-on-lan/pkg`, DKMS) and
+  pinned to one kernel series: when Arch moves to a new one, bump `_kver` there.

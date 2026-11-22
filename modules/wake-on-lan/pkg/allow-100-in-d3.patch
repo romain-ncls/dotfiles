@@ -1,0 +1,33 @@
+--- a/igc_defines.h
++++ b/igc_defines.h
+@@ -688,6 +688,7 @@
+ #define MII_SR_LINK_STATUS	0x0004 /* Link Status 1 = link */
+ #define MII_SR_AUTONEG_COMPLETE	0x0020 /* Auto Neg Complete */
+ #define IGC_PHY_RST_COMP	0x0100 /* Internal PHY reset completion */
++#define IGC_I225_PHPM_DIS_100_D3	0x0200 /* Disable 100M link in D3 */
+ 
+ /* PHY 1000 MII Register/Bit Definitions */
+ /* PHY Registers defined by IEEE */
+--- a/igc_main.c
++++ b/igc_main.c
+@@ -7483,10 +7483,18 @@
+ 	}
+ 
+ 	wake = wufc || adapter->en_mng_pt;
+-	if (!wake)
++	if (!wake) {
+ 		igc_power_down_phy_copper_base(&adapter->hw);
+-	else
++	} else {
+ 		igc_power_up_link(adapter);
++		/* The NVM default only allows a 10 Mb/s link in D3. A link
++		 * partner without 10BASE-T then drops the link and the wake
++		 * packet never arrives. Allow 100 Mb/s, as the Windows driver
++		 * does.
++		 */
++		wr32(IGC_I225_PHPM,
++		     rd32(IGC_I225_PHPM) & ~IGC_I225_PHPM_DIS_100_D3);
++	}
+ 
+ 	if (enable_wake)
+ 		*enable_wake = wake;

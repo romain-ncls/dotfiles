@@ -162,23 +162,23 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
 - **C: mounted at boot with the new in-kernel `ntfs` driver** (kernel 7.2). It
   mounts a hibernated or dirty volume read-only instead of refusing it. If it
   misbehaves, `ntfs3` is the fallback.
-- **Wake-on-LAN does not work from Linux: asleep, `igc` leaves the I225-V
-  allowed to link at 10 Mbit/s only.** NetworkManager arms the NIC
-  (`conf.d/wake-on-lan.conf`, `ethernet.wake-on-lan=magic`; `ethtool` shows
-  `Wake-on: g`), and the device and its root port are ACPI wake sources. But
-  the card's NVM default for PHY power management (`PHPM = 0x00045398`)
-  disables 100M, 1G and 2.5G in D3, `igc` never changes it, and the Freebox's
-  2.5G port doesn't do 10 Mbit/s: asleep, the card has no link (port
-  inactive, LEDs off) and the magic packet never reaches it. Windows' driver
-  allows 100M in D3 and sleeps on a 100BaseTX link. Proven 2026-11-22: with
-  that bit (`DIS_100_D3`, `0x200`) cleared by hand, Linux hibernated and a
-  magic packet woke it. The fix is a few lines in `igc`'s `__igc_shutdown`
-  (a write from userspace can't do it: `igc` resets the card to its NVM
-  defaults while going down); with that patched module, menadion woke from
-  hibernate and from poweroff (2026-11-22). Ruled out on the way: `d3cold_allowed=0`, MSI
-  "Wake Up Event By BIOS" + "Resume By PCI-E Device", a udev `.link` file
-  with `WakeOnLan=magic`. The investigation, the patch, its tests and the
-  plan (local DKMS package, then upstream): `docs/wake-on-lan.md`.
+- **Wake-on-LAN takes a patched `igc` (`modules/wake-on-lan`).** Stock
+  `igc` leaves the I225-V allowed to link at 10 Mbit/s only once asleep: the
+  card's NVM default for PHY power management (`PHPM = 0x00045398`) disables
+  100M, 1G and 2.5G in D3, `igc` never changes it, and the Freebox's 2.5G
+  port doesn't do 10 Mbit/s. So the sleeping card had no link (port
+  inactive, LEDs off) and the magic packet never reached it, though
+  NetworkManager arms it (`ethernet.wake-on-lan=magic`) and the device and
+  its root port are ACPI wake sources. Windows' driver allows 100M in D3 and
+  sleeps on a 100BaseTX link. The patch clears that bit (`DIS_100_D3`,
+  `0x200`) in `__igc_shutdown` when wake is armed; userspace can't do it,
+  `igc` resets the card to its NVM defaults while going down. With it,
+  menadion wakes from hibernate and from poweroff (2026-11-22). It is a DKMS
+  package pinned to one kernel series: on the next series Arch's `igc` loads
+  and Wake-on-LAN stops until `_kver` is bumped. Ruled out on the way:
+  `d3cold_allowed=0`, MSI "Wake Up Event By BIOS" + "Resume By PCI-E
+  Device", a udev `.link` file with `WakeOnLan=magic`. The investigation,
+  the package and the upstream plan: `docs/wake-on-lan.md`.
 
 ## Logitech mice (logi-smartshift)
 

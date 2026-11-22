@@ -1,8 +1,9 @@
 # Wake-on-LAN on menadion
 
-Work in progress on the branch `feat/wol-link`. The short version is in
-`docs/decisions.md` (Hardware → Wake-on-LAN); this file keeps the whole
-investigation, the fix and the tests still to run.
+The short version is in `docs/decisions.md` (Hardware → Wake-on-LAN); this
+file keeps the whole investigation and the fix. The fix itself:
+`modules/wake-on-lan` (NetworkManager arms the card, `pkg/` is the patched
+`igc`).
 
 ## Where it stands (2026-11-22)
 
@@ -16,8 +17,8 @@ investigation, the fix and the tests still to run.
 - **Proven 2026-11-22:** with that one bit (`DIS_100_D3`) cleared by hand,
   Linux hibernated and a magic packet woke it.
 - **The patched `igc` works (2026-11-22):** after a hibernate and after a
-  poweroff, a magic packet woke menadion. Next: a local package until the
-  patch is upstream.
+  poweroff, a magic packet woke menadion. It is installed as a DKMS package
+  (`modules/wake-on-lan/pkg`) until the patch is upstream.
 
 Freebox OS → Réseau local → Switch, menadion on port 3 (Ethernet 3, 2.5G):
 
@@ -236,25 +237,41 @@ after any change to the patch or the source (no reboot):
 Nothing to clean up: the next boot loads Arch's `igc` again. To go back
 without rebooting: `sudo rmmod igc && sudo modprobe igc`.
 
-## Then
+## The package
 
-1. **Local package until it's upstream.** A DKMS package of the repo
-   (`modules/igc-wol/pkg`: `igc`'s source + the patch; DKMS is already here
-   for `nvidia-open-dkms`). DKMS rebuilds it for each kernel and installs it
-   under `updates/`, which wins over Arch's module. The source is pinned to
-   one kernel version: bump it when `igc` changes. If a build fails, Arch's
-   `igc` loads: network fine, no Wake-on-LAN.
-2. **Upstream.** A patch to `intel-wired-lan@lists.osuosl.org` (Intel's
+`modules/wake-on-lan/pkg` builds `igc-wol-dkms`: `igc`'s source from the
+stable kernel `_kver` (downloaded from git.kernel.org, checksums pinned),
+the patch (`allow-100-in-d3.patch`) and a `dkms.conf`. DKMS (already here
+for `nvidia-open-dkms`) builds the module for each installed kernel and puts
+it in `updates/dkms/`, which wins over Arch's `igc`. Built from the package,
+the module has the same functions as the one tested above.
+
+- **One kernel series at a time.** `dkms.conf` only allows kernels of
+  `_kver`'s series (`BUILD_EXCLUSIVE_KERNEL`, `^7\.3\.` for 7.3.4): within
+  it, a new Arch kernel gets the module rebuilt; on the next series DKMS
+  builds nothing and Arch's `igc` loads (network fine, no Wake-on-LAN),
+  rather than compiling 7.3's driver against a newer kernel. To follow:
+  set `_kver` to the new series' latest release, `updpkgsums`, check the
+  patch applies, apply.
+- **Check it's ours:** `modinfo -n igc` is under `updates/dkms/`, and
+  `cat /sys/module/igc/taint` prints `OE` (Arch's prints nothing);
+  `dkms status` lists `igc-wol`.
+- Takes effect at the next boot (or `sudo modprobe -r igc && sudo modprobe
+  igc`).
+
+## Still to do
+
+1. **Upstream.** A patch to `intel-wired-lan@lists.osuosl.org` (Intel's
    `igc` maintainers), `netdev` in copy, with the evidence above (PHPM
    decode, port 3 with and without the bit, Windows' 100BaseTX). Romain
-   sends it under his name with `Signed-off-by:` (DCO: a human certifies it)
-   and must be able to defend it in review. Check the kernel's current rules
-   on disclosing AI help (an `Assisted-by:`-style tag) before sending. A
-   `Fixes:` tag on the commit that added `__igc_shutdown` gets it into
-   stable kernels. Expect weeks to months; drop the local package once
-   Arch's kernel has it. The FreeBSD bug (below) could get the same fix
+   sends it under their own name with `Signed-off-by:` (DCO: a human
+   certifies it) and must be able to defend it in review. Check the kernel's
+   current rules on disclosing AI help (an `Assisted-by:`-style tag) before
+   sending. A `Fixes:` tag on the commit that added `__igc_shutdown` gets it
+   into stable kernels. Expect weeks to months; drop `pkg/` once Arch's
+   kernel has it. The FreeBSD bug (below) could get the same fix
    (`igc_set_d3_lplu_state_i225()` exists there).
-3. **Optional checks:** `systemctl suspend` (same function), and whether a
+2. **Optional checks:** `systemctl suspend` (same function), and whether a
    2.5G or 1G link in D3 would also work (not needed: Windows uses 100M).
 
 ## Sources
