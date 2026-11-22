@@ -15,7 +15,8 @@ investigation, the fix and the tests still to run.
   100 Mbit/s in D3 and sleeps on a 100BaseTX link.
 - **Proven 2026-11-22:** with that one bit (`DIS_100_D3`) cleared by hand,
   Linux hibernated and a magic packet woke it.
-- Next: test the patched `igc` (below), then a local package until the
+- **The patched `igc` works (2026-11-22):** after a hibernate and after a
+  poweroff, a magic packet woke menadion. Next: a local package until the
   patch is upstream.
 
 Freebox OS → Réseau local → Switch, menadion on port 3 (Ethernet 3, 2.5G):
@@ -26,6 +27,7 @@ Freebox OS → Réseau local → Switch, menadion on port 3 (Ethernet 3, 2.5G):
 | hibernated from Windows | Actif | **100BaseTX-FD** | on |
 | hibernated or powered off from Linux | **Inactif** | | off |
 | hibernated from Linux, `DIS_100_D3` cleared | Actif | | woke on the magic packet |
+| hibernated or powered off from Linux, patched `igc` | Actif | | woke on the magic packet |
 
 The TV, on port 2, keeps a minimal link in standby (10BaseT-HD, no MAC
 learned), which is also why it doesn't answer pings.
@@ -214,7 +216,11 @@ kernel patch doesn't touch `igc`; built unpatched, every function has the
 same size as in Arch's module): `~/wol-test/igc-7.3.4-wol/igc.ko`, patch in
 `~/wol-test/igc-allow-100-in-d3.patch`.
 
-### Test C: the patched module (no reboot)
+### Test C: the patched module (2026-11-22): works
+
+`insmod` at 12:50:28, hibernate at 12:50:50, woken by a magic packet at
+12:51:58; then poweroff at 12:53:14, woken at 12:53:45. The steps, to rerun
+after any change to the patch or the source (no reboot):
 
 1. `sudo modprobe -r igc && sudo insmod ~/wol-test/igc-7.3.4-wol/igc.ko`
 2. Check it's ours: `cat /sys/module/igc/taint` prints `OE` (out of tree,

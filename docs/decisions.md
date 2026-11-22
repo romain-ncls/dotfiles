@@ -174,7 +174,8 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   that bit (`DIS_100_D3`, `0x200`) cleared by hand, Linux hibernated and a
   magic packet woke it. The fix is a few lines in `igc`'s `__igc_shutdown`
   (a write from userspace can't do it: `igc` resets the card to its NVM
-  defaults while going down). Ruled out on the way: `d3cold_allowed=0`, MSI
+  defaults while going down); with that patched module, menadion woke from
+  hibernate and from poweroff (2026-11-22). Ruled out on the way: `d3cold_allowed=0`, MSI
   "Wake Up Event By BIOS" + "Resume By PCI-E Device", a udev `.link` file
   with `WakeOnLan=magic`. The investigation, the patch, its tests and the
   plan (local DKMS package, then upstream): `docs/wake-on-lan.md`.
