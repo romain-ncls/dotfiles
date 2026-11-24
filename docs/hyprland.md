@@ -443,7 +443,9 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    which is now shared with Plasma's (`SilksongPrompt.qml`, a locker for
    each). `lock-screen` is hypridle's lock_cmd, so Meta+L, the idle,
    sleep and Lock AFK all reach it; sleep waits for the lock
-   (`inhibit_sleep = 3`). hyprlock stays as the fallback: without the art or
+   (`inhibit_sleep = 3`). While it holds the lock it sets logind's
+   `LockedHint`, as Plasma's locker does: Lock AFK reads it to tell the
+   phone "Already locked". hyprlock stays as the fallback: without the art or
    the PAM service, if the lock doesn't come up within 5 seconds, or if it
    ends while locked. The painting starts over the windows ("over", chosen
    among mockups), the screens' sizes read from their EDID as KWin does

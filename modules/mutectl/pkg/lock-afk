@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
+# KDE Connect's "Lock AFK" (docs/manual-steps.md): lock, go AFK, tell the phone.
+# Whether it was locked already: logind's LockedHint, which Plasma's locker and
+# Hyprland's (modules/hyprland/hypr/lock-screen) both set. Hyprland has no
+# org.freedesktop.ScreenSaver GetActive: hypridle owns the name for inhibits only.
 
-msg=$(qdbus6 org.freedesktop.ScreenSaver /ScreenSaver GetActive | grep -q true && echo "Already locked" || echo "Successfully locked")
+if [[ $(loginctl show-session auto -p LockedHint --value) == yes ]]; then
+  msg="Already locked"
+else
+  msg="Successfully locked"
+fi
 
 loginctl lock-session && mutectl afk && kdeconnect-cli -n 'OnePlus 13' --ping-msg "$msg"

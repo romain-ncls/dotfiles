@@ -4,9 +4,17 @@
 # (modules/silksong: `qs -c silksong-lock`), else hyprlock: without its PAM service, if it quits
 # (no game's art) or hasn't locked within 5 seconds, or should it end while locked (the session
 # stays locked; hyprlock takes the lock over, misc.allow_session_lock_restore). One at a time.
+# While it runs, logind's LockedHint is set, as Plasma's locker does: what tells either
+# desktop is locked (mutectl's lock-afk).
 pidof hyprlock > /dev/null && exit 0
 qs list -c silksong-lock 2>/dev/null | grep -q '^Instance' && exit 0
-[ -e /etc/pam.d/silksong-lock ] || exec hyprlock
+hint() {
+    busctl call org.freedesktop.login1 /org/freedesktop/login1/session/auto \
+        org.freedesktop.login1.Session SetLockedHint b "$1" 2> /dev/null
+}
+hint true
+trap 'hint false' EXIT
+[ -e /etc/pam.d/silksong-lock ] || { hyprlock; exit; }
 marker=${XDG_RUNTIME_DIR:-/tmp}/silksong-lock.locked # touched once every screen shows it
 rm -f "$marker"
 # Traced once: with this file there, the next lock logs each screen's frames (Qt's render loop
@@ -25,9 +33,10 @@ while [ ! -e "$marker" ] && kill -0 "$pid" 2> /dev/null && [ "$i" -lt 50 ]; do
 done
 if [ ! -e "$marker" ]; then
     kill "$pid" 2> /dev/null
-    exec hyprlock
+    hyprlock
+    exit
 fi
 wait "$pid"
 status=$?
 rm -f "$marker"
-[ "$status" -eq 0 ] || exec hyprlock
+[ "$status" -eq 0 ] || hyprlock
