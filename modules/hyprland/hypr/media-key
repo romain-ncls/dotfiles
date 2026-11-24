@@ -1,0 +1,24 @@
+#!/bin/sh
+# The media keys (binds.lua): `media-key play-pause|next|previous` acts, as Plasma's
+# do, on the player that started playing last if it still plays, else on one that
+# plays, else on the one that played last. playerctl alone takes the first player
+# by name: a Brave tab with a paused video (plasma-browser-integration) before
+# Spotify. `media-key watch` (hyprland-media-key.service) keeps the last one.
+last=${XDG_RUNTIME_DIR:-/tmp}/media-key.last
+
+if [ "$1" = watch ]; then
+    # follow mode prints a line for the player whose status just changed
+    playerctl -a -F status -f '{{status}} {{playerInstance}}' | while read -r status player; do
+        [ "$status" = Playing ] && echo "$player" > "$last"
+    done
+    exit 1 # playerctl ended: systemd restarts it
+fi
+
+previous=
+[ -r "$last" ] && read -r previous < "$last"
+player=$(playerctl -a status -f '{{status}} {{playerInstance}}' 2> /dev/null | awk -v last="$previous" '
+    $2 == last { seen = 1; if ($1 == "Playing") hot = 1 }
+    $1 == "Playing" && playing == "" { playing = $2 }
+    END { print hot ? last : playing != "" ? playing : seen ? last : "" }')
+[ -n "$player" ] && exec playerctl -p "$player" "$@"
+exec playerctl "$@"

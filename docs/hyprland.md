@@ -510,6 +510,10 @@ migrations and update channels (lodestar does that), their titlebar plugin.
 - Meta+Return: the terminal, floating. Meta+E: the files (Nautilus, a new
   window, as Dolphin's). Meta+²: Spotify's scratchpad (the key that opens
   Plasma's media player now). Meta+~: volume (the shell).
+- Media keys, as Plasma's: on the player playing, else on the one that
+  played last (`hypr/media-key`; `hyprland-media-key.service` remembers it).
+  `playerctl` alone takes the first by name: a Brave tab with a paused video
+  before Spotify.
 - Meta+Tab, Ctrl+Alt+Tab: shadesmar's overview, Plasma's: each screen's
   windows as live thumbnails, the tape's off-screen columns included (with
   their last picture: Hyprland copies a window only while it overlaps its

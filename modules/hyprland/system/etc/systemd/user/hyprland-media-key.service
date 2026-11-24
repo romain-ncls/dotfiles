@@ -1,0 +1,14 @@
+# The media keys in Hyprland (hypr/media-key): which player played last, so
+# Play resumes it rather than the first player by name.
+[Unit]
+Description=Media keys: the player that played last
+PartOf=graphical-session.target
+ConditionEnvironment=XDG_CURRENT_DESKTOP=Hyprland
+
+[Service]
+ExecStart=%h/.config/hypr/media-key watch
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=hyprland-session.target

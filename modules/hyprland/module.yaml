@@ -33,6 +33,7 @@ user-services:
   - hypridle.service
   - hyprland-lid.service
   - hyprland-kwallet-pam.service
+  - hyprland-media-key.service # the player that played last (hypr/media-key)
 
 files:
   ~/.config/hypr:

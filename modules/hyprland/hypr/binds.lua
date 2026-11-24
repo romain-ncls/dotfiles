@@ -382,10 +382,11 @@ bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggl
 bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true })
 bind("XF86MonBrightnessUp", brightness("5%+"), locked)
 bind("XF86MonBrightnessDown", brightness("5%-"), locked)
-bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
-bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
-bind("XF86AudioNext", hl.dsp.exec_cmd("playerctl next"), { locked = true })
-bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"), { locked = true })
+-- media-key: the player playing, else the one that played last (not playerctl's first by name)
+bind("XF86AudioPlay", hl.dsp.exec_cmd("~/.config/hypr/media-key play-pause"), { locked = true })
+bind("XF86AudioPause", hl.dsp.exec_cmd("~/.config/hypr/media-key play-pause"), { locked = true })
+bind("XF86AudioNext", hl.dsp.exec_cmd("~/.config/hypr/media-key next"), { locked = true })
+bind("XF86AudioPrev", hl.dsp.exec_cmd("~/.config/hypr/media-key previous"), { locked = true })
 
 -- Session: Plasma's Lock Session (hypridle runs hyprlock on it), and its
 -- "without confirmation" ones.
