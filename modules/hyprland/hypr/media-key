@@ -6,8 +6,13 @@
 # Spotify. `media-key watch` (hyprland-media-key.service) keeps the last one.
 last=${XDG_RUNTIME_DIR:-/tmp}/media-key.last
 
+list() { playerctl -a status -f '{{status}} {{playerInstance}}' 2> /dev/null; }
+
 if [ "$1" = watch ]; then
-    # follow mode prints a line for the player whose status just changed
+    # follow mode prints a line for the player whose status just changed, but at
+    # start only the first player's: the one already playing is noted first
+    playing=$(list | awk '$1 == "Playing" { print $2; exit }')
+    [ -n "$playing" ] && echo "$playing" > "$last"
     playerctl -a -F status -f '{{status}} {{playerInstance}}' | while read -r status player; do
         [ "$status" = Playing ] && echo "$player" > "$last"
     done
@@ -16,9 +21,13 @@ fi
 
 previous=
 [ -r "$last" ] && read -r previous < "$last"
-player=$(playerctl -a status -f '{{status}} {{playerInstance}}' 2> /dev/null | awk -v last="$previous" '
+players=$(list)
+player=$(printf '%s\n' "$players" | awk -v last="$previous" '
     $2 == last { seen = 1; if ($1 == "Playing") hot = 1 }
     $1 == "Playing" && playing == "" { playing = $2 }
     END { print hot ? last : playing != "" ? playing : seen ? last : "" }')
-[ -n "$player" ] && exec playerctl -p "$player" "$@"
-exec playerctl "$@"
+[ -n "$player" ] || exec playerctl "$@"
+# a player the key pauses is the one to resume, even one that came up playing
+# (a new tab), which the watcher doesn't see start
+printf '%s\n' "$players" | grep -qxF "Playing $player" && echo "$player" > "$last"
+exec playerctl -p "$player" "$@"
