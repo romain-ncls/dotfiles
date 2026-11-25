@@ -10,6 +10,20 @@
     "type": "command",
     "command": "bash ~/.claude/statusline-command.sh"
   },
+  "hooks": {
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "bash ~/.claude/hooks/notify.sh done" }] }
+    ],
+    "StopFailure": [
+      { "hooks": [{ "type": "command", "command": "bash ~/.claude/hooks/notify.sh error" }] }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission_prompt|elicitation_dialog|elicitation_url_dialog",
+        "hooks": [{ "type": "command", "command": "bash ~/.claude/hooks/notify.sh question" }]
+      }
+    ]
+  },
   "effortLevel": "xhigh",
   "tui": "fullscreen",
   "skipWorkflowUsageWarning": true,
