@@ -276,8 +276,9 @@ end
 
 -- Spotify's scratchpad, on the laptop's screen (a special workspace opens on
 -- the focused screen): Spotify over Discord, but for its left strip (the
--- servers, who's in the voice channel), above the bar.
-local strip, bar = 375, 40
+-- servers, who's in the voice channel) and its top 33 px, above the bar.
+-- Sized by hand on 26 Nov 2026; the right edge stays on the screen's.
+local strip, top, bar = 375, 33, 40
 
 local function laptop_screen()
     return find(screens.laptop) or hl.get_active_monitor()
@@ -339,8 +340,8 @@ local function stow(w)
     if not in_scratchpad(w) then
         hl.dispatch(hl.dsp.window.move({ window = w, workspace = "special:spotify", follow = false }))
     end
-    hl.dispatch(hl.dsp.window.resize({ window = w, x = m.width - strip, y = m.height - bar, relative = false }))
-    hl.dispatch(hl.dsp.window.move({ window = w, x = m.x + strip, y = m.y, relative = false }))
+    hl.dispatch(hl.dsp.window.resize({ window = w, x = m.width - strip, y = m.height - top - bar, relative = false }))
+    hl.dispatch(hl.dsp.window.move({ window = w, x = m.x + strip, y = m.y + top, relative = false }))
 end
 
 -- Meta+²: Spotify, started the first time, put back in the scratchpad if

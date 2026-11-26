@@ -28,7 +28,7 @@ rejects (`bezier` or `spring`).
   servers and channels: who is in the voice channel.
 - **Spotify is a scratchpad on the middle screen**: a shortcut shows it over
   Discord, leaving Discord's left side (servers and channel list, about the
-  first 375 px) uncovered, and hides it again.
+  first 375 px) and a strip on top uncovered, and hides it again.
 - **The terminal from Meta+Return always opens floating**; from there it goes
   anywhere (over a window, into the tape at half width, two side by side).
 - What the KDE habits are for: one window filling each screen and quick
@@ -62,8 +62,9 @@ rejects (`bezier` or `spring`).
   out of the grid) holds Discord and Teams (Brave's web app) as full-width
   columns, opened there by window rules. Spotify lives on a special
   workspace (Hyprland's scratchpad), floating, from x = 375 px to the right
-  edge, the full height under the bar. Not a rule: Spotify (XWayland) names
-  its window after it opens, so grid.lua places it on `window.class`, and
+  edge and from y = 33 px down to the bar (the top found by hand). Not a
+  rule: Spotify (XWayland) names its window after it opens, so grid.lua
+  places it on `window.class`, and
   again on the shortcut if it left. The shortcut focuses the laptop's
   screen, then toggles it (a special workspace opens on the focused screen),
   so it always shows there; hiding it gives the focus back to the window
