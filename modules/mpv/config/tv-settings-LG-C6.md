@@ -71,6 +71,11 @@ Menu names may differ a little on the TV; they weren't all checked there.
   so it gets the desktop's colour intensity.
 - **HDR10, HLG, Dolby Vision:** mpv tone-maps them itself to the peak KDE
   gives (1950 nits), then sends them as HDR.
+- **Dolby audio** (AC-3, E-AC-3 with Atmos) goes to the TV undecoded
+  (`dolby-to-tv` profile; the TV shows its Atmos logo), so it plays at the
+  same level as in the TV's apps. Decoded by mpv, it was louder: no
+  dialnorm, and a downmix that isn't normalized. mpv's volume doesn't reach
+  these tracks. DTS and TrueHD are still decoded by mpv.
 - **To check:** subtitles in HDR video. On the TV's Jellyfin app, white
   subtitles in Dolby Vision were too bright; mpv has `sub-hdr-peak` and
   `image-subs-hdr-peak` for that.
