@@ -1,8 +1,10 @@
 -- Desktops (docs/hyprland.md). Four, in a 2×2 grid, on the side screens,
 -- which switch together as in KDE; the laptop's screen between them keeps a
 -- workspace of its own, comms (Discord, Teams), with Spotify as a
--- scratchpad over it. The laptop alone shows the grid itself, comms then
--- being a fifth workspace.
+-- scratchpad over it. Away from the desk, a screen the config doesn't know
+-- (at home) takes the grid as a side screen does, the laptop's keeping
+-- comms. The laptop alone shows the grid itself, comms then being a fifth
+-- workspace.
 --
 -- Desktop d (1 2 / 3 4) of a grid screen is workspace base + d: base 0 on
 -- the left screen (and on the laptop alone), 4 on the right one. Numbered
@@ -34,7 +36,10 @@ local function find(sel)
     end
 end
 
--- The screens holding the grid now, each with its base.
+-- The screens holding the grid now, each with its base: the desk's side
+-- screens; without them, the screens the config doesn't know, the first
+-- two from the left (a third one, or a projector at the desk, keeps a
+-- workspace of its own); else the laptop's.
 local function grid()
     local list = {}
     local left, right = find(screens.left), find(screens.right)
@@ -44,6 +49,20 @@ local function grid()
     if right then
         list[#list + 1] = { monitor = right, base = 4 }
     end
+    if #list == 0 then
+        local others = {}
+        for _, m in ipairs(hl.get_monitors()) do
+            if not is(m, screens.laptop) then
+                others[#others + 1] = m
+            end
+        end
+        table.sort(others, function(a, b)
+            return a.x < b.x
+        end)
+        for i = 1, math.min(#others, 2) do
+            list[i] = { monitor = others[i], base = (i - 1) * 4 }
+        end
+    end
     local laptop = #list == 0 and (find(screens.laptop) or hl.get_active_monitor())
     if laptop then
         list[1] = { monitor = laptop, base = 0 }
@@ -51,8 +70,14 @@ local function grid()
     return list
 end
 
+-- Whether the laptop's screen is the only one (it holds the grid then).
 local function alone()
-    return not find(screens.left) and not find(screens.right)
+    for _, m in ipairs(hl.get_monitors()) do
+        if not is(m, screens.laptop) then
+            return false
+        end
+    end
+    return true
 end
 
 -- Each workspace on its screen, whatever creates it (a window sent there,
@@ -399,21 +424,35 @@ function G.arrange()
     end
 end
 
--- A grid screen that leaves gives its windows to the same desktop of the
--- screens left (the laptop alone, or the other side).
-hl.on("monitor.removed", function(m)
-    local base = nil
-    if is(m, screens.left) then
-        base = 0
-    elseif is(m, screens.right) then
-        base = 4
+-- A screen that leaves gives its windows to the screens left. Desktops no
+-- screen holds any more (a grid screen gone, or the right one's when the
+-- grid moves to fewer screens) go to the same desktop of the grid (the
+-- laptop alone, or the other side); a workspace of its own that Hyprland
+-- moved to another screen, out of sight and out of the keys' reach, to the
+-- desktop shown.
+hl.on("monitor.removed", function()
+    local list = grid()
+    local to = list[1]
+    if not to then
+        return
     end
-    local to = grid()[1]
-    if base and to and to.base ~= base then
-        for d = 1, 4 do
-            for _, w in ipairs(hl.get_workspace_windows(tostring(base + d))) do
-                hl.dispatch(hl.dsp.window.move({ window = w, workspace = tostring(to.base + d), follow = false }))
+    local held = {}
+    for _, s in ipairs(list) do
+        held[s.base] = true
+    end
+    for _, base in ipairs({ 0, 4 }) do
+        if not held[base] then
+            for d = 1, 4 do
+                for _, w in ipairs(hl.get_workspace_windows(tostring(base + d))) do
+                    hl.dispatch(hl.dsp.window.move({ window = w, workspace = tostring(to.base + d), follow = false }))
+                end
             end
+        end
+    end
+    for _, w in ipairs(hl.get_windows()) do
+        local ws = w.workspace
+        if ws and ws.id and ws.id > 8 and not ws.visible then
+            hl.dispatch(hl.dsp.window.move({ window = w, workspace = tostring(to.base + current()), follow = false }))
         end
     end
     G.arrange()

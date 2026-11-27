@@ -542,6 +542,12 @@ migrations and update channels (lodestar does that), their titlebar plugin.
 - **The laptop alone**: its screen shows the grid's four desktops; `comms`
   (Discord, Teams) is a fifth workspace, Meta+F1 in place of the desktop
   and again back; Spotify's scratchpad opens over whatever is there.
+- **A screen the config doesn't know** (at home): away from the desk, it
+  takes the grid as a side screen does, and the laptop's screen goes to
+  `comms`; two of them, the first two from the left, switching together.
+  At the desk (a projector), it keeps a workspace of its own. Hyprland
+  gives it its preferred mode, to the right of the others, and guesses
+  its scale.
 
 ## Secrets (KWallet)
 
@@ -674,6 +680,12 @@ later (yazi, btop, lazygit…).
       match with their own dark themes.
 - [x] Hotplug: what becomes of windows on a screen that goes away (they go
       to the same desktop on the screens left, grid.lua; tried headless).
+      A screen the config doesn't know takes the grid away from the desk
+      (27 Nov 2026; tried headless: the desk left, one and two home
+      screens plugged and unplugged, the desk again, a projector there).
+      Its windows, on a workspace of its own, went out of reach when it
+      left (on a workspace hidden on the laptop): now they go to the
+      desktop shown.
 - [x] A drop-down terminal (Ghostty's quick terminal, or a special workspace
       as Omarchy's Super+\`): dropped, not needed (9 Nov 2026); the
       free-floating one on Meta+Return is enough.

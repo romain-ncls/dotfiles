@@ -35,7 +35,8 @@ for _, s in ipairs(layout) do
         hl.monitor({ output = s[1], mode = mode, position = s[3], scale = 1 })
     end
 end
--- Anything else (a projector, a TV): its own mode, to the right.
+-- Anything else (a screen at home, a projector): its own mode, to the
+-- right; away from the desk, grid.lua gives it the desktops.
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "auto" })
 
 return screens
