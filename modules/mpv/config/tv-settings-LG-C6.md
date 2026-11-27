@@ -76,6 +76,8 @@ Menu names may differ a little on the TV; they weren't all checked there.
   same level as in the TV's apps. Decoded by mpv, it was louder: no
   dialnorm, and a downmix that isn't normalized. mpv's volume doesn't reach
   these tracks. DTS and TrueHD are still decoded by mpv.
-- **To check:** subtitles in HDR video. On the TV's Jellyfin app, white
-  subtitles in Dolby Vision were too bright; mpv has `sub-hdr-peak` and
-  `image-subs-hdr-peak` for that.
+- **Subtitles:** 15% smaller on this screen (`tv-sub-size` profile,
+  `sub-scale=0.85`): mpv sizes them by the video's height, so they grew
+  with the TV. In HDR, text subtitles follow the desktop's SDR white
+  (`sub-hdr-peak=auto`, 300 nits) and image subtitles (PGS) use 203 nits
+  (`image-subs-hdr-peak=sdr`) instead of mpv's 1000, which glared.
