@@ -59,6 +59,8 @@ kde:
   kwinrc:
     Xwayland:
       Scale: 2 # 4K TV at 200% (display.sh sets the outputs)
+    Plugins:
+      screenedgeEnabled: false # no glow at the bottom edge, where the hidden taskbar waits
   # The desktop is on the TV: never lock, dim, turn the screen off or suspend
   # on its own (that would cut the HDMI signal). blackout blacks it out instead.
   kscreenlockerrc:
