@@ -14,6 +14,7 @@ panel.location = "bottom";
 panel.height = 46;
 panel.floating = false; // docked (nalthis)
 panel.opacity = "translucent"; // always the glass, even with a maximized window
+panel.hiding = panelHiding; // the host's (options.js): autohide on the OLED TV
 
 // A widget that isn't installed (Claude Usage, by hand) is left out: the
 // rest of the panel still gets built.
@@ -45,6 +46,9 @@ add("org.kde.plasma.claudeusage", { General: { showIcon: false } });
 // Middle: two flexible spacers center what is between them on the panel.
 add("org.kde.plasma.panelspacer");
 add("org.kde.plasma.kickoff", { General: { compactMode: true } }); // tighter rows
+if (blackoutButton) { // from build-panel: black screen now (modules/blackout)
+    add("org.kde.plasma.icon", { General: { url: "file:///usr/share/applications/blackout.desktop" } });
+}
 add("org.kde.plasma.icontasks", {
     General: { launchers: "applications:systemsettings.desktop,preferred://filemanager,preferred://browser" },
 });

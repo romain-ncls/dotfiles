@@ -432,3 +432,5 @@ camera-off            camera-off
 # Glyphs in the panel itself (show desktop), which asks for 32: the tray's
 # 20 px there too.
 user-desktop-symbolic monitor
+# blackout's button, next to the launcher (modules/blackout)
+blackout              monitor-off

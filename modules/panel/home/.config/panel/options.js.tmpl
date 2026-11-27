@@ -1,0 +1,3 @@
+// The host's panel options (lodestar renders them from host.yaml's vars);
+// build-panel puts them before layout.js.
+const panelHiding = "{{ or (index .vars "panel_hiding") "none" }}"; // none, autohide, dodgewindows, windowsgobelow

@@ -1,5 +1,5 @@
-# The home PC: MSI Z690, i9-12900K, RTX 3070 Ti, 4K TV. Dual boot with
-# Windows 11 on a shared ESP; btrfs, snapper, Limine.
+# The home PC: MSI Z690, i9-12900K, RTX 3070 Ti, 4K OLED TV (LG C6 77").
+# Dual boot with Windows 11 on a shared ESP; btrfs, snapper, Limine.
 modules:
   - base
   - boot
@@ -22,6 +22,7 @@ modules:
   - logi-smartshift
   - nvidia
   - wake-on-lan
+  - blackout # the LG C6 is an OLED: black screen after 5 min idle
   - krdp
   - sshd
   - lodestar
@@ -30,6 +31,7 @@ vars:
   name: Romain Nicolas
   email: nicolasromain0@gmail.com
   konsole_colors: Nalthis # modules/konsole; DarkOneNuanced without nalthis
+  panel_hiding: autohide # modules/panel: the OLED TV keeps no static taskbar
 
 user:
   name: romain
@@ -56,8 +58,9 @@ json:
 kde:
   kwinrc:
     Xwayland:
-      Scale: 2 # 4K TV at 200% (display-scale.sh sets the outputs)
-  # The desktop is on the TV: never lock, dim, blank or suspend on its own.
+      Scale: 2 # 4K TV at 200% (display.sh sets the outputs)
+  # The desktop is on the TV: never lock, dim, turn the screen off or suspend
+  # on its own (that would cut the HDMI signal). blackout blacks it out instead.
   kscreenlockerrc:
     Daemon:
       Autolock: false
@@ -72,4 +75,4 @@ kde:
       AutoSuspendAction: 0
 
 hooks:
-  - run: display-scale.sh
+  - run: display.sh # scale, HDR, colour profile, VRR

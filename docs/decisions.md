@@ -180,6 +180,75 @@ installing the home PC on 3 Oct 2026; the original install runbook is the
   Device", a udev `.link` file with `WakeOnLan=magic`. The investigation,
   the package and the upstream plan: `docs/wake-on-lan.md`.
 
+## OLED TV (home PC)
+
+menadion's screen is an LG C6 77" OLED since 2026-11-27. A static image
+left for hours wears an OLED unevenly, so the desktop keeps little on screen.
+
+- **`blackout` covers the screen in black after 5 minutes without input**
+  (`modules/blackout`), instead of turning it off. Black OLED pixels are
+  off, so the panel rests the same. Turning the screen off (KDE's setting,
+  DPMS) cuts the HDMI signal: the TV shows "No signal", goes to standby,
+  and has to be woken with the remote. With the black layer the signal
+  stays, and the first key or mouse move brings the desktop back. That
+  input goes to the black layer, not to an app, and the cursor is hidden
+  while it's black. No KDE setting does this: PowerDevil only dims or turns
+  off, and swaylock-style tools need a session-lock protocol that KWin
+  doesn't offer (it locks itself).
+- **What keeps the screen on.** KWin holds back the idle event for Wayland
+  idle inhibitors (mpv while it plays; paused, it goes black) and
+  org.freedesktop.ScreenSaver inhibitions, which KWin serves (browsers
+  playing a video, SDL games). blackout also follows PowerDevil's
+  "ChangeScreenSettings" inhibitions. Tested 2026-11-27 with kde-inhibit
+  and a PowerDevil inhibition. Gap: gamepads aren't input for KWin's idle
+  timer, so a game that doesn't inhibit goes black after 5 minutes of
+  gamepad-only play.
+- **The Wayland client is ours, ~250 lines** (`daemon/wayland.go`): the
+  wire format and the few requests blackout sends. One black pixel
+  (single-pixel-buffer) stretched by viewporter needs no shared memory and
+  no file descriptors. go-wayland would have needed bindings generated for
+  four extra protocols.
+- **A button blacks the screen out on demand** (`blackout now`, the
+  taskbar's button next to the launcher, Lucide's monitor-off from
+  nalthis). It sends SIGUSR1 to the service. The screen comes back on the
+  first input after a second without any (an input idle notification,
+  which inhibitors don't hold back), so the click itself doesn't end it.
+- **The taskbar auto-hides on menadion** (`panel_hiding: autohide` in its
+  vars, read by `modules/panel/build-panel`); wandersail's stays.
+- **4K 120 Hz needs the TV's "HDMI Ultra HD Deep Colour" on for the PC's
+  port.** Off, the C6's EDID stops at HDMI 2.0 (TMDS 300 MHz, no HDMI Forum
+  block): 4K 30 Hz at most, no VRR. KWin keeps the mode in its own
+  kwinoutputconfig.json; `hosts/menadion/display.sh` sets the rest.
+- **HDR on the desktop, with our own colour profile**
+  (`hosts/menadion/hdr-icc/`). The C6's EDID gives sRGB primaries, so with
+  KWin's default (EDID) profile, "SDR colour intensity" has nothing to
+  stretch sRGB toward and does nothing, even at 100% (same as the TCL). The
+  profile gives KWin the primaries from the TV's Dolby Vision block, and an
+  identity MHC2 tag, which makes KWin still send PQ BT.2020 unchanged
+  (KWin 6.8: `drm_output.cpp`, `iccprofile.cpp`). In this mode the profile
+  also sets SDR white (300 nits: the C6 holds ~340 full screen) and the
+  peak (1950, from hdrcalibrator);
+  System Settings' SDR brightness and peak override no longer apply, the
+  brightness slider still dims. Colour intensity 50% (the user, 2026-11-27,
+  judged on wallpapers: 100% didn't look wrong either).
+- **What colour intensity reaches.** KWin stretches only what is sRGB with
+  the perceptual intent: windows that don't describe their colours. Apps
+  that use Wayland colour management and convert to the screen's colours
+  themselves stay accurate:
+  - **mpv** converts by default (`target-colorspace-hint-mode=target`). The
+    `sdr-to-kde` profile in mpv.conf hands SDR video to KDE as BT.709
+    (`source`), so anime gets the desktop's colours; HDR10, HLG and Dolby
+    Vision keep the default, so mpv's own tone mapping stays.
+  - **Brave** stays accurate (the user's choice): turning its colour
+    management off (`--disable-features=WaylandWpColorManagerV1`) would
+    make it vivid, but HDR video in the browser would play as SDR.
+- **VRR: Automatic** (fullscreen windows only). On the desktop it would
+  vary the refresh rate for nothing, and LG OLEDs flicker in dark greys when
+  it varies.
+- **TV side:** Filmmaker for the PC (desktop, films), Optimiseur de jeu for
+  games (HGIG, VRR & G-Sync). The TV notes:
+  `modules/mpv/config/tv-settings-LG-C6.md`.
+
 ## Logitech mice (logi-smartshift)
 
 - **Per-app wheel settings (Options+ style) with our own

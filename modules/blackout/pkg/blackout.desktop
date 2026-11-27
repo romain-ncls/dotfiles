@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Black screen
+Name[fr]=Écran noir
+Comment=Cover the screen in black until the next key or mouse move
+Comment[fr]=Couvrir l'écran de noir jusqu'à la prochaine touche ou au prochain mouvement de la souris
+Exec=blackout now
+Icon=blackout
+Categories=Utility;
+Keywords=oled;black;blank;screen;
+Keywords[fr]=oled;noir;écran;

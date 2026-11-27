@@ -1,0 +1,25 @@
+# Local package: lodestar builds it when this folder changes.
+pkgname=blackout
+pkgver=1
+pkgrel=1
+pkgdesc='Black screens after some time without input, for a desktop on an OLED TV'
+arch=(x86_64)
+license=(MIT)
+options=(!debug)
+depends=(kwin)
+makedepends=(go)
+source=(blackout.service blackout.desktop)
+sha256sums=(SKIP SKIP)
+
+build() {
+	cd "$startdir/daemon"   # local package: the Go sources sit next to this file
+	export GOPATH="$srcdir/gopath" GOTOOLCHAIN=local CGO_ENABLED=0
+	export GOFLAGS="-buildmode=pie -trimpath -mod=readonly -modcacherw"
+	go build -o "$srcdir/blackout" .
+}
+
+package() {
+	install -Dm755 "$srcdir/blackout" -t "$pkgdir/usr/bin"
+	install -Dm644 blackout.service -t "$pkgdir/usr/lib/systemd/user"
+	install -Dm644 blackout.desktop -t "$pkgdir/usr/share/applications" # the panel's button
+}

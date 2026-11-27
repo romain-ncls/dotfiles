@@ -1,0 +1,14 @@
+# OLED care for a desktop on an OLED TV: pkg/ builds blackout, a daemon that
+# covers the screens in black after 5 minutes without input (the delay is in
+# pkg/blackout.service). Not turning the screen off: the HDMI signal stays,
+# so the TV stays on and the desktop comes back on the first input
+# (docs/decisions.md). `blackout now` (blackout.desktop: the panel's button
+# next to the launcher, its icon from nalthis) blacks them out at once. The
+# host's other half: `panel_hiding: autohide`.
+user-services:
+  - blackout.service
+
+hooks:
+  # lodestar rebuilds the package but leaves the running daemon: restart it
+  # on the new binary.
+  - run: systemctl --user try-restart blackout.service

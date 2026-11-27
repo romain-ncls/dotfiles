@@ -178,3 +178,4 @@ Paramètres avancés → Paramètres de luminosité / Couleur / Clarté / Mouvem
   and sends HDR straight to the display. Skipped on 2026-10-03: this TV's HDR is too weak, the user
   prefers mpv's own HDR conversion, and every switch would trigger the TV's slow color recovery.
   **Worth revisiting with a better HDR display** (≈600+ nits with local dimming, or OLED).
+  Revisited for the LG C6 (2026-11-27): `tv-settings-LG-C6.md`.
