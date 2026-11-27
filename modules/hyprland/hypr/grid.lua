@@ -1,9 +1,9 @@
 -- Desktops (docs/hyprland.md). Four, in a 2×2 grid, on the side screens,
 -- which switch together as in KDE; the laptop's screen between them keeps a
 -- workspace of its own, comms (Discord, Teams), with Spotify as a
--- scratchpad over it. Away from the desk, a screen the config doesn't know
--- (at home) takes the grid as a side screen does, the laptop's keeping
--- comms. The laptop alone shows the grid itself, comms then being a fifth
+-- scratchpad over it. Away from the desk, another screen (home's, or one the
+-- config doesn't know) takes the grid as a side screen does, the laptop's
+-- keeping comms. The laptop alone shows the grid itself, comms then being a fifth
 -- workspace.
 --
 -- Desktop d (1 2 / 3 4) of a grid screen is workspace base + d: base 0 on
@@ -37,8 +37,8 @@ local function find(sel)
 end
 
 -- The screens holding the grid now, each with its base: the desk's side
--- screens; without them, the screens the config doesn't know, the first
--- two from the left (a third one, or a projector at the desk, keeps a
+-- screens; without them, the other screens (home's, or ones the config
+-- doesn't know), the first two from the left (a third one, or a projector at the desk, keeps a
 -- workspace of its own); else the laptop's.
 local function grid()
     local list = {}

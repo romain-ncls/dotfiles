@@ -544,12 +544,14 @@ migrations and update channels (lodestar does that), their titlebar plugin.
 - **The laptop alone**: its screen shows the grid's four desktops; `comms`
   (Discord, Teams) is a fifth workspace, Meta+F1 in place of the desktop
   and again back; Spotify's scratchpad opens over whatever is there.
-- **A screen the config doesn't know** (at home): away from the desk, it
-  takes the grid as a side screen does, and the laptop's screen goes to
-  `comms`; two of them, the first two from the left, switching together.
-  At the desk (a projector), it keeps a workspace of its own. Hyprland
-  gives it its preferred mode, to the right of the others, and guesses
-  its scale.
+- **At home: an MSI MAG342CQR** (34", 3440×1440) left of the laptop, tops
+  aligned, at 100 Hz (its preferred mode over HDMI is 50 Hz), known by its
+  EDID description in `monitors.lua`. Away from the desk, it takes the grid
+  as a side screen does, and the laptop's screen goes to `comms`.
+- **A screen the config doesn't know**: the same away from the desk (two
+  of them, the first two from the left, switching together); at the desk
+  (a projector), it keeps a workspace of its own. Hyprland gives it its
+  preferred mode, to the right of the others, and guesses its scale.
 
 ## Secrets (KWallet)
 
