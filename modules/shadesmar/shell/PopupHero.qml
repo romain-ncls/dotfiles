@@ -1,14 +1,16 @@
 // A popup's head, as Control Center's modules: what it's about, its icon in
 // a circle, lit in the accent while it's on (`lit`: connected, playing,
 // popups shown), red when something's wrong (`warn`); its name, a line
-// under it (Connected · 5 GHz); a switch on the right (`toggle`). Its icon
-// changing (off, on) pops in.
+// under it (Connected · 5 GHz); a switch on the right (`toggle`), and before
+// it the buttons put inside it (Chevron.qml: Claude's reload, the Wi-Fi's
+// QR code). Its icon changing (off, on) pops in.
 import QtQuick
 import Quickshell
 
 Item {
     id: hero
 
+    default property alias tools: tools.data
     property string icon: ""
     property string iconSource: "" // or a picture of ours (icons/)
     property string title: ""
@@ -38,7 +40,7 @@ Item {
 
     Column {
         x: chip.x + chip.width + 12
-        width: parent.width - x - (toggle.visible ? toggle.width + 16 : 8)
+        width: (tools.width > 0 ? tools.x - 4 : toggle.visible ? toggle.x - 8 : parent.width - 8) - x
         anchors.verticalCenter: parent.verticalCenter
         spacing: 1
 
@@ -72,5 +74,14 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         checked: hero.checked
         onToggled: hero.toggled()
+    }
+
+    Row {
+        id: tools
+
+        anchors.right: toggle.visible ? toggle.left : parent.right
+        anchors.rightMargin: toggle.visible ? 8 : 4
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 2
     }
 }

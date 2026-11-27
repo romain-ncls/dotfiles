@@ -237,25 +237,15 @@ BarButton {
         // the head, and in its corner Reload: the file now rather than at the
         // next half minute (the numbers themselves are new at Claude Code's
         // next reply)
-        Item {
-            width: parent.width
-            height: hero.height
-
-            PopupHero {
-                id: hero
-
-                iconSource: Qt.resolvedUrl("icons/claude.svg")
-                title: "Claude Code"
-                caption: claude.high ? `Near the limit · ${claude.age}` : claude.age
-                warn: claude.high
-            }
+        PopupHero {
+            iconSource: Qt.resolvedUrl("icons/claude.svg")
+            title: "Claude Code"
+            caption: claude.high ? `Near the limit · ${claude.age}` : claude.age
+            warn: claude.high
 
             Chevron {
                 id: reload
 
-                anchors.right: parent.right
-                anchors.rightMargin: 4
-                anchors.verticalCenter: parent.verticalCenter
                 icon: "refresh-cw"
                 onClicked: {
                     reload.turn()

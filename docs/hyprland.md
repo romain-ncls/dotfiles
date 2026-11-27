@@ -387,7 +387,9 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    popups, as Plasma's tray: the clipboard's history (cliphist, recorded
    by clipboard-history.service), the network (Wi-Fi, the cable, the VPNs
    through nmcli; their secrets through spanreed's agent, in place of
-   nm-applet), Bluetooth (pairing through spanreed's agent); both agents
+   nm-applet; a Wi-Fi's QR code joins it, the head's button opening Qrca
+   in its Wi-Fi mode, as Plasma's applet does, floating on the laptop's
+   screen), Bluetooth (pairing through spanreed's agent); both agents
    ask in a card above the bar, a window of its own, as a request can
    come with no popup open (BarCard.qml), the sound (devices, volume, the
    microphone; Meta+~), the battery (power profiles, brightness, the

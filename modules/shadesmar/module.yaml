@@ -13,6 +13,7 @@
 packages:
   - cliphist # the clipboard's history
   - wl-screenrec # the screen recorder's (Recorder.qml), encoding on the GPU
+  - qrca # the network popup's QR code button (Network.qml; desktop has it too)
 
 files:
   ~/.config/quickshell/shadesmar:

@@ -351,7 +351,10 @@ BarButton {
             }
         }
 
-        // what's in use, big
+        // what's in use, big; with the Wi-Fi on, a network's QR code to join
+        // it, as Plasma's applet: Qrca (KDE's scanner) on the camera, which
+        // joins through NetworkManager itself; started by Hyprland, as the
+        // launcher's apps
         PopupHero {
             icon: net.icon
             title: net.wired ? "Wired" : net.current ? net.current.name : "Offline"
@@ -361,6 +364,15 @@ BarButton {
             toggle: net.wifi !== null
             checked: Networking.wifiEnabled
             onToggled: Networking.wifiEnabled = !Networking.wifiEnabled
+
+            Chevron {
+                visible: net.wifi !== null && Networking.wifiEnabled
+                icon: "scan-qr-code"
+                onClicked: {
+                    Quickshell.execDetached(["hyprctl", "eval", "hl.exec_cmd('qrca --wifi')"])
+                    popup.close()
+                }
+            }
         }
 
         // the network's sign-in page: any plain http address leads there

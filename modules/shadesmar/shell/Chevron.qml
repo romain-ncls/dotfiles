@@ -1,6 +1,7 @@
 // A small button with a line icon of ours (icons/<icon>.svg): the clock's
 // month steps and year button, the year view's, Claude's reload (turn():
-// the icon goes round once, to say it was done). A press sinks it.
+// the icon goes round once, to say it was done), the Wi-Fi's QR code. A
+// press sinks it.
 import QtQuick
 
 Item {

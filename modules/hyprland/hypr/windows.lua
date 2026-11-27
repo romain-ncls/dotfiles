@@ -38,3 +38,15 @@ hl.window_rule({ name = "dialogs", match = { modal = true }, float = true })
 -- A screenshot pinned from LumineCapture's editor (Ctrl+P): above the windows,
 -- on every desktop.
 hl.window_rule({ name = "lumine-pin", match = { class = "^lumine-pin$" }, float = true, pin = true })
+
+-- Qrca, the QR code scanner (the network popup's button: a Wi-Fi's code to
+-- join it): a camera's view, floating, on the laptop's screen, by its camera
+-- and the bar it was opened from.
+hl.window_rule({
+    name = "qrca",
+    match = { class = "^org\\.kde\\.qrca(\\.wifi)?$" },
+    float = true,
+    size = "720 600",
+    center = true,
+    monitor = require("monitors").laptop,
+})
