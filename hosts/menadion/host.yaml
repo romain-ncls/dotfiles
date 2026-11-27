@@ -55,6 +55,12 @@ json:
   - path: ~/.config/com.bilingify.readest/settings.json
     merge: readest.json
 
+brave:
+  flags:
+    # Brave leaves colour to KDE, so pages and SDR video get the desktop's SDR
+    # colour intensity; HDR video in the browser plays as SDR (docs/decisions.md).
+    - --disable-features=WaylandWpColorManagerV1
+
 kde:
   kwinrc:
     Xwayland:

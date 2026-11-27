@@ -239,9 +239,13 @@ left for hours wears an OLED unevenly, so the desktop keeps little on screen.
     `sdr-to-kde` profile in mpv.conf hands SDR video to KDE as BT.709
     (`source`), so anime gets the desktop's colours; HDR10, HLG and Dolby
     Vision keep the default, so mpv's own tone mapping stays.
-  - **Brave** stays accurate (the user's choice): turning its colour
-    management off (`--disable-features=WaylandWpColorManagerV1`) would
-    make it vivid, but HDR video in the browser would play as SDR.
+  - **Brave** converts colours itself through Wayland colour management,
+    so pages and streams stayed flat. menadion turns that off
+    (`--disable-features=WaylandWpColorManagerV1`, in its `brave: flags`):
+    Brave's windows are then plain sRGB to KWin and get the colour
+    intensity too. The cost: HDR video in the browser plays as SDR, which
+    the user doesn't use (tried and kept, 2026-11-27). Brave has no colour
+    setting of its own; "Force color profile" only says what the screen is.
 - **VRR: Automatic** (fullscreen windows only). On the desktop it would
   vary the refresh rate for nothing, and LG OLEDs flicker in dark greys when
   it varies.

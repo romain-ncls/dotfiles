@@ -60,9 +60,10 @@ Menu names may differ a little on the TV; they weren't all checked there.
 - **SDR white 300 nits**, under what the TV holds full screen (~340), so
   big white windows don't get dimmed by the TV. It was 400 the first
   evening. Change it in the profile (`-sdr`), not in System Settings.
-- **Colour intensity** reaches apps that leave colour to KDE (the desktop,
-  wallpapers, most apps, SDR video in mpv). Brave converts colours itself
-  and stays accurate. Details in `docs/decisions.md`.
+- **Colour intensity** reaches apps that leave colour to KDE: the desktop,
+  wallpapers, most apps, SDR video in mpv, and Brave, whose own colour
+  management menadion turns off (HDR video in the browser plays as SDR).
+  Details in `docs/decisions.md`.
 
 ## mpv
 
