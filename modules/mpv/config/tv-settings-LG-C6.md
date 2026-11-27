@@ -49,7 +49,7 @@ Menu names may differ a little on the TV; they weren't all checked there.
 | Setting | Value | Where it's set |
 |---|---|---|
 | Mode | 3840×2160 at 119.88 Hz | KWin's own config |
-| Scale | 200% | `hosts/menadion/display.sh` |
+| Scale | 175% (200% looked too big at 77") | `hosts/menadion/display.sh` |
 | HDR, wide colour gamut | On | `display.sh` |
 | HDR colour profile | `~/.local/share/icc/lg-c6-sdr300-peak1950.icc` (ICC) | `display.sh`, made by `hosts/menadion/hdr-icc/` |
 | SDR white, peak | 300 nits, 1950 nits | in the profile |
