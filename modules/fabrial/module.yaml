@@ -1,4 +1,4 @@
-# fabrial: the headset mic, cleaned up (DeepFilterNet and the awpro-v3
+# fabrial: the headset mic, cleaned up (DeepFilterNet and the awpro-v4
 # chain), as a virtual mic that apps recording the headset are moved onto.
 # It replaces EasyEffects on the mic; EasyEffects stays in the media module,
 # installed but not started. Its PKGBUILD lives in its own repo.
