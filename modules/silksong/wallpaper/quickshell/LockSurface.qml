@@ -3,7 +3,7 @@
 // world, Hornet's day planned meanwhile: shell.qml's planned) and of the prompt
 // (prompt/LockScreen.qml: made once every screen has drawn its first frame), with the scene and
 // the prompt as they are, by URL. The wallpaper's settings are Plasma's lock screen's (main.xml's
-// defaults).
+// defaults). Away from the desk, a picture (Backdrop's) in place of the world (`picture`).
 import QtQuick
 import QtQuick.Window
 import Quickshell
@@ -47,6 +47,10 @@ Item {
     property var planned: null
     // The world standing still (on battery: shell.qml's onBattery).
     property bool paused: false
+    // Away from the desk (shell.qml): a picture in place of the world and its painting, cropped
+    // to fill, fading in over the screen as it was; its fade done counts as the painting gone.
+    property url picture: ""
+    readonly property bool world: picture.toString() === ""
     signal paintingGone()
     Image {
         id: captureImage
@@ -65,7 +69,7 @@ Item {
             id: view
             anchors.fill: parent
             asynchronous: true
-            active: root.seated && (!(painting.item?.present ?? false) || painting.item.up)
+            active: root.world && root.seated && (!(painting.item?.present ?? false) || painting.item.up)
 
             Component.onCompleted: setSource(root.file("scene/WorldScene.qml"), {
                 coverFirst: Qt.binding(() => !(painting.item?.present ?? false)),
@@ -89,7 +93,7 @@ Item {
         Loader {
             id: painting
             anchors.fill: parent
-            active: root.seated && !wallpaper.paintingGone
+            active: root.world && root.seated && !wallpaper.paintingGone
 
             Component.onCompleted: setSource(root.file("scene/Painting.qml"), {
                 screens: Qt.binding(() => root.screens),
@@ -139,6 +143,44 @@ Item {
             function onRevealedChanged() {
                 if (view.item.revealed) {
                     console.info("Silksong lock screen:", root.screenName, "world revealed");
+                }
+            }
+        }
+
+        // Away from the desk: the picture, read once the surface has its size, then faded in.
+        Image {
+            id: pictureImage
+            anchors.fill: parent
+            visible: !root.world
+            source: root.seated ? root.picture : ""
+            asynchronous: true
+            cache: false
+            fillMode: Image.PreserveAspectCrop
+            sourceSize: Qt.size(width, height)
+            opacity: 0
+            onStatusChanged: {
+                if (status === Image.Ready && opacity === 0) {
+                    fadeIn.start();
+                } else if (status === Image.Error) {
+                    console.warn("Silksong lock screen:", root.screenName, "the picture can't be read:", source);
+                    pictureImage.shown();
+                }
+            }
+            function shown() {
+                if (!wallpaper.paintingGone) {
+                    wallpaper.paintingGone = true;
+                    root.paintingGone();
+                }
+            }
+            NumberAnimation on opacity {
+                id: fadeIn
+                running: false
+                to: 1
+                duration: 700
+                easing.type: Easing.InOutQuad
+                onFinished: {
+                    console.info("Silksong lock screen:", root.screenName, "picture shown");
+                    pictureImage.shown();
                 }
             }
         }

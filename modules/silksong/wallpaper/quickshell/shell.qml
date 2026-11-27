@@ -5,7 +5,9 @@
 // `qs -c silksong-lock` locks the session as it starts and quits once it's unlocked: modules/
 // hyprland's lock-screen runs it, and hyprlock instead should it fail. Without the game's art
 // (tools/extract_ui.py) it quits at once, status 2; should the prompt fail, status 3, the session
-// still locked, which hyprlock takes over.
+// still locked, which hyprlock takes over. Away from the desk the world is made for, lock-screen
+// gives it a picture instead (SILKSONG_LOCK_PICTURE: Backdrop's), which every screen fades in
+// over the screen as it was, under the same prompt.
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -20,6 +22,9 @@ ShellRoot {
     // The prompt needs a Kit.qml of this version (tools/extract_ui.py's KIT_VERSION) or later.
     readonly property int kitVersion: 2
     property QtObject kit: null
+    // The picture shown in place of the world (no world then, nor Hornet's day planned).
+    readonly property string pictureFile: Quickshell.env("SILKSONG_LOCK_PICTURE") ?? ""
+    readonly property url picture: pictureFile !== "" ? "file://" + pictureFile : ""
 
     // The screens as the scene reads them, as Plasma's: Qt's, in the sizes KWin gives them, the
     // EDID's detailed timing's millimetres (476 by 268), which tools/derive.py made this desk's views
@@ -227,6 +232,7 @@ ShellRoot {
                 art: shell.uiDir
                 locker: auth
                 capture: shell.captureOf(surface.screen)
+                picture: shell.picture
                 planned: shell.planned
                 paused: shell.onBattery
                 onPaintingGone: shell.paintingsGone++
@@ -250,7 +256,11 @@ ShellRoot {
         captureScreens = Array.from(Quickshell.screens);
         captureFor.start();
         kit = made;
-        planDay();
+        if (pictureFile === "") {
+            planDay();
+        } else {
+            console.info("Silksong lock screen: a picture in place of the world:", pictureFile);
+        }
     }
 
     // Hornet's day, planned on a worker thread (scene/DayPlanner.qml) from the moment the lock

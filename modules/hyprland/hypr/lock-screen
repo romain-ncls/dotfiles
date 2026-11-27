@@ -1,7 +1,8 @@
 #!/bin/sh
 # The session's lock screen (docs/hyprland.md), hypridle's lock_cmd: Meta+L, the idle, the lid,
 # sleep and mutectl's Lock AFK all go through `loginctl lock-session`. The Silksong one
-# (modules/silksong: `qs -c silksong-lock`), else hyprlock: without its PAM service, if it quits
+# (modules/silksong: `qs -c silksong-lock`; away from the office desk, with Backdrop's picture in
+# place of its world), else hyprlock: without its PAM service, if it quits
 # (no game's art) or hasn't locked within 5 seconds, or should it end while locked (the session
 # stays locked; hyprlock takes the lock over, misc.allow_session_lock_restore). One at a time.
 # While it runs, logind's LockedHint is set, as Plasma's locker does: what tells either
@@ -24,6 +25,28 @@ if [ -e "$trace" ]; then
     rm -f "$trace"
     export QT_LOGGING_RULES="qt.scenegraph.time.renderloop=true;qt.scenegraph.general=true"
 fi
+# The world is made for the office desk: the laptop's panel between the two BenQs, nothing else
+# plugged in. Those are the screens grid.lua binds desktops 1 and 5 and comms to (monitors.lua's
+# left, right and laptop), read from Hyprland's workspace rules (`desc:`: the start of a screen's
+# description). Anywhere else, the lock shows Backdrop's picture in its place, as the desktop does
+# (modules/backdrop: the only file of its current/, else the newest liked one); none, the world.
+at_desk() {
+    hyprctl -j workspacerules | jq -e --argjson screens "$(hyprctl -j monitors)" '
+        def plugged($sel): [$screens[] | select(if $sel | startswith("desc:")
+            then .description | startswith($sel[5:]) else .name == $sel end)] | length == 1;
+        [.[] | select(.workspaceString == "1" or .workspaceString == "5"
+            or .workspaceString == "name:comms") | .monitor] as $desk
+        | ($desk | length) == 3 and ($screens | length) == 3 and all($desk[]; plugged(.))' \
+        > /dev/null 2>&1
+}
+picture() {
+    for dir in "${XDG_DATA_HOME:-$HOME/.local/share}/backdrop/current" "$HOME/Pictures/Backdrop"; do
+        f=$(ls -t "$dir"/*.jpg "$dir"/*.jpeg "$dir"/*.png "$dir"/*.webp 2> /dev/null | head -n 1)
+        [ -n "$f" ] && { echo "$f"; return; }
+    done
+}
+unset SILKSONG_LOCK_PICTURE
+at_desk || { SILKSONG_LOCK_PICTURE=$(picture); export SILKSONG_LOCK_PICTURE; }
 qs -n -c silksong-lock &
 pid=$!
 i=0

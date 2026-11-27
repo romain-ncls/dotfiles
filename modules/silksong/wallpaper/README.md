@@ -244,6 +244,12 @@ game's art it quits at once (status 2), and should the prompt fail, with the ses
 `SILKSONG_DESK=DP-3:476x268,eDP-1:344x215,HDMI-A-1:476x268` gives them the desk's, names included,
 and with `HYPR_DEV` set, `SILKSONG_LOCK_TEST_PAM` a folder with a test `silksong-lock` PAM config.
 
+The world is made for the office desk, so only there does the lock show it: away from it (home,
+the laptop alone, a projector beside the desk), `lock-screen` gives the lock Backdrop's current
+picture (`SILKSONG_LOCK_PICTURE`), which each screen shows in place of the world and its painting,
+cropped to fill and faded in over the screen as it was (its fade done stands for the painting
+gone), under the same prompt; no day is planned then. Plasma's lock screen is unchanged.
+
 ## Runtime
 
 A running desktop wallpaper reloads the world by itself when `world.py` writes a new one, and

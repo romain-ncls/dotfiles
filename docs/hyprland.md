@@ -454,7 +454,13 @@ its own shell id and state folder. Fine, but link the same path everywhere.
    among mockups), the screens' sizes read from their EDID as KWin does
    (Hyprland's whole centimetres made it slow and jerky). The desktop keeps
    shadesmar's wallpaper from Backdrop (5 Nov 2026): Silksong is the lock
-   screen's only. The bench is the lock screen's, as `lock-screen` runs it, in
+   screen's only, and only at the office desk, the world being made for it
+   (27 Nov 2026): the two BenQs and the laptop's panel, nothing else
+   plugged in (the screens grid.lua binds desktops 1 and 5 and comms to,
+   read by `lock-screen` from Hyprland's workspace rules). Anywhere else
+   (home, the laptop alone, a projector), the same lock shows Backdrop's
+   picture in place of the world, faded in over the screen as it was,
+   under the same prompt. The bench is the lock screen's, as `lock-screen` runs it, in
    the headless rig (modules/silksong's `tools/lockbench.sh`; `bench.py` stays
    Plasma's). Left: the lid, suspend and hibernate on the machine (romain's
    tests, later).

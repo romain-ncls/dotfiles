@@ -2,7 +2,8 @@
 # Hornet living in it, as the lock screen's wallpaper with the game's prompt
 # (wallpaper/README.md): Plasma's lock screen, and Hyprland's
 # (wallpaper/quickshell, `qs -c silksong-lock`, which modules/hyprland's
-# lock-screen runs; its PAM service, system/etc/pam.d/silksong-lock). The
+# lock-screen runs; its PAM service, system/etc/pam.d/silksong-lock; away from
+# the office desk, Backdrop's picture in place of the world, there only). The
 # game's art is made from the installed game into ~/.local/share/silksong-wallpaper
 # by the tools, never kept here.
 files:

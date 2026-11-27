@@ -28,6 +28,7 @@ packages:
   # Decisions); hyprlock: the lock screen's fallback (hypr/lock-screen)
   - hyprlock
   - hypridle
+  - jq # lock-screen tells the office desk from Hyprland's screens and rules
 
 user-services:
   - hypridle.service
