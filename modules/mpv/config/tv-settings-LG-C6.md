@@ -53,7 +53,7 @@ Menu names may differ a little on the TV; they weren't all checked there.
 | HDR, wide colour gamut | On | `display.sh` |
 | HDR colour profile | `~/.local/share/icc/lg-c6-sdr300-peak1950.icc` (ICC) | `display.sh`, made by `hosts/menadion/hdr-icc/` |
 | SDR white, peak | 300 nits, 1950 nits | in the profile |
-| SDR colour intensity | 50% | `display.sh` |
+| SDR colour intensity | 80% | `display.sh` |
 | VRR | Automatic (fullscreen only) | `display.sh` |
 
 - **Peak 1950 nits** is what KDE's `hdrcalibrator` found in Filmmaker.

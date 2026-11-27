@@ -4,7 +4,7 @@
 # - every output: 200% scale (a 4K TV);
 # - the LG C6 (its EDID: manufacturer GSM, product 33997): HDR with our
 #   colour profile (hdr-icc/, home/.local/share/icc/), SDR colour intensity
-#   50%, VRR for fullscreen windows only (docs/decisions.md, "OLED TV").
+#   80%, VRR for fullscreen windows only (docs/decisions.md, "OLED TV").
 #   With the profile, SDR white (300 nits) and the peak (1950) come from it;
 #   System Settings' SDR brightness and peak override no longer apply (the
 #   SDR brightness is set to 300 too, for when the profile is off).
@@ -20,7 +20,7 @@ for out in $(kscreen-doctor -o | sed 's/\x1b\[[0-9;]*m//g' | awk '$1 == "Output:
 	if [[ -r $edid ]] && [[ $(od -An -tx1 -j8 -N4 "$edid" | tr -d ' \n') == 1e6dcd84 ]]; then
 		args+=("output.$out.hdr.enable" "output.$out.wcg.enable"
 			"output.$out.hdrIccProfile.$icc" "output.$out.hdrColorProfileSource.ICC"
-			"output.$out.sdrGamut.50" "output.$out.sdr-brightness.300"
+			"output.$out.sdrGamut.80" "output.$out.sdr-brightness.300"
 			"output.$out.vrrpolicy.automatic")
 	fi
 	kscreen-doctor "${args[@]}"

@@ -229,8 +229,9 @@ left for hours wears an OLED unevenly, so the desktop keeps little on screen.
   also sets SDR white (300 nits: the C6 holds ~340 full screen) and the
   peak (1950, from hdrcalibrator);
   System Settings' SDR brightness and peak override no longer apply, the
-  brightness slider still dims. Colour intensity 50% (the user, 2026-11-27,
-  judged on wallpapers: 100% didn't look wrong either).
+  brightness slider still dims. Colour intensity 80% (the user,
+  2026-11-27: 50% first, judged on wallpapers, then 80% after an evening
+  with mpv and Brave; 100% didn't look wrong either).
 - **What colour intensity reaches.** KWin stretches only what is sRGB with
   the perceptual intent: windows that don't describe their colours. Apps
   that use Wayland colour management and convert to the screen's colours
