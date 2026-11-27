@@ -537,10 +537,11 @@ migrations and update channels (lodestar does that), their titlebar plugin.
 - Recordings, on Spectacle's keys (shadesmar): Meta+Shift+R a region,
   Meta+Alt+R the screen under the pointer; the same key again, or a click
   on the bar's red dot, stops.
-- Dropped: Meta+< (Focus Discord: Discord is always on the middle screen).
+- Meta+F1: Discord and Teams (`comms`), the laptop's screen focused at the
+  desk. Not Plasma's Meta+< (Focus Discord).
 - **The laptop alone**: its screen shows the grid's four desktops; `comms`
-  (Discord, Teams) is a fifth workspace with its own key; Spotify's
-  scratchpad opens over whatever is there.
+  (Discord, Teams) is a fifth workspace, Meta+F1 in place of the desktop
+  and again back; Spotify's scratchpad opens over whatever is there.
 
 ## Secrets (KWallet)
 

@@ -21,9 +21,9 @@ for _, dir in ipairs({ "left", "right", "up", "down" }) do
     bind(mod .. " + CTRL + SHIFT + " .. dir, function() G.send(dir) end)
 end
 
--- The middle screen: Discord and Teams (Meta+<), Spotify over them (Meta+²,
+-- The middle screen: Discord and Teams (Meta+F1), Spotify over them (Meta+²,
 -- Plasma's media player key).
-bind(mod .. " + less", function() G.comms() end)
+bind(mod .. " + F1", function() G.comms() end)
 bind(mod .. " + twosuperior", function() G.spotify() end)
 -- Meta+~ (Meta+Shift+²): the sound's popup, as Plasma's audio applet (Volume.qml).
 bind(mod .. " + SHIFT + twosuperior", hl.dsp.global("shadesmar:volume"))
